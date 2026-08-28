@@ -1,0 +1,139 @@
+import type { App } from '@slack/bolt';
+import type { WebClient } from '@slack/web-api';
+import { richTextBlocks } from './richtext.ts';
+import { DAY, context, errorCode, fetchMessage, quoted, serialized, type Deps } from './slack.ts';
+import type { Conversation } from './store.ts';
+
+interface Incoming {
+  user: string;
+  text: string;
+  blocks: readonly unknown[] | undefined;
+  files: number;
+}
+
+/**
+ * The inbox: DMs to the bot and @bot mentions become threads in the team channel. A thread reply marked with the send
+ * emoji goes back as the bot; the delete emoji on any record of something the bot sent deletes it.
+ */
+export function registerInbox(app: App, { config, store, i18n }: Deps): void {
+  const team = config.teamChannelId;
+  // What the bot posts in the team channel is in the team's language; what only one person sees is in theirs.
+  const teamStrings = i18n.team;
+
+  /** Posts the message in its conversation thread, or starts a thread and returns its ts. */
+  async function relay(client: WebClient, existing: Conversation | undefined, header: string, message: Incoming) {
+    const title = existing ? teamStrings.followUp(message.user) : header;
+    const blocks = quoted(title, richTextBlocks(message.blocks), message.text);
+    if (message.files > 0) blocks.push(context(teamStrings.filesNotRelayed(message.files)));
+    const text = `${title} ${message.text}`;
+
+    if (existing) {
+      await client.chat.postMessage({ channel: team, thread_ts: existing.teamThreadTs, text, blocks, unfurl_links: false });
+      store.touch(existing.id);
+      return undefined;
+    }
+    blocks.push(context(teamStrings.replyHint(config.sendEmoji)));
+    const parent = await client.chat.postMessage({ channel: team, text, blocks, unfurl_links: false });
+    return parent.ts;
+  }
+
+  app.event('message', async ({ event, client }) => {
+    if (event.channel_type !== 'im') return;
+    if (event.subtype !== undefined && event.subtype !== 'file_share') return;
+    if ('bot_id' in event && event.bot_id) return;
+    const { channel, user, ts } = event;
+    const message = { user, text: event.text ?? '', blocks: event.blocks, files: event.files?.length ?? 0 };
+
+    await serialized(channel, async () => {
+      const existing = store.latestDm(channel, Date.now() - config.inboxIdleDays * DAY);
+      const teamThreadTs = await relay(client, existing, teamStrings.dmHeader(user), message);
+      if (teamThreadTs) {
+        store.createConversation({ kind: 'dm', userId: user, targetChannel: channel, targetThreadTs: null, teamThreadTs });
+        await client.chat.postMessage({ channel, text: (await i18n.forUser(user)).dmAck });
+      }
+    });
+    await client.reactions.add({ channel, timestamp: ts, name: 'incoming_envelope' });
+  });
+
+  app.event('app_mention', async ({ event, client }) => {
+    const { channel, user, ts } = event;
+    if (!user || event.bot_id || event.subtype) return;
+    if (channel === team || channel.startsWith('D')) return;
+    const threadTs = event.thread_ts ?? ts;
+    const message = { user, text: event.text, blocks: event.blocks, files: event.files?.length ?? 0 };
+
+    await serialized(`${channel}:${threadTs}`, async () => {
+      const existing = store.mentionThread(channel, threadTs);
+      const header = existing
+        ? ''
+        : teamStrings.mentionHeader(user, channel, (await client.chat.getPermalink({ channel, message_ts: ts })).permalink ?? '');
+      const teamThreadTs = await relay(client, existing, header, message);
+      if (teamThreadTs) {
+        store.createConversation({ kind: 'mention', userId: user, targetChannel: channel, targetThreadTs: threadTs, teamThreadTs });
+      }
+    });
+  });
+
+  app.event('reaction_added', async ({ event, client }) => {
+    const { item } = event;
+    if (item.type !== 'message' || item.channel !== team) return;
+    if (event.reaction === config.sendEmoji) await sendReply(client, item.ts, event.user);
+    else if (event.reaction === config.deleteEmoji) await deleteDelivery(client, item.ts, event.user);
+  });
+
+  async function sendReply(client: WebClient, ts: string, user: string) {
+    const t = await i18n.forUser(user);
+    const message = await fetchMessage(client, team, ts);
+    const threadTs = message?.thread_ts;
+    const notify = async (text: string) => {
+      await client.chat.postEphemeral({ channel: team, user, thread_ts: threadTs, text });
+    };
+
+    if (!message || !threadTs || threadTs === ts) return notify(t.notInThread);
+    if (message.bot_id) return notify(t.cannotSendBotMessage);
+    const conversation = store.byTeamThread(threadTs);
+    if (!conversation) return notify(t.notAConversation);
+    const text = message.text ?? '';
+    if (!text.trim()) return notify(t.emptyReply);
+    if (!store.claimDelivery(ts, conversation.targetChannel, user)) return notify(t.alreadySent);
+
+    let sentTs: string | undefined;
+    try {
+      const blocks = richTextBlocks(message.blocks);
+      const sent = await client.chat.postMessage({
+        channel: conversation.targetChannel,
+        thread_ts: conversation.targetThreadTs ?? undefined,
+        text,
+        blocks: blocks.length > 0 ? blocks : undefined,
+      });
+      sentTs = sent.ts;
+    } catch (error) {
+      store.releaseDelivery(ts);
+      return notify(t.sendFailed(errorCode(error)));
+    }
+    if (sentTs) store.completeDelivery(ts, sentTs);
+    store.touch(conversation.id);
+    await client.reactions.add({ channel: team, timestamp: ts, name: 'white_check_mark' });
+    if (message.files?.length) await notify(t.filesNotSent);
+  }
+
+  async function deleteDelivery(client: WebClient, ts: string, user: string) {
+    const delivery = store.delivery(ts);
+    if (!delivery?.targetTs) return;
+    const t = await i18n.forUser(user);
+    const threadTs = (await fetchMessage(client, team, ts))?.thread_ts ?? ts;
+    const notify = async (text: string) => {
+      await client.chat.postEphemeral({ channel: team, user, thread_ts: threadTs, text });
+    };
+    if (delivery.deletedAt) return notify(t.alreadyDeleted);
+
+    try {
+      await client.chat.delete({ channel: delivery.targetChannel, ts: delivery.targetTs });
+    } catch (error) {
+      if (errorCode(error) !== 'message_not_found') return notify(t.deleteFailed(errorCode(error)));
+    }
+    store.markDeleted(ts);
+    await client.reactions.remove({ channel: team, timestamp: ts, name: 'white_check_mark' }).catch(() => {});
+    await client.chat.postMessage({ channel: team, thread_ts: threadTs, text: teamStrings.deleted(user) });
+  }
+}
