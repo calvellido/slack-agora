@@ -14,8 +14,9 @@ export interface AppSettings {
   extraScopes: string[];
   /** Language of what the bot posts in the team channel, which everyone there shares, and of the manifest. */
   teamLanguage: Language;
-  /** The slash command to post as the bot. */
+  /** Slash commands. */
   publishCommand: string;
+  anonCommand: string;
   /** Optional text for the Home tab: by language, with `default` for languages without their own. */
   about: Partial<Record<Language | 'default', string>>;
 }
@@ -29,6 +30,10 @@ export interface Config extends AppSettings {
   sendEmoji: string;
   deleteEmoji: string;
   logLevel: LogLevel;
+  anonSecret: string;
+  anonIdleDays: number;
+  anonClosedVisibleDays: number;
+  anonMaxOpen: number;
 }
 
 export function loadAppSettings(env: NodeJS.ProcessEnv = process.env): AppSettings {
@@ -63,6 +68,7 @@ export function loadAppSettings(env: NodeJS.ProcessEnv = process.env): AppSettin
     extraScopes: (env.EXTRA_BOT_SCOPES ?? '').split(/[\s,]+/).filter(Boolean),
     teamLanguage,
     publishCommand: command('PUBLISH_COMMAND', '/agora-post'),
+    anonCommand: command('ANONYMOUS_COMMAND', '/agora-anon'),
     about,
   };
 }
@@ -80,6 +86,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   };
   const logLevel = (env.LOG_LEVEL ?? 'info') as LogLevel;
   if (!Object.values(LogLevel).includes(logLevel)) throw new Error(`Invalid LOG_LEVEL ${logLevel}`);
+  const anonSecret = required('ANON_SECRET');
+  if (anonSecret.length < 32) throw new Error('ANON_SECRET is too short: generate one with `openssl rand -base64 32`');
 
   return {
     ...loadAppSettings(env),
@@ -91,5 +99,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     sendEmoji: env.SEND_EMOJI ?? 'outbox_tray',
     deleteEmoji: env.DELETE_EMOJI ?? 'wastebasket',
     logLevel,
+    anonSecret,
+    anonIdleDays: positive('ANON_IDLE_DAYS', 30),
+    anonClosedVisibleDays: positive('ANON_CLOSED_VISIBLE_DAYS', 7),
+    anonMaxOpen: positive('ANON_MAX_OPEN', 3),
   };
 }

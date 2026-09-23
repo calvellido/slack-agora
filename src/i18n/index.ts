@@ -2,10 +2,11 @@ import type { WebClient } from '@slack/web-api';
 import { en } from './en.ts';
 import { es } from './es.ts';
 
-/** What the texts mention by name: the bot as it appears in Slack, and the command as set up in the app. */
+/** What the texts mention by name: the bot as it appears in Slack, and the commands as set up in the app. */
 export interface Names {
   bot: string;
   publishCommand: string;
+  anonCommand: string;
 }
 
 export type Strings = ReturnType<typeof en>;

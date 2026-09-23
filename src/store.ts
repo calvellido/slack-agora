@@ -2,7 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-// Only Slack IDs and timestamps are stored here. Message contents stay in Slack.
+// Only Slack IDs, timestamps and keyed hashes are stored here. Message contents stay in Slack.
 
 /** A conversation with someone outside the team channel, mirrored as one thread in the team channel. */
 export interface Conversation {
@@ -31,6 +31,39 @@ export interface Delivery {
   deletedAt: number | null;
 }
 
+export type ClosedBy = 'person' | 'team' | 'expired';
+
+/** An anonymous conversation. Nothing here identifies the author once `owner` is cleared. */
+export interface AnonConversation {
+  id: number;
+  /**
+   * Random, private identifier the author's window uses to refer to the conversation. Never shown, and never put in
+   * the team channel, so nothing visible links the author's window to the thread.
+   */
+  handle: string;
+  /** Parent message in the team channel; null while it is being posted. */
+  teamThreadTs: string | null;
+  /** Keyed hash of the author's Slack ID (see anonymity.ts); null once purged. */
+  owner: string | null;
+  createdAt: number;
+  lastActivityAt: number;
+  /** Last time the author's Home tab showed this conversation. */
+  seenAt: number;
+  closedAt: number | null;
+  closedBy: ClosedBy | null;
+}
+
+/** A message of an anonymous conversation, posted in its thread in the team channel. */
+export interface AnonMessage {
+  teamMessageTs: string;
+  conversationId: number;
+  author: 'person' | 'team';
+  /** Team member who sent a team reply. */
+  sentBy: string | null;
+  createdAt: number;
+  deletedAt: number | null;
+}
+
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS conversations (
     id INTEGER PRIMARY KEY,
@@ -53,6 +86,31 @@ const SCHEMA = `
     deleted_at INTEGER
   );
 
+  CREATE TABLE IF NOT EXISTS anon_conversations (
+    id INTEGER PRIMARY KEY,
+    code TEXT NOT NULL UNIQUE,
+    team_thread_ts TEXT UNIQUE,
+    owner TEXT,
+    created_at INTEGER NOT NULL,
+    last_activity_at INTEGER NOT NULL,
+    seen_at INTEGER NOT NULL,
+    closed_at INTEGER,
+    closed_by TEXT CHECK (closed_by IN ('person', 'team', 'expired'))
+  );
+  CREATE INDEX IF NOT EXISTS anon_conversations_owner ON anon_conversations (owner);
+
+  CREATE TABLE IF NOT EXISTS anon_messages (
+    team_message_ts TEXT PRIMARY KEY,
+    conversation_id INTEGER NOT NULL REFERENCES anon_conversations (id),
+    author TEXT NOT NULL CHECK (author IN ('person', 'team')),
+    sent_by TEXT,
+    created_at INTEGER NOT NULL,
+    deleted_at INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS anon_messages_conversation ON anon_messages (conversation_id);
+
+  -- Blocking was removed; drop what an earlier version may have stored.
+  DROP TABLE IF EXISTS anon_blocks;
 `;
 
 const CONVERSATION = `
@@ -64,6 +122,16 @@ const DELIVERY = `
   SELECT team_message_ts AS teamMessageTs, target_channel AS targetChannel, target_ts AS targetTs,
          sent_by AS sentBy, sent_at AS sentAt, deleted_at AS deletedAt
   FROM deliveries`;
+
+const ANON = `
+  SELECT id, code AS handle, team_thread_ts AS teamThreadTs, owner, created_at AS createdAt,
+         last_activity_at AS lastActivityAt, seen_at AS seenAt, closed_at AS closedAt, closed_by AS closedBy
+  FROM anon_conversations`;
+
+const ANON_MESSAGE = `
+  SELECT team_message_ts AS teamMessageTs, conversation_id AS conversationId, author, sent_by AS sentBy,
+         created_at AS createdAt, deleted_at AS deletedAt
+  FROM anon_messages`;
 
 /** node:sqlite returns null-prototype objects; hand out plain ones. */
 function row<T>(value: unknown): T | undefined {
@@ -147,6 +215,154 @@ export class Store {
 
   markDeleted(teamMessageTs: string, now = Date.now()): void {
     this.#db.prepare('UPDATE deliveries SET deleted_at = ? WHERE team_message_ts = ?').run(now, teamMessageTs);
+  }
+
+  // Anonymous conversations
+
+  /** Creates a conversation with an unused handle; its thread in the team channel is set once posted. */
+  reserveAnon(owner: string, makeHandle: () => string, now = Date.now()): AnonConversation {
+    const insert = this.#db.prepare(`INSERT OR IGNORE INTO anon_conversations
+                                     (code, owner, created_at, last_activity_at, seen_at) VALUES (?, ?, ?, ?, ?)`);
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const handle = makeHandle();
+      const { changes, lastInsertRowid } = insert.run(handle, owner, now, now, now);
+      if (changes === 1) {
+        return {
+          id: Number(lastInsertRowid),
+          handle,
+          teamThreadTs: null,
+          owner,
+          createdAt: now,
+          lastActivityAt: now,
+          seenAt: now,
+          closedAt: null,
+          closedBy: null,
+        };
+      }
+    }
+    throw new Error('No unused anonymous handle found');
+  }
+
+  setAnonThread(id: number, teamThreadTs: string): void {
+    this.#db.prepare('UPDATE anon_conversations SET team_thread_ts = ? WHERE id = ?').run(teamThreadTs, id);
+  }
+
+  /** Removes a reservation whose the team channel thread could not be posted. */
+  dropAnon(id: number): void {
+    this.#db.prepare('DELETE FROM anon_conversations WHERE id = ? AND team_thread_ts IS NULL').run(id);
+  }
+
+  anonById(id: number): AnonConversation | undefined {
+    return row<AnonConversation>(this.#db.prepare(`${ANON} WHERE id = ?`).get(id));
+  }
+
+  anonByHandle(handle: string): AnonConversation | undefined {
+    return row<AnonConversation>(this.#db.prepare(`${ANON} WHERE code = ?`).get(handle));
+  }
+
+  anonByTeamThread(teamThreadTs: string): AnonConversation | undefined {
+    return row<AnonConversation>(this.#db.prepare(`${ANON} WHERE team_thread_ts = ?`).get(teamThreadTs));
+  }
+
+  /** The author's conversations that aren't purged yet, most recently active first. */
+  anonForOwner(owner: string, limit: number): AnonConversation[] {
+    return this.#db
+      .prepare(`${ANON} WHERE owner = ? AND team_thread_ts IS NOT NULL
+                ORDER BY last_activity_at DESC, id DESC LIMIT ?`)
+      .all(owner, limit)
+      .map((r) => row<AnonConversation>(r)!);
+  }
+
+  openAnonCount(owner: string): number {
+    const { count } = this.#db
+      .prepare(`SELECT count(*) AS count FROM anon_conversations
+                WHERE owner = ? AND closed_at IS NULL AND team_thread_ts IS NOT NULL`)
+      .get(owner) as { count: number };
+    return count;
+  }
+
+  touchAnon(id: number, now = Date.now()): void {
+    this.#db.prepare('UPDATE anon_conversations SET last_activity_at = ? WHERE id = ?').run(now, id);
+  }
+
+  markAnonSeen(id: number, now = Date.now()): void {
+    this.#db.prepare('UPDATE anon_conversations SET seen_at = ? WHERE id = ?').run(now, id);
+  }
+
+  /** False if it was already closed. */
+  closeAnon(id: number, by: ClosedBy, now = Date.now()): boolean {
+    const { changes } = this.#db
+      .prepare('UPDATE anon_conversations SET closed_at = ?, closed_by = ? WHERE id = ? AND closed_at IS NULL')
+      .run(now, by, id);
+    return changes === 1;
+  }
+
+  /** Forgets who wrote a conversation, and which of its messages in the team channel were theirs. */
+  purgeAnon(id: number): void {
+    this.#db.prepare('UPDATE anon_conversations SET owner = NULL WHERE id = ?').run(id);
+    this.#db.prepare('DELETE FROM anon_messages WHERE conversation_id = ?').run(id);
+  }
+
+  /** Closes open conversations inactive since `before` and returns them. */
+  expireAnon(before: number, now = Date.now()): AnonConversation[] {
+    const stale = this.#db
+      .prepare(`${ANON} WHERE closed_at IS NULL AND team_thread_ts IS NOT NULL AND last_activity_at < ?`)
+      .all(before)
+      .map((r) => row<AnonConversation>(r)!);
+    return stale.filter((c) => this.closeAnon(c.id, 'expired', now));
+  }
+
+  /** Purges conversations closed before `before` and returns them; drops reservations left by a crash before then. */
+  purgeClosedAnon(before: number): AnonConversation[] {
+    const closed = this.#db
+      .prepare(`${ANON} WHERE closed_at < ? AND owner IS NOT NULL`)
+      .all(before)
+      .map((r) => row<AnonConversation>(r)!);
+    for (const { id } of closed) this.purgeAnon(id);
+    this.#db.prepare('DELETE FROM anon_conversations WHERE team_thread_ts IS NULL AND created_at < ?').run(before);
+    return closed.map((c) => ({ ...c, owner: null }));
+  }
+
+  /** Removes every record of a conversation, once its messages are deleted from the team channel. */
+  deleteAnon(id: number): void {
+    this.#db.prepare('DELETE FROM anon_messages WHERE conversation_id = ?').run(id);
+    this.#db.prepare('DELETE FROM anon_conversations WHERE id = ?').run(id);
+  }
+
+  /** False if this the team channel message was already recorded (a reply already sent). */
+  addAnonMessage(
+    teamMessageTs: string,
+    conversationId: number,
+    author: AnonMessage['author'],
+    sentBy: string | null,
+    now = Date.now(),
+  ): boolean {
+    const { changes } = this.#db
+      .prepare(`INSERT OR IGNORE INTO anon_messages (team_message_ts, conversation_id, author, sent_by, created_at)
+                VALUES (?, ?, ?, ?, ?)`)
+      .run(teamMessageTs, conversationId, author, sentBy, now);
+    return changes === 1;
+  }
+
+  anonMessage(teamMessageTs: string): AnonMessage | undefined {
+    return row<AnonMessage>(this.#db.prepare(`${ANON_MESSAGE} WHERE team_message_ts = ?`).get(teamMessageTs));
+  }
+
+  /** Messages not deleted, oldest first. */
+  anonMessages(conversationId: number): AnonMessage[] {
+    return this.#db
+      .prepare(`${ANON_MESSAGE} WHERE conversation_id = ? AND deleted_at IS NULL
+                ORDER BY created_at, team_message_ts`)
+      .all(conversationId)
+      .map((r) => row<AnonMessage>(r)!);
+  }
+
+  /** False if it was already deleted. */
+  markAnonMessageDeleted(teamMessageTs: string, now = Date.now()): boolean {
+    const { changes } = this.#db
+      .prepare('UPDATE anon_messages SET deleted_at = ? WHERE team_message_ts = ? AND deleted_at IS NULL')
+      .run(now, teamMessageTs);
+    return changes === 1;
   }
 
   close(): void {

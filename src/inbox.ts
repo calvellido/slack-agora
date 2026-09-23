@@ -1,5 +1,6 @@
 import type { App } from '@slack/bolt';
 import type { WebClient } from '@slack/web-api';
+import type { Anonymous } from './anonymous.ts';
 import { richTextBlocks } from './richtext.ts';
 import { DAY, context, errorCode, fetchMessage, quoted, serialized, type Deps } from './slack.ts';
 import type { Conversation } from './store.ts';
@@ -13,9 +14,10 @@ interface Incoming {
 
 /**
  * The inbox: DMs to the bot and @bot mentions become threads in the team channel. A thread reply marked with the send
- * emoji goes back as the bot; the delete emoji on any record of something the bot sent deletes it.
+ * emoji goes back as the bot (or, in anonymous threads, to the author's Home tab); the delete emoji on any record of
+ * something the bot sent deletes it.
  */
-export function registerInbox(app: App, { config, store, i18n }: Deps): void {
+export function registerInbox(app: App, { config, store, i18n }: Deps, anonymous: Anonymous): void {
   const team = config.teamChannelId;
   // What the bot posts in the team channel is in the team's language; what only one person sees is in theirs.
   const teamStrings = i18n.team;
@@ -91,10 +93,13 @@ export function registerInbox(app: App, { config, store, i18n }: Deps): void {
 
     if (!message || !threadTs || threadTs === ts) return notify(t.notInThread);
     if (message.bot_id) return notify(t.cannotSendBotMessage);
-    const conversation = store.byTeamThread(threadTs);
-    if (!conversation) return notify(t.notAConversation);
+    const anon = store.anonByTeamThread(threadTs);
+    const conversation = anon ? undefined : store.byTeamThread(threadTs);
+    if (!anon && !conversation) return notify(t.notAConversation);
     const text = message.text ?? '';
     if (!text.trim()) return notify(t.emptyReply);
+    if (anon) return anonymous.sendReply(client, anon, ts, message, user, notify);
+    if (!conversation) return;
     if (!store.claimDelivery(ts, conversation.targetChannel, user)) return notify(t.alreadySent);
 
     let sentTs: string | undefined;
@@ -118,6 +123,7 @@ export function registerInbox(app: App, { config, store, i18n }: Deps): void {
   }
 
   async function deleteDelivery(client: WebClient, ts: string, user: string) {
+    if (await anonymous.deleteReply(client, ts, user)) return;
     const delivery = store.delivery(ts);
     if (!delivery?.targetTs) return;
     const t = await i18n.forUser(user);

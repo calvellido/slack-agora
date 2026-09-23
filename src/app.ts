@@ -1,4 +1,6 @@
 import { App } from '@slack/bolt';
+import { ownerHasher } from './anonymity.ts';
+import { registerAnonymous } from './anonymous.ts';
 import { loadConfig } from './config.ts';
 import { registerHome } from './home.ts';
 import { I18n } from './i18n/index.ts';
@@ -20,15 +22,17 @@ const deps = {
   config,
   store,
   team: new TeamDirectory(app.client, config.teamChannelId),
+  anonOwner: ownerHasher(config.anonSecret),
   bot,
   i18n: new I18n(
     app.client,
-    { bot: bot.name, publishCommand: config.publishCommand },
+    { bot: bot.name, publishCommand: config.publishCommand, anonCommand: config.anonCommand },
     config.teamLanguage,
   ),
 };
 
-registerInbox(app, deps);
+const anonymous = registerAnonymous(app, deps);
+registerInbox(app, deps, anonymous);
 registerPublish(app, deps);
 registerHome(app, deps);
 
@@ -46,8 +50,15 @@ try {
 }
 app.logger.info(`${bot.name} is running`);
 
+const cleanup = () => {
+  anonymous.cleanup(app.client).catch((error) => app.logger.error(`Cleanup failed: ${errorCode(error)}`));
+};
+cleanup();
+const cleanupTimer = setInterval(cleanup, 60 * 60_000);
+
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, async () => {
+    clearInterval(cleanupTimer);
     await app.stop();
     store.close();
     process.exit(0);

@@ -8,6 +8,8 @@ export interface Deps {
   config: Config;
   store: Store;
   team: TeamDirectory;
+  /** Keyed hash identifying the author of anonymous conversations (see anonymity.ts). */
+  anonOwner: (userId: string) => string;
   bot: BotIdentity;
   i18n: I18n;
 }
@@ -94,6 +96,25 @@ export async function fetchMessage(client: WebClient, channel: string, ts: strin
     if (errorCode(error) === 'thread_not_found') return undefined;
     throw error;
   }
+}
+
+/** All the messages of a thread, by ts. */
+export async function threadMessages(client: WebClient, channel: string, ts: string): Promise<Map<string, SlackMessage>> {
+  const byTs = new Map<string, SlackMessage>();
+  let cursor: string | undefined;
+  do {
+    const page = await client.conversations.replies({ channel, ts, cursor, limit: 200 });
+    for (const message of page.messages ?? []) if (message.ts) byTs.set(message.ts, message);
+    cursor = page.response_metadata?.next_cursor || undefined;
+  } while (cursor);
+  return byTs;
+}
+
+/** A date each viewer sees in their own timezone and language. */
+export function slackDate(ts: string): string {
+  const seconds = Math.floor(Number(ts));
+  const fallback = new Date(seconds * 1000).toISOString().slice(0, 16).replace('T', ' ');
+  return `<!date^${seconds}^{date_short_pretty} {time}|${fallback} UTC>`;
 }
 
 export function context(text: string): ContextBlock {

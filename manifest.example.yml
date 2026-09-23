@@ -3,7 +3,7 @@
 
 display_information:
   name: Agora
-  description: Write to the Agora team
+  description: Write to the Agora team, with your name or anonymously
   background_color: "#212121"
 features:
   app_home:
@@ -14,6 +14,10 @@ features:
     display_name: Agora
     always_online: true
   shortcuts:
+    - name: Anonymous message to Agora
+      type: global
+      callback_id: anon_new
+      description: Write to the Agora team without your name
     - name: Post as Agora
       type: message
       callback_id: publish_as_bot
@@ -22,6 +26,9 @@ features:
     - command: /agora-post
       description: Post as Agora in a channel or by direct message
       usage_hint: "[message]"
+      should_escape: false
+    - command: /agora-anon
+      description: Write to the Agora team without your name
       should_escape: false
 oauth_config:
   scopes:

@@ -1,8 +1,12 @@
 import type { App } from '@slack/bolt';
 import type { KnownBlock } from '@slack/types';
-import type { Deps } from './slack.ts';
+import { context, type Deps } from './slack.ts';
 
-/** The bot's Home tab: who is behind it and how to reach them, plus a cheat sheet for team members. */
+/**
+ * The bot's Home tab: who is behind it and how to reach them, plus a cheat sheet for team members. It is the same for
+ * everyone (in their language), so it never gives away that someone writes anonymously: those conversations live in
+ * a modal.
+ */
 export function registerHome(app: App, { config, team, bot, i18n }: Deps): void {
   app.event('app_home_opened', async ({ event, client }) => {
     if (event.tab !== 'home') return;
@@ -15,6 +19,18 @@ export function registerHome(app: App, { config, team, bot, i18n }: Deps): void 
       ...(about ? [{ type: 'section' as const, text: { type: 'mrkdwn' as const, text: about } }] : []),
       { type: 'divider' },
       { type: 'section', text: { type: 'mrkdwn', text: t.homeContact } },
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            action_id: 'anon_inbox',
+            style: 'primary',
+            text: { type: 'plain_text', text: t.homeAnonButton },
+          },
+        ],
+      },
+      context(t.homeAnonHint),
     ];
     if (await team.isMember(event.user)) {
       blocks.push(

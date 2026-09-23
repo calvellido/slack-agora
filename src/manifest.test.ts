@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import { parse } from 'yaml';
 import { loadAppSettings } from './config.ts';
 import {
+  ANON_SHORTCUT,
   BOT_SCOPES,
   PUBLISH_SHORTCUT,
   buildManifest,
@@ -30,19 +31,25 @@ test('the manifest takes names and commands from the settings, in the team langu
   const { manifest } = build({
     APP_NAME: 'Helpdesk',
     PUBLISH_COMMAND: '/hd-post',
+    ANONYMOUS_COMMAND: '/hd-anon',
     TEAM_LANGUAGE: 'es',
   });
   assert.equal(manifest.display_information.name, 'Helpdesk');
   assert.equal(manifest.features.bot_user.display_name, 'Helpdesk');
-  assert.equal(manifest.display_information.description, 'Escribe al equipo de Helpdesk');
-  assert.deepEqual(manifest.features.slash_commands.map((c) => c.command), ['/hd-post']);
-  assert.deepEqual(manifest.features.shortcuts.map((s) => s.name), ['Publicar como Helpdesk']);
+  assert.equal(manifest.display_information.description, 'Escribe al equipo de Helpdesk, con tu nombre o de forma anónima');
+  assert.deepEqual(manifest.features.slash_commands.map((c) => c.command), ['/hd-post', '/hd-anon']);
+  assert.deepEqual(manifest.features.shortcuts.map((s) => s.name), ['Mensaje anónimo a Helpdesk', 'Publicar como Helpdesk']);
 });
 
-test('the shortcut uses the callback ID its handler listens for', () => {
+test('the shortcuts use the callback IDs the handlers listen for', () => {
   const { manifest } = build({});
-  assert.deepEqual(manifest.features.shortcuts.map((s) => s.callback_id), [PUBLISH_SHORTCUT]);
-  assert.match(readFileSync('src/publish.ts', 'utf8'), /callback_id: PUBLISH_SHORTCUT/);
+  assert.deepEqual(manifest.features.shortcuts.map((s) => s.callback_id), [ANON_SHORTCUT, PUBLISH_SHORTCUT]);
+  for (const [file, constant] of [
+    ['src/anonymous.ts', 'ANON_SHORTCUT'],
+    ['src/publish.ts', 'PUBLISH_SHORTCUT'],
+  ] as const) {
+    assert.match(readFileSync(file, 'utf8'), new RegExp(`callback_id: ${constant}`));
+  }
 });
 
 test('extra scopes are added to the ones the code needs', () => {
@@ -68,7 +75,7 @@ test('the about text becomes the long description, without formatting, when Slac
 test('settings Slack would reject fail early', () => {
   assert.throws(() => loadAppSettings({ APP_NAME: 'x'.repeat(36) }), /APP_NAME/);
   assert.throws(() => loadAppSettings({ PUBLISH_COMMAND: 'publish' }), /PUBLISH_COMMAND/);
-  assert.throws(() => loadAppSettings({ PUBLISH_COMMAND: `/${'a'.repeat(32)}` }), /PUBLISH_COMMAND/);
+  assert.throws(() => loadAppSettings({ ANONYMOUS_COMMAND: `/${'a'.repeat(32)}` }), /ANONYMOUS_COMMAND/);
   assert.throws(() => loadAppSettings({ APP_COLOR: 'black' }), /APP_COLOR/);
 });
 

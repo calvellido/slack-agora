@@ -5,7 +5,7 @@ import { en } from './en.ts';
 import { es } from './es.ts';
 import { I18n, languageOf } from './index.ts';
 
-const names = { bot: 'Helpdesk', publishCommand: '/post' };
+const names = { bot: 'Helpdesk', publishCommand: '/post', anonCommand: '/anon' };
 
 test('a Slack locale maps to its language, and anything unsupported to English', () => {
   assert.equal(languageOf('es-ES'), 'es');
@@ -22,6 +22,7 @@ test('the texts use the names they are given', () => {
       .join('\n');
     assert.match(all, /Helpdesk/);
     assert.match(all, /\/post/);
+    assert.match(all, /\/anon/);
   }
 });
 
@@ -43,10 +44,10 @@ test("people get their own Slack language, cached, and English if it can't be re
   } as unknown as WebClient;
   const i18n = new I18n(client, names, 'es');
 
-  assert.equal(i18n.team.publishSubmit, 'Publicar');
-  assert.equal((await i18n.forUser('U1')).publishSubmit, 'Publicar');
-  assert.equal((await i18n.forUser('U1')).publishSubmit, 'Publicar');
-  assert.equal((await i18n.forUser('U2')).publishSubmit, 'Post');
-  assert.equal((await i18n.forUser('U3')).publishSubmit, 'Post');
+  assert.equal(i18n.team.convSend, 'Enviar');
+  assert.equal((await i18n.forUser('U1')).convSend, 'Enviar');
+  assert.equal((await i18n.forUser('U1')).convSend, 'Enviar');
+  assert.equal((await i18n.forUser('U2')).convSend, 'Send');
+  assert.equal((await i18n.forUser('U3')).convSend, 'Send');
   assert.deepEqual(calls, ['U1', 'U2', 'U3']);
 });

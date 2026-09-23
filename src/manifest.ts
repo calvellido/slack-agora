@@ -5,7 +5,8 @@ import { stringsIn } from './i18n/index.ts';
 // The Slack app's manifest, built from AppSettings (.env) and from what the code needs, so neither has to be kept
 // in step with a hand-written manifest. `pnpm manifest` writes it to manifest.yml.
 
-/** Callback ID of the shortcut, which its handler listens for. */
+/** Callback IDs of the shortcuts, which the handlers listen for. */
+export const ANON_SHORTCUT = 'anon_new';
 export const PUBLISH_SHORTCUT = 'publish_as_bot';
 
 /** The bot scopes the code uses. */
@@ -30,8 +31,8 @@ const BOT_EVENTS = ['app_home_opened', 'app_mention', 'message.im', 'reaction_ad
 const LONG_DESCRIPTION_MIN = 174;
 
 export function buildManifest(settings: AppSettings): { manifest: object; warnings: string[] } {
-  const { appName, teamLanguage, publishCommand } = settings;
-  const t = stringsIn(teamLanguage, { bot: appName, publishCommand });
+  const { appName, teamLanguage, publishCommand, anonCommand } = settings;
+  const t = stringsIn(teamLanguage, { bot: appName, publishCommand, anonCommand });
   const warnings: string[] = [];
 
   // The Home tab's text doubles as the app's long description, without Slack formatting.
@@ -56,6 +57,7 @@ export function buildManifest(settings: AppSettings): { manifest: object; warnin
       app_home: { home_tab_enabled: true, messages_tab_enabled: true, messages_tab_read_only_enabled: false },
       bot_user: { display_name: appName, always_online: true },
       shortcuts: [
+        { name: t.anonShortcutName, type: 'global', callback_id: ANON_SHORTCUT, description: t.anonShortcutDescription },
         {
           name: t.publishShortcutName,
           type: 'message',
@@ -70,6 +72,7 @@ export function buildManifest(settings: AppSettings): { manifest: object; warnin
           usage_hint: t.publishCommandHint,
           should_escape: false,
         },
+        { command: anonCommand, description: t.anonCommandDescription, should_escape: false },
       ],
     },
     oauth_config: { scopes: { bot: [...new Set([...BOT_SCOPES, ...settings.extraScopes])].sort() } },
