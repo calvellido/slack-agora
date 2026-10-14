@@ -21,6 +21,7 @@ import {
   context,
   errorCode,
   fetchMessage,
+  postInThread,
   serialized,
   threadMessages,
   type Deps,
@@ -221,27 +222,33 @@ export function registerAnonymous(app: App, deps: Deps): Anonymous {
     return { sent: true };
   }
 
-  /** Posts the author's message in their thread. */
+  /**
+   * Posts the author's message in their thread. 'gone' if the team deleted the thread by hand, which ends the
+   * conversation.
+   */
   async function writeAgain(
     client: WebClient,
     conversation: AnonConversation,
     message: RichTextBlock,
-  ): Promise<'sent' | 'failed'> {
+  ): Promise<'sent' | 'failed' | 'gone'> {
     const header = teamStrings.anonFollowUp;
     let ts: string | undefined;
     try {
-      const posted = await client.chat.postMessage({
+      ts = await postInThread(client, {
         channel: teamChannel,
         thread_ts: conversation.teamThreadTs!,
         text: `${header} ${plainText(message)}`,
         blocks: [context(header), message],
         unfurl_links: false,
       });
-      ts = posted.ts;
+      if (!ts) {
+        store.closeAnon(conversation.id, 'team');
+        return 'gone';
+      }
     } catch (error) {
       app.logger.error(`Could not post an anonymous message: ${errorCode(error)}`);
+      return 'failed';
     }
-    if (!ts) return 'failed';
     store.addAnonMessage(ts, conversation.id, 'person', null);
     store.touchAnon(conversation.id);
     return 'sent';
@@ -345,7 +352,7 @@ export function registerAnonymous(app: App, deps: Deps): Anonymous {
 
   async function note(client: WebClient, conversation: AnonConversation, text: string) {
     if (conversation.teamThreadTs) {
-      await client.chat.postMessage({ channel: teamChannel, thread_ts: conversation.teamThreadTs, text });
+      await postInThread(client, { channel: teamChannel, thread_ts: conversation.teamThreadTs, text });
     }
   }
 
@@ -360,9 +367,7 @@ export function registerAnonymous(app: App, deps: Deps): Anonymous {
   async function deleteThread(client: WebClient, conversation: AnonConversation, leaveNote?: string) {
     const ts = conversation.teamThreadTs;
     if (!ts) return;
-    const kept = leaveNote
-      ? (await client.chat.postMessage({ channel: teamChannel, thread_ts: ts, text: leaveNote })).ts
-      : undefined;
+    const kept = leaveNote ? await postInThread(client, { channel: teamChannel, thread_ts: ts, text: leaveNote }) : undefined;
     const ours = [...(await threadMessages(client, teamChannel, ts)).values()]
       .filter((m) => m.ts && m.ts !== kept && m.bot_id === bot.botId)
       // The parent goes last: deleted while it still has replies, Slack leaves a "deleted message" placeholder.
@@ -407,13 +412,16 @@ export function registerAnonymous(app: App, deps: Deps): Anonymous {
 
     async cleanup(client) {
       const now = Date.now();
-      for (const conversation of store.expireAnon(now - config.anonIdleDays * DAY, now)) {
+      // Conversations of another team channel (from before TEAM_CHANNEL_ID changed) expire and are forgotten too,
+      // but their threads are left alone: they aren't in this channel.
+      const here = (c: AnonConversation) => c.teamChannel === teamChannel;
+      for (const conversation of store.expireAnon(now - config.anonIdleDays * DAY, now).filter(here)) {
         const text = teamStrings.anonExpired(config.anonIdleDays);
         await setTeamStatus(client, conversation, { state: 'ended', note: text });
         await note(client, conversation, text);
       }
       // The authors can't see these any more, so the team may now delete them.
-      for (const conversation of store.purgeClosedAnon(now - config.anonClosedVisibleDays * DAY)) {
+      for (const conversation of store.purgeClosedAnon(now - config.anonClosedVisibleDays * DAY).filter(here)) {
         const ended =
           conversation.closedBy === 'expired' ? teamStrings.anonExpired(config.anonIdleDays) : teamStrings.anonEndedByTeam;
         await setTeamStatus(client, conversation, { state: 'forgotten', note: ended });

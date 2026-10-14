@@ -4,7 +4,7 @@ import type { WebClient } from '@slack/web-api';
 import { isBlank, plainText, richTextBlocks, richTextFromPlain } from './richtext.ts';
 import type { Strings } from './i18n/index.ts';
 import { PUBLISH_SHORTCUT } from './manifest.ts';
-import { DAY, context, errorCode, modalTitle, quoted, serialized, type Deps } from './slack.ts';
+import { DAY, context, errorCode, modalTitle, postInThread, quoted, serialized, type Deps } from './slack.ts';
 
 /** The publish command and message shortcut: post to a channel or DM people as the bot. */
 export function registerPublish(app: App, { config, store, team, i18n }: Deps): void {
@@ -168,15 +168,19 @@ export function registerPublish(app: App, { config, store, team, i18n }: Deps): 
 
       const existing = store.latestDm(dmChannel, Date.now() - config.inboxIdleDays * DAY);
       const header = teamStrings.dmStarted(poster, user);
-      const blocks = quoted(header, [message]);
-      if (!existing) blocks.push(context(teamStrings.replyHint(config.sendEmoji)));
-      const post = { channel: teamChannel, text: header, blocks, unfurl_links: false };
-      // In the person's ongoing conversation if there is one, else in a new one.
-      const record = await client.chat.postMessage(existing ? { ...post, thread_ts: existing.teamThreadTs } : post);
-      if (!record.ts) return;
-      if (existing) store.touch(existing.id);
-      else store.createConversation({ kind: 'dm', userId: user, targetChannel: dmChannel, targetThreadTs: null, teamThreadTs: record.ts });
-      store.recordDelivery(record.ts, dmChannel, sentTs, poster);
+      const post = { channel: teamChannel, text: header, blocks: quoted(header, [message]), unfurl_links: false };
+      // In the person's ongoing conversation if there is one (and its thread still exists), else in a new one.
+      let recordTs = existing && (await postInThread(client, { ...post, thread_ts: existing.teamThreadTs }));
+      if (existing && recordTs) {
+        store.touch(existing.id);
+      } else {
+        recordTs = (
+          await client.chat.postMessage({ ...post, blocks: [...post.blocks, context(teamStrings.replyHint(config.sendEmoji))] })
+        ).ts;
+        if (!recordTs) return;
+        store.createConversation({ kind: 'dm', userId: user, targetChannel: dmChannel, targetThreadTs: null, teamThreadTs: recordTs });
+      }
+      store.recordDelivery(recordTs, dmChannel, sentTs, poster);
     });
   }
 }

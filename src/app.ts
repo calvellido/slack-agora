@@ -10,7 +10,7 @@ import { TeamDirectory, botIdentity, errorCode } from './slack.ts';
 import { Store } from './store.ts';
 
 const config = loadConfig();
-const store = new Store(config.dbPath);
+const store = new Store(config.dbPath, config.teamChannelId);
 const app = new App({
   token: config.botToken,
   appToken: config.appToken,

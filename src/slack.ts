@@ -98,16 +98,42 @@ export async function fetchMessage(client: WebClient, channel: string, ts: strin
   }
 }
 
-/** All the messages of a thread, by ts. */
+/** All the messages of a thread, by ts. Empty if the thread is gone. */
 export async function threadMessages(client: WebClient, channel: string, ts: string): Promise<Map<string, SlackMessage>> {
   const byTs = new Map<string, SlackMessage>();
   let cursor: string | undefined;
   do {
-    const page = await client.conversations.replies({ channel, ts, cursor, limit: 200 });
+    let page;
+    try {
+      page = await client.conversations.replies({ channel, ts, cursor, limit: 200 });
+    } catch (error) {
+      if (errorCode(error) === 'thread_not_found') return byTs;
+      throw error;
+    }
     for (const message of page.messages ?? []) if (message.ts) byTs.set(message.ts, message);
     cursor = page.response_metadata?.next_cursor || undefined;
   } while (cursor);
   return byTs;
+}
+
+interface ThreadPost {
+  channel: string;
+  thread_ts: string;
+  text: string;
+  blocks?: KnownBlock[];
+  unfurl_links?: boolean;
+}
+
+/**
+ * Posts in a thread and returns the ts. When the thread no longer exists (its first message was deleted), Slack
+ * posts a standalone message instead: that one is taken back and undefined returned, so the caller can start over.
+ */
+export async function postInThread(client: WebClient, message: ThreadPost): Promise<string | undefined> {
+  const posted = await client.chat.postMessage(message);
+  if (!posted.ts || posted.message?.thread_ts === message.thread_ts) return posted.ts;
+  if (await fetchMessage(client, message.channel, message.thread_ts)) return posted.ts;
+  await client.chat.delete({ channel: message.channel, ts: posted.ts }).catch(() => {});
+  return undefined;
 }
 
 /** A date each viewer sees in their own timezone and language. */

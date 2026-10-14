@@ -77,6 +77,11 @@ everyone.
 `pnpm manifest`, and paste `manifest.yml` into **App Manifest** (YAML) in the app settings. Don't edit the app's
 settings in Slack by hand: the next manifest would undo it. `manifest.yml` is generated, so it isn't committed.
 
+**Changing `TEAM_CHANNEL_ID`** (for example from a test channel to the real one) is safe with the same database.
+Each conversation belongs to the channel it started in, so after the change people's next messages start new
+threads in the new channel. Anonymous conversations from the old channel drop out of people's window, and the bot
+forgets their authors on the usual schedule.
+
 Socket Mode only opens an outgoing connection to Slack, so it runs on any machine without a public URL. It must
 stay running for the bot to work, and `data/` holds the database: keep it between restarts.
 

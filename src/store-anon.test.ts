@@ -7,7 +7,7 @@ function handles(...values: string[]) {
 }
 
 test('reserving retries taken handles and a failed post can be dropped', () => {
-  const store = new Store(':memory:');
+  const store = new Store(':memory:', 'C1');
   const first = store.reserveAnon('owner-a', handles('AAAA'));
   const second = store.reserveAnon('owner-b', handles('AAAA', 'AAAA', 'BBBB'));
   assert.equal(first.handle, 'AAAA');
@@ -21,7 +21,7 @@ test('reserving retries taken handles and a failed post can be dropped', () => {
 });
 
 test('an owner only sees their posted conversations, and only open ones count', () => {
-  const store = new Store(':memory:');
+  const store = new Store(':memory:', 'C1');
   const posted = store.reserveAnon('owner-a', handles('AAAA'), 1_000);
   store.setAnonThread(posted.id, '1.0');
   store.reserveAnon('owner-a', handles('BBBB'), 2_000);
@@ -38,7 +38,7 @@ test('an owner only sees their posted conversations, and only open ones count', 
 });
 
 test('purging forgets the owner and which messages were theirs', () => {
-  const store = new Store(':memory:');
+  const store = new Store(':memory:', 'C1');
   const c = store.reserveAnon('owner-a', handles('AAAA'));
   store.setAnonThread(c.id, '1.0');
   store.addAnonMessage('1.0', c.id, 'person', null, 1_000);
@@ -60,7 +60,7 @@ test('purging forgets the owner and which messages were theirs', () => {
 });
 
 test('deleting removes every record of the conversation', () => {
-  const store = new Store(':memory:');
+  const store = new Store(':memory:', 'C1');
   const c = store.reserveAnon('owner-a', handles('AAAA'));
   store.setAnonThread(c.id, '1.0');
   store.addAnonMessage('1.0', c.id, 'person', null);
@@ -71,7 +71,7 @@ test('deleting removes every record of the conversation', () => {
 });
 
 test('idle conversations expire, and closed ones are purged after the grace period', () => {
-  const store = new Store(':memory:');
+  const store = new Store(':memory:', 'C1');
   const idle = store.reserveAnon('owner-a', handles('AAAA'), 1_000);
   store.setAnonThread(idle.id, '1.0');
   const active = store.reserveAnon('owner-a', handles('BBBB'), 1_000);

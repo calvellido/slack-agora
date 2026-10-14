@@ -3,6 +3,9 @@ import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 // Only Slack IDs, timestamps and keyed hashes are stored here. Message contents stay in Slack.
+//
+// Conversations remember the team channel their thread is in. Only those of the current TEAM_CHANNEL_ID are found,
+// so pointing the bot at another channel starts fresh threads there instead of replying to threads it can't see.
 
 /** A conversation with someone outside the team channel, mirrored as one thread in the team channel. */
 export interface Conversation {
@@ -16,6 +19,8 @@ export interface Conversation {
   targetThreadTs: string | null;
   /** Parent message of the conversation thread in the team channel. */
   teamThreadTs: string;
+  /** The team channel that thread is in; null for rows from before channels were recorded. */
+  teamChannel: string | null;
   createdAt: number;
   lastActivityAt: number;
 }
@@ -43,6 +48,8 @@ export interface AnonConversation {
   handle: string;
   /** Parent message in the team channel; null while it is being posted. */
   teamThreadTs: string | null;
+  /** The team channel that thread is in; null for rows from before channels were recorded. */
+  teamChannel: string | null;
   /** Keyed hash of the author's Slack ID (see anonymity.ts); null once purged. */
   owner: string | null;
   createdAt: number;
@@ -72,6 +79,7 @@ const SCHEMA = `
     target_channel TEXT NOT NULL,
     target_thread_ts TEXT,
     team_thread_ts TEXT NOT NULL UNIQUE,
+    team_channel TEXT,
     created_at INTEGER NOT NULL,
     last_activity_at INTEGER NOT NULL
   );
@@ -90,6 +98,7 @@ const SCHEMA = `
     id INTEGER PRIMARY KEY,
     code TEXT NOT NULL UNIQUE,
     team_thread_ts TEXT UNIQUE,
+    team_channel TEXT,
     owner TEXT,
     created_at INTEGER NOT NULL,
     last_activity_at INTEGER NOT NULL,
@@ -115,7 +124,8 @@ const SCHEMA = `
 
 const CONVERSATION = `
   SELECT id, kind, user_id AS userId, target_channel AS targetChannel, target_thread_ts AS targetThreadTs,
-         team_thread_ts AS teamThreadTs, created_at AS createdAt, last_activity_at AS lastActivityAt
+         team_thread_ts AS teamThreadTs, team_channel AS teamChannel, created_at AS createdAt,
+         last_activity_at AS lastActivityAt
   FROM conversations`;
 
 const DELIVERY = `
@@ -124,7 +134,7 @@ const DELIVERY = `
   FROM deliveries`;
 
 const ANON = `
-  SELECT id, code AS handle, team_thread_ts AS teamThreadTs, owner, created_at AS createdAt,
+  SELECT id, code AS handle, team_thread_ts AS teamThreadTs, team_channel AS teamChannel, owner, created_at AS createdAt,
          last_activity_at AS lastActivityAt, seen_at AS seenAt, closed_at AS closedAt, closed_by AS closedBy
   FROM anon_conversations`;
 
@@ -140,33 +150,45 @@ function row<T>(value: unknown): T | undefined {
 
 export class Store {
   #db: DatabaseSync;
+  #channel: string;
 
-  constructor(path: string) {
+  /** `teamChannel` is the current TEAM_CHANNEL_ID. */
+  constructor(path: string, teamChannel: string) {
     if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
     this.#db = new DatabaseSync(path);
+    this.#channel = teamChannel;
     this.#db.exec('PRAGMA journal_mode = WAL;');
     this.#db.exec(SCHEMA);
+    for (const table of ['conversations', 'anon_conversations']) {
+      const columns = this.#db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+      if (!columns.some((c) => c.name === 'team_channel')) {
+        this.#db.exec(`ALTER TABLE ${table} ADD COLUMN team_channel TEXT`);
+      }
+    }
   }
 
   /** The most recent DM conversation in this DM channel that was active since `since`. */
   latestDm(dmChannel: string, since: number): Conversation | undefined {
     const found = this.#db
-      .prepare(`${CONVERSATION} WHERE kind = 'dm' AND target_channel = ? AND last_activity_at >= ?
+      .prepare(`${CONVERSATION} WHERE kind = 'dm' AND target_channel = ? AND last_activity_at >= ? AND team_channel = ?
                 ORDER BY last_activity_at DESC, id DESC LIMIT 1`)
-      .get(dmChannel, since);
+      .get(dmChannel, since, this.#channel);
     return row<Conversation>(found);
   }
 
   mentionThread(channel: string, threadTs: string): Conversation | undefined {
     const found = this.#db
       .prepare(`${CONVERSATION} WHERE kind = 'mention' AND target_channel = ? AND target_thread_ts = ?
-                ORDER BY id DESC LIMIT 1`)
-      .get(channel, threadTs);
+                AND team_channel = ? ORDER BY id DESC LIMIT 1`)
+      .get(channel, threadTs, this.#channel);
     return row<Conversation>(found);
   }
 
   byTeamThread(teamThreadTs: string): Conversation | undefined {
-    return row<Conversation>(this.#db.prepare(`${CONVERSATION} WHERE team_thread_ts = ?`).get(teamThreadTs));
+    const found = this.#db
+      .prepare(`${CONVERSATION} WHERE team_thread_ts = ? AND team_channel = ?`)
+      .get(teamThreadTs, this.#channel);
+    return row<Conversation>(found);
   }
 
   createConversation(
@@ -174,11 +196,11 @@ export class Store {
     now = Date.now(),
   ): Conversation {
     const { lastInsertRowid } = this.#db
-      .prepare(`INSERT INTO conversations
-                (kind, user_id, target_channel, target_thread_ts, team_thread_ts, created_at, last_activity_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)`)
-      .run(c.kind, c.userId, c.targetChannel, c.targetThreadTs, c.teamThreadTs, now, now);
-    return { ...c, id: Number(lastInsertRowid), createdAt: now, lastActivityAt: now };
+      .prepare(`INSERT INTO conversations (kind, user_id, target_channel, target_thread_ts, team_thread_ts,
+                                           team_channel, created_at, last_activity_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(c.kind, c.userId, c.targetChannel, c.targetThreadTs, c.teamThreadTs, this.#channel, now, now);
+    return { ...c, id: Number(lastInsertRowid), teamChannel: this.#channel, createdAt: now, lastActivityAt: now };
   }
 
   touch(conversationId: number, now = Date.now()): void {
@@ -222,15 +244,17 @@ export class Store {
   /** Creates a conversation with an unused handle; its thread in the team channel is set once posted. */
   reserveAnon(owner: string, makeHandle: () => string, now = Date.now()): AnonConversation {
     const insert = this.#db.prepare(`INSERT OR IGNORE INTO anon_conversations
-                                     (code, owner, created_at, last_activity_at, seen_at) VALUES (?, ?, ?, ?, ?)`);
+                                     (code, team_channel, owner, created_at, last_activity_at, seen_at)
+                                     VALUES (?, ?, ?, ?, ?, ?)`);
     for (let attempt = 0; attempt < 50; attempt++) {
       const handle = makeHandle();
-      const { changes, lastInsertRowid } = insert.run(handle, owner, now, now, now);
+      const { changes, lastInsertRowid } = insert.run(handle, this.#channel, owner, now, now, now);
       if (changes === 1) {
         return {
           id: Number(lastInsertRowid),
           handle,
           teamThreadTs: null,
+          teamChannel: this.#channel,
           owner,
           createdAt: now,
           lastActivityAt: now,
@@ -257,27 +281,31 @@ export class Store {
   }
 
   anonByHandle(handle: string): AnonConversation | undefined {
-    return row<AnonConversation>(this.#db.prepare(`${ANON} WHERE code = ?`).get(handle));
+    const found = this.#db.prepare(`${ANON} WHERE code = ? AND team_channel = ?`).get(handle, this.#channel);
+    return row<AnonConversation>(found);
   }
 
   anonByTeamThread(teamThreadTs: string): AnonConversation | undefined {
-    return row<AnonConversation>(this.#db.prepare(`${ANON} WHERE team_thread_ts = ?`).get(teamThreadTs));
+    const found = this.#db
+      .prepare(`${ANON} WHERE team_thread_ts = ? AND team_channel = ?`)
+      .get(teamThreadTs, this.#channel);
+    return row<AnonConversation>(found);
   }
 
   /** The author's conversations that aren't purged yet, most recently active first. */
   anonForOwner(owner: string, limit: number): AnonConversation[] {
     return this.#db
-      .prepare(`${ANON} WHERE owner = ? AND team_thread_ts IS NOT NULL
+      .prepare(`${ANON} WHERE owner = ? AND team_thread_ts IS NOT NULL AND team_channel = ?
                 ORDER BY last_activity_at DESC, id DESC LIMIT ?`)
-      .all(owner, limit)
+      .all(owner, this.#channel, limit)
       .map((r) => row<AnonConversation>(r)!);
   }
 
   openAnonCount(owner: string): number {
     const { count } = this.#db
       .prepare(`SELECT count(*) AS count FROM anon_conversations
-                WHERE owner = ? AND closed_at IS NULL AND team_thread_ts IS NOT NULL`)
-      .get(owner) as { count: number };
+                WHERE owner = ? AND closed_at IS NULL AND team_thread_ts IS NOT NULL AND team_channel = ?`)
+      .get(owner, this.#channel) as { count: number };
     return count;
   }
 
@@ -303,7 +331,7 @@ export class Store {
     this.#db.prepare('DELETE FROM anon_messages WHERE conversation_id = ?').run(id);
   }
 
-  /** Closes open conversations inactive since `before` and returns them. */
+  /** Closes open conversations inactive since `before`, in any team channel, and returns them. */
   expireAnon(before: number, now = Date.now()): AnonConversation[] {
     const stale = this.#db
       .prepare(`${ANON} WHERE closed_at IS NULL AND team_thread_ts IS NOT NULL AND last_activity_at < ?`)
@@ -312,7 +340,8 @@ export class Store {
     return stale.filter((c) => this.closeAnon(c.id, 'expired', now));
   }
 
-  /** Purges conversations closed before `before` and returns them; drops reservations left by a crash before then. */
+  /** Purges conversations closed before `before`, in any team channel, and returns them; drops reservations left by
+   * a crash before then. */
   purgeClosedAnon(before: number): AnonConversation[] {
     const closed = this.#db
       .prepare(`${ANON} WHERE closed_at < ? AND owner IS NOT NULL`)

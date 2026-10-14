@@ -2,7 +2,7 @@ import type { App } from '@slack/bolt';
 import type { WebClient } from '@slack/web-api';
 import type { Anonymous } from './anonymous.ts';
 import { richTextBlocks } from './richtext.ts';
-import { DAY, context, errorCode, fetchMessage, quoted, serialized, type Deps } from './slack.ts';
+import { DAY, context, errorCode, fetchMessage, postInThread, quoted, serialized, type Deps } from './slack.ts';
 import type { Conversation } from './store.ts';
 
 interface Incoming {
@@ -22,18 +22,35 @@ export function registerInbox(app: App, { config, store, i18n }: Deps, anonymous
   // What the bot posts in the team channel is in the team's language; what only one person sees is in theirs.
   const teamStrings = i18n.team;
 
-  /** Posts the message in its conversation thread, or starts a thread and returns its ts. */
-  async function relay(client: WebClient, existing: Conversation | undefined, header: string, message: Incoming) {
-    const title = existing ? teamStrings.followUp(message.user) : header;
-    const blocks = quoted(title, richTextBlocks(message.blocks), message.text);
-    if (message.files > 0) blocks.push(context(teamStrings.filesNotRelayed(message.files)));
-    const text = `${title} ${message.text}`;
+  /**
+   * Posts the message in its conversation thread. Without one (or if its thread was deleted), starts a thread with
+   * `header` and returns its ts.
+   */
+  async function relay(
+    client: WebClient,
+    existing: Conversation | undefined,
+    header: () => Promise<string> | string,
+    message: Incoming,
+  ): Promise<string | undefined> {
+    const body = (title: string) => {
+      const blocks = quoted(title, richTextBlocks(message.blocks), message.text);
+      if (message.files > 0) blocks.push(context(teamStrings.filesNotRelayed(message.files)));
+      return { text: `${title} ${message.text}`, blocks };
+    };
 
     if (existing) {
-      await client.chat.postMessage({ channel: team, thread_ts: existing.teamThreadTs, text, blocks, unfurl_links: false });
-      store.touch(existing.id);
-      return undefined;
+      const posted = await postInThread(client, {
+        channel: team,
+        thread_ts: existing.teamThreadTs,
+        ...body(teamStrings.followUp(message.user)),
+        unfurl_links: false,
+      });
+      if (posted) {
+        store.touch(existing.id);
+        return undefined;
+      }
     }
+    const { text, blocks } = body(await header());
     blocks.push(context(teamStrings.replyHint(config.sendEmoji)));
     const parent = await client.chat.postMessage({ channel: team, text, blocks, unfurl_links: false });
     return parent.ts;
@@ -48,7 +65,7 @@ export function registerInbox(app: App, { config, store, i18n }: Deps, anonymous
 
     await serialized(channel, async () => {
       const existing = store.latestDm(channel, Date.now() - config.inboxIdleDays * DAY);
-      const teamThreadTs = await relay(client, existing, teamStrings.dmHeader(user), message);
+      const teamThreadTs = await relay(client, existing, () => teamStrings.dmHeader(user), message);
       if (teamThreadTs) {
         store.createConversation({ kind: 'dm', userId: user, targetChannel: channel, targetThreadTs: null, teamThreadTs });
         await client.chat.postMessage({ channel, text: (await i18n.forUser(user)).dmAck });
@@ -66,9 +83,8 @@ export function registerInbox(app: App, { config, store, i18n }: Deps, anonymous
 
     await serialized(`${channel}:${threadTs}`, async () => {
       const existing = store.mentionThread(channel, threadTs);
-      const header = existing
-        ? ''
-        : teamStrings.mentionHeader(user, channel, (await client.chat.getPermalink({ channel, message_ts: ts })).permalink ?? '');
+      const header = async () =>
+        teamStrings.mentionHeader(user, channel, (await client.chat.getPermalink({ channel, message_ts: ts })).permalink ?? '');
       const teamThreadTs = await relay(client, existing, header, message);
       if (teamThreadTs) {
         store.createConversation({ kind: 'mention', userId: user, targetChannel: channel, targetThreadTs: threadTs, teamThreadTs });

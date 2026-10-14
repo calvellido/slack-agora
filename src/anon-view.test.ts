@@ -21,6 +21,7 @@ const conversation = (handle: string, fields?: Partial<AnonConversation>): AnonC
   id: 1,
   handle,
   teamThreadTs: '1.0',
+  teamChannel: 'C1',
   owner: 'owner',
   createdAt: 0,
   lastActivityAt: 0,
