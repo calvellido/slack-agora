@@ -170,6 +170,13 @@ Use a test workspace or a test team channel for `.env`, and run a single copy pe
 
 CI (`.github/workflows/ci.yml`) runs `pnpm check` on every push to main and every pull request.
 
-To release a version, run `pnpm check`, set the version in `package.json`, and add its section at the top of `CHANGELOG.md`, saying what deployers have to do, such as pasting a new manifest. Commit, then tag and push the tag: `git tag v1.0.1 && git push origin v1.0.1`. The release workflow (`.github/workflows/release.yml`) runs the tests, checks that the tag matches `package.json`, publishes the Docker image for linux/amd64 and linux/arm64, and creates the GitHub release with the changelog section as its notes.
+To release a version, add its section at the top of `CHANGELOG.md`, saying what deployers have to do, such as pasting a new manifest, and commit it. Then:
+
+```sh
+pnpm version patch        # or minor, or major
+git push --follow-tags
+```
+
+`pnpm version` runs `pnpm check`, sets the new version in `package.json`, checks that the changelog has its section, and commits and tags it (`chore: release v1.0.1`, `v1.0.1`). If the changelog lacks the section it stops before committing: add it, undo the version change with `git checkout package.json`, and run it again. Pushing the tag starts the release workflow (`.github/workflows/release.yml`), which runs the tests, checks that the tag matches `package.json`, publishes the Docker image for linux/amd64 and linux/arm64, and creates the GitHub release with the changelog section as its notes.
 
 The `Dockerfile` builds the image from `src/` and `locales/` only (see `.dockerignore`), and the bot in it reads `.env` itself, as `pnpm start` does. GitHub creates the image's package as private: after the first release, make it public in the package's settings, so anyone can pull it.

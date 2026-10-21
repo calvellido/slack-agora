@@ -21,7 +21,10 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test 'src/**/*.test.ts'",
     "check": "pnpm typecheck && pnpm test",
-    "generate": "pnpm i18n && pnpm manifest --example"
+    "generate": "pnpm i18n && pnpm manifest --example",
+    "preversion": "pnpm check",
+    "version": "grep -q \"^## \\[$npm_package_version\\]\" CHANGELOG.md || { echo \"CHANGELOG.md has no section for $npm_package_version: add it and commit it, undo the version change with git checkout package.json, and try again\" >&2; exit 1; }",
+    "postversion": "echo \"Tagged v$npm_package_version. Release it with: git push --follow-tags\""
   },
   "dependencies": {
     "@formatjs/icu-messageformat-parser": "3.5.21",
