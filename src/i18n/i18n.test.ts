@@ -1,6 +1,6 @@
+import type { WebClient } from '@slack/web-api';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import type { WebClient } from '@slack/web-api';
 import { en } from './en.ts';
 import { es } from './es.ts';
 import { I18n, languageOf } from './index.ts';

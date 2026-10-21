@@ -1,6 +1,10 @@
+import type { KnownBlock } from '@slack/types';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import type { KnownBlock } from '@slack/types';
+import { es } from '#src/i18n/es.ts';
+import { DAY } from '#src/lib/time.ts';
+import { richTextFromPlain } from '#src/slack/richtext.ts';
+import type { AnonConversation } from '#src/storage/index.ts';
 import {
   CONVERSATION_MAX_MESSAGES,
   INBOX_MAX_CONVERSATIONS,
@@ -11,11 +15,7 @@ import {
   teamAnonStatus,
   withTeamAnonStatus,
   type ConversationView,
-} from './anon-view.ts';
-import { es } from './i18n/es.ts';
-import { richTextFromPlain } from './richtext.ts';
-import { DAY } from './slack.ts';
-import type { AnonConversation } from './store.ts';
+} from './views.ts';
 
 const conversation = (handle: string, fields?: Partial<AnonConversation>): AnonConversation => ({
   id: 1,

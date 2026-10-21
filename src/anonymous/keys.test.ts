@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { newHandle, ownerHasher } from './anonymity.ts';
+import { newHandle, ownerHasher } from './keys.ts';
 
 const secret = 'x'.repeat(44);
 

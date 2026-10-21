@@ -1,6 +1,7 @@
 import type { App } from '@slack/bolt';
 import type { KnownBlock } from '@slack/types';
-import { context, type Deps } from './slack.ts';
+import type { Deps } from '#src/deps.ts';
+import { context } from '#src/slack/blocks.ts';
 
 /**
  * The bot's Home tab: who is behind it and how to reach them, plus a cheat sheet for team members. It is the same for

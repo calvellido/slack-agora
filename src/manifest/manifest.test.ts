@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { parse } from 'yaml';
-import { loadAppSettings } from './config.ts';
+import { loadAppSettings } from '#src/config.ts';
 import {
   ANON_SHORTCUT,
   BOT_SCOPES,
@@ -10,7 +10,7 @@ import {
   buildManifest,
   exampleManifest,
   renderManifest,
-} from './manifest.ts';
+} from './index.ts';
 
 type Manifest = {
   display_information: { name: string; description: string; long_description?: string };
@@ -45,8 +45,8 @@ test('the shortcuts use the callback IDs the handlers listen for', () => {
   const { manifest } = build({});
   assert.deepEqual(manifest.features.shortcuts.map((s) => s.callback_id), [ANON_SHORTCUT, PUBLISH_SHORTCUT]);
   for (const [file, constant] of [
-    ['src/anonymous.ts', 'ANON_SHORTCUT'],
-    ['src/publish.ts', 'PUBLISH_SHORTCUT'],
+    ['src/anonymous/window.ts', 'ANON_SHORTCUT'],
+    ['src/publish/index.ts', 'PUBLISH_SHORTCUT'],
   ] as const) {
     assert.match(readFileSync(file, 'utf8'), new RegExp(`callback_id: ${constant}`));
   }

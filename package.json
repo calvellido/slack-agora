@@ -4,13 +4,16 @@
   "private": true,
   "description": "Agora: a Slack bot for a team to receive messages, including anonymous ones, answer them together from a private channel, and post as the bot",
   "type": "module",
+  "imports": {
+    "#src/*": "./src/*"
+  },
   "engines": {
     "node": ">=22.18"
   },
   "scripts": {
-    "start": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/app.ts",
-    "dev": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env --watch src/app.ts",
-    "manifest": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/manifest-cli.ts",
+    "start": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/main.ts",
+    "dev": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env --watch src/main.ts",
+    "manifest": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/manifest/cli.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --disable-warning=ExperimentalWarning --test 'src/**/*.test.ts'"
   },

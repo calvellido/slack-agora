@@ -1,0 +1,16 @@
+import type { Config } from './config.ts';
+import type { I18n } from './i18n/index.ts';
+import type { BotIdentity } from './slack/identity.ts';
+import type { TeamDirectory } from './slack/team-directory.ts';
+import type { Store } from './storage/index.ts';
+
+/** The shared services every feature receives when it registers its handlers (see main.ts). */
+export interface Deps {
+  config: Config;
+  store: Store;
+  team: TeamDirectory;
+  /** Keyed hash identifying the author of anonymous conversations (see anonymous/keys.ts). */
+  anonOwner: (userId: string) => string;
+  bot: BotIdentity;
+  i18n: I18n;
+}

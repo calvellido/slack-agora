@@ -1,6 +1,6 @@
 import { stringify } from 'yaml';
-import { loadAppSettings, type AppSettings } from './config.ts';
-import { stringsIn } from './i18n/index.ts';
+import { loadAppSettings, type AppSettings } from '#src/config.ts';
+import { stringsIn } from '#src/i18n/index.ts';
 
 // The Slack app's manifest, built from AppSettings (.env) and from what the code needs, so neither has to be kept
 // in step with a hand-written manifest. `pnpm manifest` writes it to manifest.yml.

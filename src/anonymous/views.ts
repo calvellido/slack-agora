@@ -1,7 +1,8 @@
 import type { ActionsBlock, KnownBlock, ModalView, RichTextBlock } from '@slack/types';
-import type { Strings } from './i18n/index.ts';
-import { DAY, context, modalTitle, slackDate } from './slack.ts';
-import type { AnonConversation, AnonMessage } from './store.ts';
+import type { Strings } from '#src/i18n/index.ts';
+import { DAY } from '#src/lib/time.ts';
+import { context, modalTitle, slackDate } from '#src/slack/blocks.ts';
+import type { AnonConversation, AnonMessage } from '#src/storage/index.ts';
 
 // Views of anonymous mode, in the language of `t`. Nothing here may contain the author's identity. They are all modals, never the Home tab:
 // Slack shows the last published Home tab whenever the bot is opened, so anything there could be seen over a shoulder.

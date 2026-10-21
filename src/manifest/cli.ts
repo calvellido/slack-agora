@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
-import { loadAppSettings } from './config.ts';
-import { buildManifest, exampleManifest, renderManifest } from './manifest.ts';
+import { loadAppSettings } from '#src/config.ts';
+import { buildManifest, exampleManifest, renderManifest } from './index.ts';
 
 // `pnpm manifest`: writes the Slack app's manifest for this .env to manifest.yml.
 // `pnpm manifest --example`: writes manifest.example.yml from the defaults, ignoring .env.

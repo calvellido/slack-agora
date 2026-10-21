@@ -1,6 +1,6 @@
+import type { RichTextBlock } from '@slack/types';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import type { RichTextBlock } from '@slack/types';
 import { isBlank, plainText, richTextBlocks, richTextFromPlain } from './richtext.ts';
 
 const message: RichTextBlock = {
