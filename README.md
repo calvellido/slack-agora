@@ -23,6 +23,20 @@ can't drift apart. The running bot reads its name and avatar from Slack.
   record or the DM thread) and the bot deletes it.
 - Only members of the team channel can act as the bot.
 
+### When the bot is down
+
+Slack only delivers events to a running bot, so nothing answers while it is down. To make up for it:
+
+- **No DM is lost.** The bot marks every DM it relays with :incoming_envelope:, and the Home tab tells people that
+  no mark means it is offline. On start, it relays the DMs it missed, oldest first and marked with when they were
+  sent, and apologises once to each sender. It knows how long it was away from a heartbeat it writes to its
+  database every minute.
+- **The team hears about it.** After more than 5 minutes away, or if it recovered any DMs, the bot posts in the team
+  channel how long it was offline and how many DMs it relayed.
+- **The rest is not recovered.** @mentions while it was down are lost. A :outbox_tray: added while it was down does
+  nothing: if no :white_check_mark: appears, remove it and add it again. Commands, buttons and windows show Slack's
+  own error while the bot is down.
+
 ### Anonymous messages
 
 - **Where.** Everything happens in the *Anonymous messages* window, opened from the button on the bot's Home tab,

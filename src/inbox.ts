@@ -1,8 +1,19 @@
 import type { App } from '@slack/bolt';
 import type { WebClient } from '@slack/web-api';
 import type { Anonymous } from './anonymous.ts';
+import { RECEIVED_EMOJI, missedDms } from './downtime.ts';
 import { richTextBlocks } from './richtext.ts';
-import { DAY, context, errorCode, fetchMessage, postInThread, quoted, serialized, type Deps } from './slack.ts';
+import {
+  DAY,
+  context,
+  errorCode,
+  fetchMessage,
+  postInThread,
+  quoted,
+  serialized,
+  slackDate,
+  type Deps,
+} from './slack.ts';
 import type { Conversation } from './store.ts';
 
 interface Incoming {
@@ -10,6 +21,18 @@ interface Incoming {
   text: string;
   blocks: readonly unknown[] | undefined;
   files: number;
+  /** Set when relaying, late, a message sent while the bot was down. */
+  lateTs?: string;
+}
+
+interface Dm extends Incoming {
+  channel: string;
+  ts: string;
+}
+
+export interface Inbox {
+  /** Relays the DMs that arrived since `since` (ms) and weren't marked as received. Returns how many. */
+  catchUp(client: WebClient, since: number): Promise<number>;
 }
 
 /**
@@ -17,7 +40,7 @@ interface Incoming {
  * emoji goes back as the bot (or, in anonymous threads, to the author's Home tab); the delete emoji on any record of
  * something the bot sent deletes it.
  */
-export function registerInbox(app: App, { config, store, i18n }: Deps, anonymous: Anonymous): void {
+export function registerInbox(app: App, { config, store, i18n, bot }: Deps, anonymous: Anonymous): Inbox {
   const team = config.teamChannelId;
   // What the bot posts in the team channel is in the team's language; what only one person sees is in theirs.
   const teamStrings = i18n.team;
@@ -35,6 +58,7 @@ export function registerInbox(app: App, { config, store, i18n }: Deps, anonymous
     const body = (title: string) => {
       const blocks = quoted(title, richTextBlocks(message.blocks), message.text);
       if (message.files > 0) blocks.push(context(teamStrings.filesNotRelayed(message.files)));
+      if (message.lateTs) blocks.push(context(teamStrings.lateRelay(slackDate(message.lateTs))));
       return { text: `${title} ${message.text}`, blocks };
     };
 
@@ -56,22 +80,35 @@ export function registerInbox(app: App, { config, store, i18n }: Deps, anonymous
     return parent.ts;
   }
 
+  // DMs handled recently, so one caught up at start and also delivered live isn't relayed twice.
+  const handled = new Set<string>();
+
+  /** Relays a DM to its conversation thread and marks it as received. False if it was already handled. */
+  async function handleDm(client: WebClient, dm: Dm): Promise<boolean> {
+    const key = `${dm.channel}:${dm.ts}`;
+    if (handled.has(key)) return false;
+    handled.add(key);
+    setTimeout(() => handled.delete(key), 10 * 60_000).unref();
+
+    await serialized(dm.channel, async () => {
+      const existing = store.latestDm(dm.channel, Date.now() - config.inboxIdleDays * DAY);
+      const teamThreadTs = await relay(client, existing, () => teamStrings.dmHeader(dm.user), dm);
+      if (teamThreadTs) {
+        store.createConversation({ kind: 'dm', userId: dm.user, targetChannel: dm.channel, targetThreadTs: null, teamThreadTs });
+        // Late DMs get one apology per person instead (see catchUp).
+        if (!dm.lateTs) await client.chat.postMessage({ channel: dm.channel, text: (await i18n.forUser(dm.user)).dmAck });
+      }
+    });
+    await client.reactions.add({ channel: dm.channel, timestamp: dm.ts, name: RECEIVED_EMOJI });
+    return true;
+  }
+
   app.event('message', async ({ event, client }) => {
     if (event.channel_type !== 'im') return;
     if (event.subtype !== undefined && event.subtype !== 'file_share') return;
     if ('bot_id' in event && event.bot_id) return;
     const { channel, user, ts } = event;
-    const message = { user, text: event.text ?? '', blocks: event.blocks, files: event.files?.length ?? 0 };
-
-    await serialized(channel, async () => {
-      const existing = store.latestDm(channel, Date.now() - config.inboxIdleDays * DAY);
-      const teamThreadTs = await relay(client, existing, () => teamStrings.dmHeader(user), message);
-      if (teamThreadTs) {
-        store.createConversation({ kind: 'dm', userId: user, targetChannel: channel, targetThreadTs: null, teamThreadTs });
-        await client.chat.postMessage({ channel, text: (await i18n.forUser(user)).dmAck });
-      }
-    });
-    await client.reactions.add({ channel, timestamp: ts, name: 'incoming_envelope' });
+    await handleDm(client, { channel, user, ts, text: event.text ?? '', blocks: event.blocks, files: event.files?.length ?? 0 });
   });
 
   app.event('app_mention', async ({ event, client }) => {
@@ -158,4 +195,39 @@ export function registerInbox(app: App, { config, store, i18n }: Deps, anonymous
     await client.reactions.remove({ channel: team, timestamp: ts, name: 'white_check_mark' }).catch(() => {});
     await client.chat.postMessage({ channel: team, thread_ts: threadTs, text: teamStrings.deleted(user) });
   }
+
+  return {
+    async catchUp(client, since) {
+      // A minute of overlap: DMs relayed just before going down already carry the received mark.
+      const oldest = String((since - 60_000) / 1000);
+      let recovered = 0;
+      let cursor: string | undefined;
+      do {
+        const page = await client.conversations.list({ types: 'im', limit: 200, cursor });
+        for (const im of page.channels ?? []) {
+          if (!im.id || !im.user || im.user === 'USLACKBOT') continue;
+          const { messages } = await client.conversations.history({ channel: im.id, oldest, limit: 200 });
+          let relayed = 0;
+          for (const m of missedDms(messages ?? [], bot.userId)) {
+            const dm = {
+              channel: im.id,
+              user: m.user!,
+              ts: m.ts!,
+              text: m.text ?? '',
+              blocks: m.blocks,
+              files: m.files?.length ?? 0,
+              lateTs: m.ts!,
+            };
+            if (await handleDm(client, dm)) relayed++;
+          }
+          if (relayed > 0) {
+            await client.chat.postMessage({ channel: im.id, text: (await i18n.forUser(im.user)).lateAck });
+            recovered += relayed;
+          }
+        }
+        cursor = page.response_metadata?.next_cursor || undefined;
+      } while (cursor);
+      return recovered;
+    },
+  };
 }

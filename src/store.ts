@@ -120,6 +120,12 @@ const SCHEMA = `
 
   -- Blocking was removed; drop what an earlier version may have stored.
   DROP TABLE IF EXISTS anon_blocks;
+
+  -- Settings of the running bot itself, such as its last heartbeat.
+  CREATE TABLE IF NOT EXISTS meta (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
 `;
 
 const CONVERSATION = `
@@ -392,6 +398,16 @@ export class Store {
       .prepare('UPDATE anon_messages SET deleted_at = ? WHERE team_message_ts = ? AND deleted_at IS NULL')
       .run(now, teamMessageTs);
     return changes === 1;
+  }
+
+  /** When the bot last said it was running (ms), or undefined if it never did. */
+  lastAlive(): number | undefined {
+    const found = this.#db.prepare("SELECT value FROM meta WHERE key = 'last_alive'").get() as { value: string } | undefined;
+    return found ? Number(found.value) : undefined;
+  }
+
+  setLastAlive(now = Date.now()): void {
+    this.#db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('last_alive', ?)").run(String(now));
   }
 
   close(): void {

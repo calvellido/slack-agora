@@ -47,6 +47,15 @@ export function es({ bot, publishCommand, anonCommand }: Names): Strings {
 
     // Mensaje directo a quien escribe al bot
     dmAck: `¡Gracias por escribir! El equipo de ${bot} ha recibido tu mensaje y te responderá por aquí.`,
+    lateAck: `Perdona el retraso: ${bot} estuvo sin conexión un rato. Tu mensaje ya ha llegado al equipo, que te responderá por aquí.`,
+
+    // Canal del equipo: después de que el bot estuviera caído
+    lateRelay: (date) => `⏱️ Enviado ${date}, mientras ${bot} estaba sin conexión.`,
+    backOnline: (duration, since, recovered) =>
+      `✅ ${bot} vuelve a estar en marcha tras ${duration} sin conexión (desde ${since}). ` +
+      (recovered === 0
+        ? 'No llegó ningún mensaje directo mientras tanto.'
+        : `Ha reenviado ${plural(recovered, 'mensaje directo', 'mensajes directos')} que llegaron mientras tanto.`),
 
     // Publicar como el bot
     teamOnly: `Esto solo está disponible para el equipo de ${bot}.`,
@@ -68,6 +77,9 @@ export function es({ bot, publishCommand, anonCommand }: Names): Strings {
       `*¿Quieres hablar con el equipo de ${bot}?*\n` +
       `• *Con tu nombre:* escribe desde la pestaña *Mensajes* de ${bot}. El equipo ve quién eres y te responde allí.\n` +
       '• *Sin tu nombre:* abre *Mensajes anónimos*. Ahí escribes al equipo y lees sus respuestas.',
+    homeDeliveryHint:
+      `${bot} marca cada mensaje que recibe con :incoming_envelope:. Si no lo ves, ${bot} está sin conexión un momento: ` +
+      'tu mensaje no se pierde y llegará al equipo en cuanto vuelva.',
     homeAnonButton: 'Mensajes anónimos',
     homeAnonHint:
       'Tus conversaciones anónimas nunca aparecen en esta pestaña, solo en esa ventana. ' +

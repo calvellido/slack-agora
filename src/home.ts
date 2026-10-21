@@ -19,6 +19,7 @@ export function registerHome(app: App, { config, team, bot, i18n }: Deps): void 
       ...(about ? [{ type: 'section' as const, text: { type: 'mrkdwn' as const, text: about } }] : []),
       { type: 'divider' },
       { type: 'section', text: { type: 'mrkdwn', text: t.homeContact } },
+      context(t.homeDeliveryHint),
       {
         type: 'actions',
         elements: [

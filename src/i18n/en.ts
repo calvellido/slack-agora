@@ -48,6 +48,15 @@ export function en({ bot, publishCommand, anonCommand }: Names) {
 
     // DM to whoever writes to the bot
     dmAck: `Thanks for writing! The ${bot} team has received your message and will reply here.`,
+    lateAck: `Sorry for the delay: ${bot} was offline for a while. Your message has now reached the team, and they will reply here.`,
+
+    // Team channel: after the bot was down
+    lateRelay: (date: string) => `⏱️ Sent ${date}, while ${bot} was offline.`,
+    backOnline: (duration: string, since: string, recovered: number) =>
+      `✅ ${bot} is running again after ${duration} offline (since ${since}). ` +
+      (recovered === 0
+        ? 'No direct messages arrived meanwhile.'
+        : `It has relayed ${plural(recovered, 'direct message', 'direct messages')} that arrived meanwhile.`),
 
     // Posting as the bot
     teamOnly: `This is only available to the ${bot} team.`,
@@ -69,6 +78,9 @@ export function en({ bot, publishCommand, anonCommand }: Names) {
       `*Want to talk to the ${bot} team?*\n` +
       `• *With your name:* write from ${bot}'s *Messages* tab. The team sees who you are and replies there.\n` +
       "• *Without your name:* open *Anonymous messages*. That's where you write to the team and read its replies.",
+    homeDeliveryHint:
+      `${bot} marks every message it gets with :incoming_envelope:. If you don't see it, ${bot} is offline for a moment: ` +
+      'your message is not lost and reaches the team as soon as it is back.',
     homeAnonButton: 'Anonymous messages',
     homeAnonHint:
       'Your anonymous conversations never appear on this tab, only in that window. ' +

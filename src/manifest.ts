@@ -19,6 +19,7 @@ export const BOT_SCOPES = [
   'groups:history', // reading the team channel's threads
   'groups:read', // the team channel's members, and private channels before posting in them
   'im:history', // DMs to the bot
+  'im:read', // listing its DMs, to catch up on those sent while it was down
   'im:write', // DMs from the bot
   'reactions:read',
   'reactions:write',
