@@ -11,11 +11,11 @@
     "node": ">=22.18"
   },
   "scripts": {
-    "start": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/main.ts",
-    "dev": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env --watch src/main.ts",
-    "manifest": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/manifest/cli.ts",
+    "start": "node --env-file-if-exists=.env src/main.ts",
+    "dev": "node --env-file-if-exists=.env --watch src/main.ts",
+    "manifest": "node --env-file-if-exists=.env src/manifest/cli.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --disable-warning=ExperimentalWarning --test 'src/**/*.test.ts'"
+    "test": "node --test 'src/**/*.test.ts'"
   },
   "dependencies": {
     "@slack/bolt": "5.1.0",
