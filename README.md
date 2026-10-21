@@ -63,7 +63,7 @@ Nothing is unhackable, and Agora doesn't claim to be. It does its best to keep a
 
 ## Setting it up
 
-You need Node 22.18 or later, and a machine that stays on. The bot only connects out to Slack, so it needs no public address or open port.
+You need Node 26.12.1 or later, and a machine that stays on. The bot only connects out to Slack, so it needs no public address or open port.
 
 1. Copy `.env.example` to `.env` and fill in the app's part: `APP_NAME`, the commands, `TEAM_LANGUAGE` and `ABOUT`, the text at the top of the *Home* tab. Run `pnpm install`, then `pnpm manifest`, which writes `manifest.yml`. [manifest.example.yml](manifest.example.yml) shows what you get with the defaults.
 2. [Create a Slack app](https://api.slack.com/apps) *from a manifest* with that file, and install it.
@@ -74,6 +74,8 @@ You need Node 22.18 or later, and a machine that stays on. The bot only connects
 7. Fill in the rest of `.env` and start the bot with `pnpm start`.
 
 Every setting, with its default, is described in [.env.example](.env.example). The database lives in `data/`, so keep that folder between restarts.
+
+To start over with an empty database, for example after testing, run `pnpm clean-db`. It asks first, and works with the bot running. Threads already in the team channel stay, but they are no longer conversations: replies from them aren't sent, people's next messages start new threads, and anonymous conversations disappear from their authors' windows.
 
 To change the app later, for example its name, a command, or a new version that needs other permissions, change `.env`, run `pnpm manifest`, and paste `manifest.yml` into *App Manifest* (YAML) in the app settings. Don't change the app's settings in Slack by hand, as the next manifest would undo it.
 

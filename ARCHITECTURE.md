@@ -10,7 +10,7 @@ It keeps a small SQLite database (`node:sqlite`, no dependency) with Slack IDs, 
 
 TypeScript runs directly with Node's type stripping: there is no build step, and imports name `.ts` files.
 
-Imports come in three groups: packages; then `#src/…` for another part of the app (`#src/slack/blocks.ts`); then `./…` for a file in the same folder. `#src/*` is a Node subpath import declared in `package.json`, so Node resolves it at run time and TypeScript when type checking; `tsconfig.json` `paths` would only do the latter. The shorter `#/*` needs a newer Node than the 22 this project supports.
+Imports come in three groups: packages; then `#src/…` for another part of the app (`#src/slack/blocks.ts`); then `./…` for a file in the same folder. `#src/*` is a Node subpath import declared in `package.json`, so Node resolves it at run time and TypeScript when type checking; `tsconfig.json` `paths` would only do the latter.
 
 ## Code map
 
@@ -34,11 +34,12 @@ src/
     notices.ts         Posting the bot's notices in the team channel, under their own name and icon.
 
   storage/           The SQLite database, one file per kind of data. Store (index.ts) groups them.
-    database.ts        Schema and migrations.
+    database.ts        Schema, migrations, and emptying it.
     conversations.ts   Conversations by DM or @mention, and their thread in the team channel.
     deliveries.ts      What the bot sent on the team's behalf, so it can be deleted later.
     anonymous.ts       Anonymous conversations and which of their messages came from whom.
     heartbeat.ts       When the bot was last running.
+    cli.ts             `pnpm clean-db`.
 
   i18n/              Texts, from locales/*.yml.
     index.ts           Each person's language, and the texts built for it.
@@ -155,6 +156,7 @@ pnpm typecheck
 pnpm manifest             # writes manifest.yml from .env
 pnpm manifest --example   # updates manifest.example.yml
 pnpm i18n                 # updates the texts' types from locales/en.yml, and checks the translations
+pnpm clean-db             # empties the database, after asking
 ```
 
 Use a test workspace or a test team channel for `.env`, and run a single copy per Slack app: Slack spreads events across every open connection.

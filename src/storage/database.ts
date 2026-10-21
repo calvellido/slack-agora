@@ -66,7 +66,8 @@ const SCHEMA = `
 export function openDatabase(path: string): DatabaseSync {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
   const db = new DatabaseSync(path);
-  db.exec('PRAGMA journal_mode = WAL;');
+  // Wait for another connection's write instead of failing, as when `pnpm clean-db` runs beside the bot.
+  db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;');
   db.exec(SCHEMA);
   // Databases from before conversations recorded their team channel.
   for (const table of ['conversations', 'anon_conversations']) {
@@ -74,6 +75,26 @@ export function openDatabase(path: string): DatabaseSync {
     if (!columns.some((c) => c.name === 'team_channel')) db.exec(`ALTER TABLE ${table} ADD COLUMN team_channel TEXT`);
   }
   return db;
+}
+
+function tables(db: DatabaseSync): string[] {
+  const found = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all();
+  return found.map((table) => String(table.name));
+}
+
+/** How many rows each table holds. */
+export function rowCounts(db: DatabaseSync): Map<string, number> {
+  return new Map(tables(db).map((name) => [name, Number(db.prepare(`SELECT count(*) AS n FROM "${name}"`).get()!.n)]));
+}
+
+/**
+ * Deletes every row, so the bot starts over as on its first run. Deleted rows are overwritten, the file rebuilt and
+ * the write-ahead log emptied, so nothing deleted can be read back from disk.
+ */
+export function emptyDatabase(db: DatabaseSync): void {
+  db.exec('PRAGMA secure_delete = ON; BEGIN; PRAGMA defer_foreign_keys = ON;');
+  for (const name of tables(db)) db.exec(`DELETE FROM "${name}"`);
+  db.exec('COMMIT; VACUUM; PRAGMA wal_checkpoint(TRUNCATE);');
 }
 
 /** node:sqlite returns null-prototype objects; hand out plain ones. */

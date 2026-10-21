@@ -75,6 +75,11 @@ export function loadAppSettings(env: NodeJS.ProcessEnv = process.env): AppSettin
   };
 }
 
+/** Where the database lives; read apart from the rest by `pnpm clean-db`, which needs no secrets. */
+export function databasePath(env: NodeJS.ProcessEnv = process.env): string {
+  return env.DB_PATH ?? 'data/agora.db';
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const required = (name: string): string => {
     const value = env[name]?.trim();
@@ -96,7 +101,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     botToken: required('SLACK_BOT_TOKEN'),
     appToken: required('SLACK_APP_TOKEN'),
     teamChannelId: required('TEAM_CHANNEL_ID'),
-    dbPath: env.DB_PATH ?? 'data/agora.db',
+    dbPath: databasePath(env),
     inboxIdleDays: positive('INBOX_IDLE_DAYS', 7),
     sendEmoji: env.SEND_EMOJI ?? 'outbox_tray',
     deleteEmoji: env.DELETE_EMOJI ?? 'wastebasket',
