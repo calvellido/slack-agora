@@ -19,8 +19,8 @@ export function registerHome(app: App, { config, team, bot, i18n }: Deps): void 
       { type: 'header', text: { type: 'plain_text', text: bot.name } },
       ...(about ? [{ type: 'section' as const, text: { type: 'mrkdwn' as const, text: about } }] : []),
       { type: 'divider' },
-      { type: 'section', text: { type: 'mrkdwn', text: t.homeContact } },
-      context(t.homeDeliveryHint),
+      { type: 'section', text: { type: 'mrkdwn', text: t.home.contact } },
+      context(t.home.deliveryHint),
       {
         type: 'actions',
         elements: [
@@ -28,18 +28,18 @@ export function registerHome(app: App, { config, team, bot, i18n }: Deps): void 
             type: 'button',
             action_id: 'anon_inbox',
             style: 'primary',
-            text: { type: 'plain_text', text: t.homeAnonButton },
+            text: { type: 'plain_text', text: t.home.anonymousButton },
           },
         ],
       },
-      context(t.homeAnonHint),
+      context(t.home.anonymousHint),
     ];
     if (await team.isMember(event.user)) {
       blocks.push(
         { type: 'divider' },
         {
           type: 'section',
-          text: { type: 'mrkdwn', text: t.homeTeam(config.teamChannelId, config.sendEmoji, config.deleteEmoji) },
+          text: { type: 'mrkdwn', text: t.home.team({ teamChannel: config.teamChannelId, sendEmoji: config.sendEmoji, deleteEmoji: config.deleteEmoji }) },
         },
       );
     }

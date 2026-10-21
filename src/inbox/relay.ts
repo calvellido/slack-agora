@@ -33,8 +33,8 @@ export function createRelay({ config, store, i18n }: Deps): Relay {
   return async (client, existing, header, message) => {
     const body = (title: string) => {
       const blocks = quoted(title, richTextBlocks(message.blocks), message.text);
-      if (message.files > 0) blocks.push(context(t.filesNotRelayed(message.files)));
-      if (message.lateTs) blocks.push(context(t.lateRelay(slackDate(message.lateTs))));
+      if (message.files > 0) blocks.push(context(t.inbox.thread.filesNotRelayed({ count: message.files })));
+      if (message.lateTs) blocks.push(context(t.inbox.thread.lateRelay({ date: slackDate(message.lateTs) })));
       return { text: `${title} ${message.text}`, blocks };
     };
 
@@ -42,7 +42,7 @@ export function createRelay({ config, store, i18n }: Deps): Relay {
       const posted = await postInThread(client, {
         channel: config.teamChannelId,
         thread_ts: existing.teamThreadTs,
-        ...body(t.followUp(message.user)),
+        ...body(t.inbox.thread.followUp({ user: message.user })),
         unfurl_links: false,
       });
       if (posted) {
@@ -51,7 +51,7 @@ export function createRelay({ config, store, i18n }: Deps): Relay {
       }
     }
     const { text, blocks } = body(await header());
-    blocks.push(context(t.replyHint(config.sendEmoji)));
+    blocks.push(context(t.inbox.thread.replyHint({ sendEmoji: config.sendEmoji })));
     const parent = await client.chat.postMessage({ channel: config.teamChannelId, text, blocks, unfurl_links: false });
     return parent.ts;
   };

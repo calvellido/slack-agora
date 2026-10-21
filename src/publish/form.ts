@@ -13,15 +13,15 @@ export function publishView(
   return {
     type: 'modal',
     callback_id: 'publish',
-    title: modalTitle(t.publishTitle),
-    submit: { type: 'plain_text', text: t.publishSubmit },
-    close: { type: 'plain_text', text: t.publishClose },
+    title: modalTitle(t.publish.form.title),
+    submit: { type: 'plain_text', text: t.publish.form.submit },
+    close: { type: 'plain_text', text: t.publish.form.close },
     blocks: [
       {
         type: 'input',
         block_id: 'channel',
         optional: true,
-        label: { type: 'plain_text', text: t.publishChannel },
+        label: { type: 'plain_text', text: t.publish.form.channel },
         element: {
           type: 'conversations_select',
           action_id: 'channel',
@@ -33,16 +33,16 @@ export function publishView(
         type: 'input',
         block_id: 'people',
         optional: true,
-        label: { type: 'plain_text', text: t.publishPeople },
+        label: { type: 'plain_text', text: t.publish.form.people },
         element: { type: 'multi_users_select', action_id: 'people', max_selected_items: 20 },
       },
       {
         type: 'input',
         block_id: 'message',
-        label: { type: 'plain_text', text: t.publishMessage },
+        label: { type: 'plain_text', text: t.publish.form.message },
         element: { type: 'rich_text_input', action_id: 'message', initial_value: initial.message },
       },
-      context(t.publishHint(teamChannel)),
+      context(t.publish.form.hint({ teamChannel })),
     ],
   };
 }
@@ -51,11 +51,11 @@ export function publishView(
 export async function channelProblem(client: WebClient, channel: string, t: Strings): Promise<string | undefined> {
   try {
     const { channel: info } = await client.conversations.info({ channel });
-    if (info?.is_archived) return t.publishArchived;
-    if (info?.is_private && !info.is_member) return t.publishNotMember;
+    if (info?.is_archived) return t.publish.form.archived;
+    if (info?.is_private && !info.is_member) return t.publish.form.notMember;
     return undefined;
   } catch (error) {
-    if (errorCode(error) === 'channel_not_found') return t.publishNotMember;
+    if (errorCode(error) === 'channel_not_found') return t.publish.form.notMember;
     throw error;
   }
 }

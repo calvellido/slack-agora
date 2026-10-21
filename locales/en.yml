@@ -1,0 +1,175 @@
+# Agora's texts in English, the reference language: every other language has the same keys, and falls back to this
+# file for any it doesn't have. `pnpm i18n` checks the translations and updates src/i18n/messages.ts from this file.
+#
+# Texts use ICU MessageFormat: {name} is a value, and {count, plural, one {# day} other {# days}} chooses by number.
+# Three values are available everywhere: {bot}, the bot's name in Slack, and the {publishCommand} and
+# {anonymousCommand} slash commands. Slack formatting (*bold*, <@user>, :emoji:) passes through unchanged.
+
+common:
+  cancel: "Cancel"
+  close: "Close"
+  back: "Back"
+
+# The Slack app's settings, written to the manifest in the team's language.
+manifest:
+  description: "Write to the {bot} team, with your name or anonymously"
+  anonymousShortcut:
+    name: "Anonymous message to {bot}"
+    description: "Write to the {bot} team without your name"
+  publishShortcut:
+    name: "Post as {bot}"
+    description: "Post this message as {bot} in a channel or by direct message"
+  publishCommand:
+    description: "Post as {bot} in a channel or by direct message"
+    hint: "[message]"
+  anonymousCommand:
+    description: "Write to the {bot} team without your name"
+
+# Conversations by DM or @mention.
+inbox:
+  # Posted in the team channel.
+  thread:
+    dmHeader: "💬 Direct message from <@{user}>"
+    mentionHeader: "🔔 <@{user}> mentioned {bot} in <#{channel}> · <{permalink}|view message>"
+    followUp: "<@{user}> wrote:"
+    replyHint: "To reply as {bot}, write in this thread and add :{sendEmoji}: to your message."
+    filesNotRelayed: "📎 Includes {count, plural, one {a file} other {# files}} that {bot} can't forward yet."
+    lateRelay: "⏱️ Sent {date}, while {bot} was offline."
+  # Sent by DM to whoever wrote to the bot.
+  dm:
+    ack: "Thanks for writing! The {bot} team has received your message and will reply here."
+    lateAck: "Sorry for the delay: {bot} was offline for a while. Your message has now reached the team, and they will reply here."
+  # The team's reactions in the team channel; all but the last are only seen by whoever reacted.
+  reply:
+    notInThread: "Only messages written inside a conversation's thread can be sent as {bot}."
+    notAConversation: "This thread isn't a {bot} conversation."
+    cannotSendBotMessage: "That message is from {bot}. Write your reply in the thread and add the reaction to your own message."
+    emptyReply: "That message has no text to send."
+    filesNotSent: "The text was sent, but {bot} can't send files yet."
+    alreadySent: "This message was already sent."
+    sendFailed: "Couldn't send the message: `{error}`"
+    alreadyDeleted: "It was already deleted."
+    deleteFailed: "Couldn't delete it: `{error}`"
+    deleted: "🗑️ <@{user}> deleted what {bot} had sent."
+  # Posted in the team channel after the bot was down.
+  backOnline: "✅ {bot} is running again after {duration} offline (since {since}). {recovered, plural, =0 {No direct messages arrived meanwhile.} one {It has relayed # direct message that arrived meanwhile.} other {It has relayed # direct messages that arrived meanwhile.}}"
+
+# Posting as the bot.
+publish:
+  teamOnly: "This is only available to the {bot} team."
+  form:
+    title: "Post as {bot}"
+    submit: "Post"
+    close: "Cancel"
+    channel: "Channel"
+    people: "People (direct message)"
+    message: "Message"
+    hint: "Choose a channel, people or both. <#{teamChannel}> keeps a record of who posted it."
+    needTarget: "Choose a channel or at least one person."
+    empty: "The message is empty."
+    notMember: "{bot} isn't in this private channel. Invite it first with /invite @{bot}."
+    archived: "This channel is archived."
+  # The records left in the team channel.
+  record:
+    dmStarted: "📤 <@{poster}> wrote to <@{user}> as {bot}:"
+    posted: "📣 <@{poster}> posted as {bot} in <#{channel}> · <{permalink}|view message>"
+    failed: "⚠️ Couldn't send as {bot} to {target} (requested by <@{poster}>): `{error}`"
+
+home:
+  contact: |-
+    *Want to talk to the {bot} team?*
+    • *With your name:* write from {bot}'s *Messages* tab. The team sees who you are and replies there.
+    • *Without your name:* open *Anonymous messages*. That's where you write to the team and read its replies.
+  deliveryHint: "{bot} marks every message it gets with :incoming_envelope:. If you don't see it, {bot} is offline for a moment: your message is not lost and reaches the team as soon as it is back."
+  anonymousButton: "Anonymous messages"
+  anonymousHint: "Your anonymous conversations never appear on this tab, only in that window. You can also open it with `{anonymousCommand}` from any channel."
+  # Only shown to team members.
+  team: |-
+    *For the {bot} team*
+    • Every conversation with {bot} shows up in <#{teamChannel}> as a thread, anonymous ones too.
+    • To reply, write in the thread and add :{sendEmoji}: to your message. {bot} sends it and marks it with :white_check_mark:.
+    • To delete something {bot} sent, add :{deleteEmoji}: to its record in <#{teamChannel}>.
+    • To post or write to someone as {bot}, use `{publishCommand}` or the message shortcut that posts as {bot}.
+
+anonymous:
+  unavailable: "This conversation has ended."
+  sendFailed: "Couldn't send it. Try again in a few minutes."
+  # The "Anonymous messages" window: the viewer's own conversations.
+  window:
+    title: "Anonymous messages"
+    intro: "Write to the {bot} team without your name. The team gets your messages anonymously, and its replies show up here, in this window. Nothing stays in your Slack messages."
+    new: "New conversation"
+    empty: "You don't have any anonymous conversations."
+    conversations: "*Your conversations*"
+    open: "Open"
+    newReply: "🆕 New reply"
+    started: "Started: {date}"
+    last: "Last message: {date}"
+  # One conversation, opened from the window.
+  conversation:
+    name: "*Anonymous conversation*"
+    title: "Anonymous conversation"
+    endedByTeam: "🔒 Ended by the team. It will disappear from here in {days, plural, one {# day} other {# days}}."
+    expired: "🔒 Ended after inactivity. It will disappear from here in {days, plural, one {# day} other {# days}}."
+    you: "🕶️ *You*"
+    new: "🆕"
+    hidden: "{count, plural, one {# earlier message} other {# earlier messages}} not shown."
+    unavailable: "_This message is no longer available._"
+    reply: "Your reply"
+    send: "Send"
+    end: "End conversation"
+    delete: "Delete conversation"
+    deleteConfirmTitle: "Delete the conversation?"
+    deleteConfirm: "{bot} will delete your messages from the team's channel and forget that this conversation is yours."
+    deleteConfirmButton: "Delete"
+    deleted: "{bot} is deleting your messages from the team's channel and no longer keeps anything linking you to the conversation."
+  # Ending a conversation, from the window.
+  end:
+    intro: "Once it ends, nobody can write in it any more and {bot} forgets it's yours, so you won't be able to see it again."
+    deleteLabel: "Your messages"
+    deleteOption: "Also delete my messages from the team's channel"
+    deleteHint: "The team will no longer see what you wrote. Its replies stay in the channel unless each team member deletes their own."
+    submit: "End"
+    done: "You ended the conversation. {bot} no longer keeps anything linking you to it."
+    doneDeleted: "You ended the conversation and {bot} is deleting your messages from the team's channel. It no longer keeps anything linking you to it."
+  # The form to start a conversation.
+  form:
+    title: "Anonymous message"
+    submit: "Send"
+    intro: "The {bot} team will get your message anonymously, without your name. Replies will show up in {bot}'s *Anonymous messages*, where you can continue the conversation."
+    message: "Message"
+    privacy: |-
+      • What you say and how you write can identify you: think about which details you include.
+      • The team can't tell whether two anonymous conversations come from the same person.
+      • {bot} doesn't notify you of replies, because a notification would leave a trace in your messages. Come back here to see them.
+      • {bot} doesn't store your name with the message, only an encrypted fingerprint to show you the replies. It's deleted when the conversation ends, and you can then also delete your messages from the team's channel.
+    sent: |-
+      ✅ Sent. The team will get it without your name.
+
+      Its replies will show up in {bot}'s *Anonymous messages*.
+    empty: "The message is empty."
+    tooMany: "You already have {max, plural, one {# open anonymous conversation} other {# open anonymous conversations}}. End one to start another."
+  # The team's side, in the team channel.
+  team:
+    header: "🕶️ *Anonymous message*"
+    followUp: "🕶️ The person wrote:"
+    openStatus: "To reply, write in the thread and add :{sendEmoji}: to your message. The person will see it in {bot}'s *Anonymous messages*, including later edits."
+    endButton: "End conversation"
+    endConfirmTitle: "End the conversation?"
+    endConfirm: "The person won't be able to write in it any more, and will see it as ended for {days, plural, one {# day} other {# days}}."
+    endConfirmButton: "End"
+    endedBy: "🔒 <@{user}> ended the conversation."
+    endedByPerson: "🔒 The person ended the conversation."
+    endedByTeam: "🔒 The team ended the conversation."
+    expired: "🔒 Conversation ended automatically after {days, plural, one {# day} other {# days}} without activity."
+    deletableStatus: "The person can no longer see this conversation. {bot} can delete everything it posted in it from the channel."
+    deleteButton: "Delete conversation"
+    deleteConfirmTitle: "Delete the conversation?"
+    deleteConfirm: "{bot} will delete what it posted in this thread, including the person's messages. The team's replies can only be deleted by whoever wrote them."
+    deleteConfirmButton: "Delete"
+    deletedByTeam: "Deleted. The team's replies left in the thread can only be deleted by whoever wrote them."
+    deletedByPerson: "🗑️ The person deleted their messages from this conversation. The team's replies can only be deleted by whoever wrote them."
+    notDeletable: "The person can still see this conversation, so it can't be deleted yet."
+    replyClosed: "This anonymous conversation has ended."
+    alreadyClosed: "This conversation had already ended."
+    replyDeleted: "🗑️ <@{user}> withdrew the reply. The person won't see it any more, though they may have read it already."

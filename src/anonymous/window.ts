@@ -29,14 +29,14 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
 
   /** Why this person can't start a new anonymous conversation, if they can't. */
   function newConversationProblem(t: Strings, owner: string): string | undefined {
-    if (store.anonymous.openCount(owner) >= config.anonMaxOpen) return t.anonTooMany(config.anonMaxOpen);
+    if (store.anonymous.openCount(owner) >= config.anonMaxOpen) return t.anonymous.form.tooMany({ max: config.anonMaxOpen });
     return undefined;
   }
 
   function newConversationView(t: Strings, userId: string, text?: string): ModalView {
     const problem = newConversationProblem(t, anonOwner(userId));
     return problem
-      ? noticeModal(t.anonTitle, problem, t.anonClose)
+      ? noticeModal(t.anonymous.form.title, problem, t.common.close)
       : anonModal(t, text ? richTextFromPlain(text) : undefined);
   }
 
@@ -116,20 +116,20 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
     const owner = anonOwner(userId);
     const [message] = richTextBlocks([view.state.values.message?.message?.rich_text_value]);
     if (!message || isBlank(message)) {
-      await ack({ response_action: 'errors', errors: { message: t.anonEmpty } });
+      await ack({ response_action: 'errors', errors: { message: t.anonymous.form.empty } });
       return;
     }
     // Posted before acknowledging, so the person only sees "sent" once it is in the team channel.
     const error = await serialized(`anon:${owner}`, async () => {
       const problem = newConversationProblem(t, owner);
       if (problem) return problem;
-      return (await thread.open(client, owner, message)) ? undefined : t.anonSendFailed;
+      return (await thread.open(client, owner, message)) ? undefined : t.anonymous.sendFailed;
     });
     if (error) {
       await ack({ response_action: 'errors', errors: { message: error } });
       return;
     }
-    await ack({ response_action: 'update', view: noticeModal(t.anonTitle, t.anonSent, t.anonClose) });
+    await ack({ response_action: 'update', view: noticeModal(t.anonymous.form.title, t.anonymous.form.sent, t.common.close) });
     await refreshInbox(client, t, view.previous_view_id, userId);
   });
 
@@ -140,7 +140,7 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
     const own = ownConversation(body.user.id, action.value);
     await client.views.push({
       trigger_id: body.trigger_id,
-      view: own ? await conversation(client, t, own) : noticeModal(t.inboxTitle, t.anonUnavailable, t.anonClose),
+      view: own ? await conversation(client, t, own) : noticeModal(t.anonymous.window.title, t.anonymous.unavailable, t.common.close),
     });
     await refreshInbox(client, t, body.view?.id, body.user.id);
   });
@@ -151,14 +151,14 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
     const blockId = Object.keys(view.state.values).find((id) => id.startsWith(REPLY_BLOCK)) ?? REPLY_BLOCK;
     const [message] = richTextBlocks([view.state.values[blockId]?.reply?.rich_text_value]);
     if (!message || isBlank(message)) {
-      await ack({ response_action: 'errors', errors: { [blockId]: t.anonEmpty } });
+      await ack({ response_action: 'errors', errors: { [blockId]: t.anonymous.form.empty } });
       return;
     }
     const own = ownConversation(userId, view.private_metadata);
     const result =
       own?.closedAt === null ? await serialized(`anon:${own.owner}`, () => thread.followUp(client, own, message)) : 'gone';
     if (!own || result !== 'sent') {
-      const error = result === 'failed' ? t.anonSendFailed : t.anonUnavailable;
+      const error = result === 'failed' ? t.anonymous.sendFailed : t.anonymous.unavailable;
       await ack({ response_action: 'errors', errors: { [blockId]: error } });
       return;
     }
@@ -174,7 +174,7 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
     if (!body.view?.id) return;
     await client.views.update({
       view_id: body.view.id,
-      view: own && !own.closedAt ? endView(t, own.handle) : noticeModal(t.inboxTitle, t.anonUnavailable, t.convBack),
+      view: own && !own.closedAt ? endView(t, own.handle) : noticeModal(t.anonymous.window.title, t.anonymous.unavailable, t.common.back),
     });
   });
 
@@ -183,21 +183,21 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
     const t = await i18n.forUser(userId);
     const own = ownConversation(userId, view.private_metadata);
     if (!own || !store.anonymous.close(own.id, 'person')) {
-      await ack({ response_action: 'update', view: noticeModal(t.inboxTitle, t.anonUnavailable, t.convBack) });
+      await ack({ response_action: 'update', view: noticeModal(t.anonymous.window.title, t.anonymous.unavailable, t.common.back) });
       return;
     }
     const remove = (view.state.values.delete?.delete?.selected_options ?? []).length > 0;
     store.anonymous.purge(own.id);
     await ack({
       response_action: 'update',
-      view: noticeModal(t.convTitle, remove ? t.endDoneDeleted : t.endDone, t.convBack),
+      view: noticeModal(t.anonymous.conversation.title, remove ? t.anonymous.end.doneDeleted : t.anonymous.end.done, t.common.back),
     });
     await refreshInbox(client, t, view.previous_view_id, userId);
     if (remove) {
-      await thread.remove(client, own, i18n.team.anonDeletedByPerson);
+      await thread.remove(client, own, i18n.team.anonymous.team.deletedByPerson);
     } else {
-      await thread.setStatus(client, own, { state: 'forgotten', note: i18n.team.anonEndedByPerson });
-      await thread.note(client, own, i18n.team.anonEndedByPerson);
+      await thread.setStatus(client, own, { state: 'forgotten', note: i18n.team.anonymous.team.endedByPerson });
+      await thread.note(client, own, i18n.team.anonymous.team.endedByPerson);
     }
   });
 
@@ -210,12 +210,12 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
     if (body.view?.id) {
       await client.views.update({
         view_id: body.view.id,
-        view: noticeModal(t.convTitle, deletable ? t.convDeleted : t.anonUnavailable, t.convBack),
+        view: noticeModal(t.anonymous.conversation.title, deletable ? t.anonymous.conversation.deleted : t.anonymous.unavailable, t.common.back),
       });
     }
     if (!deletable) return;
     store.anonymous.purge(deletable.id);
     await refreshInbox(client, t, body.view?.previous_view_id, body.user.id);
-    await thread.remove(client, deletable, i18n.team.anonDeletedByPerson);
+    await thread.remove(client, deletable, i18n.team.anonymous.team.deletedByPerson);
   });
 }

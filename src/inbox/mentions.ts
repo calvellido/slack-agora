@@ -15,7 +15,7 @@ export function registerMentions(app: App, { config, store, i18n }: Deps, relay:
     await serialized(`${channel}:${threadTs}`, async () => {
       const existing = store.conversations.mentionThread(channel, threadTs);
       const header = async () =>
-        i18n.team.mentionHeader(user, channel, (await client.chat.getPermalink({ channel, message_ts: ts })).permalink ?? '');
+        i18n.team.inbox.thread.mentionHeader({ user, channel, permalink: (await client.chat.getPermalink({ channel, message_ts: ts })).permalink ?? '' });
       const teamThreadTs = await relay(client, existing, header, message);
       if (teamThreadTs) {
         store.conversations.create({ kind: 'mention', userId: user, targetChannel: channel, targetThreadTs: threadTs, teamThreadTs });

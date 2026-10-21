@@ -13,7 +13,7 @@ export function registerPublish(app: App, deps: Deps): void {
 
   app.command(config.publishCommand, async ({ ack, command, client }) => {
     const t = await i18n.forUser(command.user_id);
-    if (!(await team.isMember(command.user_id))) return ack(t.teamOnly);
+    if (!(await team.isMember(command.user_id))) return ack(t.publish.teamOnly);
     await ack();
     const here = command.channel_id;
     const text = command.text.trim();
@@ -32,7 +32,7 @@ export function registerPublish(app: App, deps: Deps): void {
       await ack();
       const t = await i18n.forUser(shortcut.user.id);
       if (!(await team.isMember(shortcut.user.id))) {
-        await respond({ response_type: 'ephemeral', text: t.teamOnly });
+        await respond({ response_type: 'ephemeral', text: t.publish.teamOnly });
         return;
       }
       const [message] = richTextBlocks(shortcut.message.blocks);
@@ -53,9 +53,9 @@ export function registerPublish(app: App, deps: Deps): void {
     const [message] = richTextBlocks([values.message?.message?.rich_text_value]);
 
     const errors: Record<string, string> = {};
-    if (!(await team.isMember(poster))) errors.message = t.teamOnly;
-    else if (isBlank(message)) errors.message = t.publishEmpty;
-    if (!channel && people.length === 0) errors.channel = t.publishNeedTarget;
+    if (!(await team.isMember(poster))) errors.message = t.publish.teamOnly;
+    else if (isBlank(message)) errors.message = t.publish.form.empty;
+    if (!channel && people.length === 0) errors.channel = t.publish.form.needTarget;
     else if (channel) {
       const problem = await channelProblem(client, channel, t);
       if (problem) errors.channel = problem;

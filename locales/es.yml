@@ -1,0 +1,158 @@
+# Textos de Agora en español. Mismas claves que en.yml; lo que falte aquí se muestra en inglés.
+# Lenguaje neutro: sin formas con género para las personas, y sin «vosotros», para que se lea bien en cualquier
+# variante del español.
+
+common:
+  cancel: "Cancelar"
+  close: "Cerrar"
+  back: "Volver"
+
+manifest:
+  description: "Escribe al equipo de {bot}, con tu nombre o de forma anónima"
+  anonymousShortcut:
+    name: "Mensaje anónimo a {bot}"
+    description: "Escribe al equipo de {bot} sin tu nombre"
+  publishShortcut:
+    name: "Publicar como {bot}"
+    description: "Publica este mensaje como {bot} en un canal o por mensaje directo"
+  publishCommand:
+    description: "Publicar como {bot} en un canal o por mensaje directo"
+    hint: "[texto del mensaje]"
+  anonymousCommand:
+    description: "Escribir al equipo de {bot} sin tu nombre"
+
+inbox:
+  thread:
+    dmHeader: "💬 Mensaje directo de <@{user}>"
+    mentionHeader: "🔔 <@{user}> mencionó a {bot} en <#{channel}> · <{permalink}|ver mensaje>"
+    followUp: "<@{user}> escribió:"
+    replyHint: "Para responder como {bot}, escribe en este hilo y añade :{sendEmoji}: a tu mensaje."
+    filesNotRelayed: "📎 Incluye {count, plural, one {un archivo} other {# archivos}} que {bot} todavía no puede reenviar."
+    lateRelay: "⏱️ Enviado {date}, mientras {bot} estaba sin conexión."
+  dm:
+    ack: "¡Gracias por escribir! El equipo de {bot} ha recibido tu mensaje y te responderá por aquí."
+    lateAck: "Perdona el retraso: {bot} estuvo sin conexión un rato. Tu mensaje ya ha llegado al equipo, que te responderá por aquí."
+  reply:
+    notInThread: "Solo se pueden enviar como {bot} los mensajes escritos dentro del hilo de una conversación."
+    notAConversation: "Este hilo no corresponde a ninguna conversación de {bot}."
+    cannotSendBotMessage: "Ese mensaje es de {bot}. Escribe tu respuesta en el hilo y añade la reacción a tu mensaje."
+    emptyReply: "Ese mensaje no tiene texto que enviar."
+    filesNotSent: "Se ha enviado el texto, pero {bot} todavía no puede enviar archivos."
+    alreadySent: "Este mensaje ya se envió."
+    sendFailed: "No se pudo enviar el mensaje: `{error}`"
+    alreadyDeleted: "Ya estaba eliminado."
+    deleteFailed: "No se pudo eliminar: `{error}`"
+    deleted: "🗑️ <@{user}> eliminó lo que {bot} había enviado."
+  backOnline: "✅ {bot} vuelve a estar en marcha tras {duration} sin conexión (desde {since}). {recovered, plural, =0 {No llegó ningún mensaje directo mientras tanto.} one {Ha reenviado # mensaje directo que llegó mientras tanto.} other {Ha reenviado # mensajes directos que llegaron mientras tanto.}}"
+
+publish:
+  teamOnly: "Esto solo está disponible para el equipo de {bot}."
+  form:
+    title: "Publicar como {bot}"
+    submit: "Publicar"
+    close: "Cancelar"
+    channel: "Canal"
+    people: "Personas (mensaje directo)"
+    message: "Mensaje"
+    hint: "Elige un canal, personas o ambos. En <#{teamChannel}> quedará registro de quién lo publicó."
+    needTarget: "Elige un canal o al menos una persona."
+    empty: "El mensaje está vacío."
+    notMember: "{bot} no está en este canal privado. Primero invita a {bot} con /invite @{bot}."
+    archived: "Este canal está archivado."
+  record:
+    dmStarted: "📤 <@{poster}> escribió como {bot} a <@{user}>:"
+    posted: "📣 <@{poster}> publicó como {bot} en <#{channel}> · <{permalink}|ver mensaje>"
+    failed: "⚠️ No se pudo enviar como {bot} a {target} (lo pidió <@{poster}>): `{error}`"
+
+home:
+  contact: |-
+    *¿Quieres hablar con el equipo de {bot}?*
+    • *Con tu nombre:* escribe desde la pestaña *Mensajes* de {bot}. El equipo ve quién eres y te responde allí.
+    • *Sin tu nombre:* abre *Mensajes anónimos*. Ahí escribes al equipo y lees sus respuestas.
+  deliveryHint: "{bot} marca cada mensaje que recibe con :incoming_envelope:. Si no lo ves, {bot} está sin conexión un momento: tu mensaje no se pierde y llegará al equipo en cuanto vuelva."
+  anonymousButton: "Mensajes anónimos"
+  anonymousHint: "Tus conversaciones anónimas nunca aparecen en esta pestaña, solo en esa ventana. También puedes abrirla con `{anonymousCommand}` desde cualquier canal."
+  team: |-
+    *Para el equipo de {bot}*
+    • Cada conversación con {bot} aparece en <#{teamChannel}> como un hilo, también las anónimas.
+    • Para responder, escribe en el hilo y añade :{sendEmoji}: a tu mensaje. {bot} lo envía y lo marca con :white_check_mark:.
+    • Para borrar algo que {bot} envió, añade :{deleteEmoji}: a su mensaje de registro en <#{teamChannel}>.
+    • Para publicar o escribir a alguien como {bot}, usa `{publishCommand}` o el atajo de mensaje para publicar como {bot}.
+
+anonymous:
+  unavailable: "Esta conversación ya ha terminado."
+  sendFailed: "No se ha podido enviar. Inténtalo de nuevo en unos minutos."
+  window:
+    title: "Mensajes anónimos"
+    intro: "Escribe al equipo de {bot} sin tu nombre. El equipo recibe tus mensajes como anónimos, y sus respuestas aparecen aquí, en esta ventana. No quedan en tus mensajes de Slack."
+    new: "Nueva conversación"
+    empty: "No tienes conversaciones anónimas."
+    conversations: "*Tus conversaciones*"
+    open: "Abrir"
+    newReply: "🆕 Respuesta nueva"
+    started: "Empezó: {date}"
+    last: "Último mensaje: {date}"
+  conversation:
+    name: "*Conversación anónima*"
+    title: "Conversación anónima"
+    endedByTeam: "🔒 Terminada por el equipo. Desaparecerá de aquí en {days, plural, one {# día} other {# días}}."
+    expired: "🔒 Terminada por inactividad. Desaparecerá de aquí en {days, plural, one {# día} other {# días}}."
+    you: "🕶️ *Tú*"
+    new: "🆕"
+    hidden: "{count, plural, one {# mensaje anterior} other {# mensajes anteriores}} sin mostrar."
+    unavailable: "_Este mensaje ya no está disponible._"
+    reply: "Tu respuesta"
+    send: "Enviar"
+    end: "Terminar conversación"
+    delete: "Borrar conversación"
+    deleteConfirmTitle: "¿Borrar la conversación?"
+    deleteConfirm: "{bot} borrará tus mensajes del canal del equipo y olvidará que esta conversación es tuya."
+    deleteConfirmButton: "Borrar"
+    deleted: "{bot} está borrando tus mensajes del canal del equipo y ya no guarda nada que te relacione con la conversación."
+  end:
+    intro: "Al terminarla, nadie podrá escribir más en ella y {bot} olvidará que es tuya, así que no podrás volver a verla."
+    deleteLabel: "Tus mensajes"
+    deleteOption: "Borrar también mis mensajes del canal del equipo"
+    deleteHint: "El equipo dejará de ver lo que escribiste. Sus respuestas seguirán en el canal, salvo que cada persona del equipo borre las suyas."
+    submit: "Terminar"
+    done: "Has terminado la conversación. {bot} ya no guarda nada que te relacione con ella."
+    doneDeleted: "Has terminado la conversación y {bot} está borrando tus mensajes del canal del equipo. Ya no guarda nada que te relacione con ella."
+  form:
+    title: "Mensaje anónimo"
+    submit: "Enviar"
+    intro: "El equipo de {bot} recibirá tu mensaje como anónimo, sin tu nombre. Las respuestas aparecerán en *Mensajes anónimos* de {bot}, y desde allí podrás seguir la conversación."
+    message: "Mensaje"
+    privacy: |-
+      • Lo que cuentes y tu forma de escribir pueden identificarte: piensa qué detalles incluyes.
+      • El equipo no puede saber si dos conversaciones anónimas son de la misma persona.
+      • {bot} no te avisa cuando hay respuesta, porque un aviso dejaría rastro en tus mensajes. Vuelve aquí para verla.
+      • {bot} no guarda tu nombre con el mensaje, solo una huella cifrada para enseñarte las respuestas. Se borra al terminar la conversación, y entonces también puedes borrar tus mensajes del canal del equipo.
+    sent: |-
+      ✅ Enviado. El equipo lo recibirá sin tu nombre.
+
+      Sus respuestas aparecerán en *Mensajes anónimos* de {bot}.
+    empty: "El mensaje está vacío."
+    tooMany: "Ya tienes {max, plural, one {# conversación anónima abierta} other {# conversaciones anónimas abiertas}}. Termina alguna para empezar otra."
+  team:
+    header: "🕶️ *Mensaje anónimo*"
+    followUp: "🕶️ La persona escribió:"
+    openStatus: "Para responder, escribe en el hilo y añade :{sendEmoji}: a tu mensaje. La persona lo verá en *Mensajes anónimos* de {bot}, también si lo editas después."
+    endButton: "Terminar conversación"
+    endConfirmTitle: "¿Terminar la conversación?"
+    endConfirm: "La persona ya no podrá escribir en ella, y la verá como terminada durante {days, plural, one {# día} other {# días}}."
+    endConfirmButton: "Terminar"
+    endedBy: "🔒 <@{user}> terminó la conversación."
+    endedByPerson: "🔒 La persona terminó la conversación."
+    endedByTeam: "🔒 El equipo terminó la conversación."
+    expired: "🔒 Conversación terminada automáticamente tras {days, plural, one {# día} other {# días}} sin actividad."
+    deletableStatus: "La persona ya no puede ver esta conversación. {bot} puede borrar del canal todo lo que publicó en ella."
+    deleteButton: "Borrar conversación"
+    deleteConfirmTitle: "¿Borrar la conversación?"
+    deleteConfirm: "{bot} borrará lo que publicó en este hilo, también los mensajes de la persona. Las respuestas del equipo solo puede borrarlas quien las escribió."
+    deleteConfirmButton: "Borrar"
+    deletedByTeam: "Borrado. Las respuestas del equipo que queden en el hilo solo puede borrarlas quien las escribió."
+    deletedByPerson: "🗑️ La persona borró sus mensajes de esta conversación. Las respuestas del equipo solo puede borrarlas quien las escribió."
+    notDeletable: "La persona todavía puede ver esta conversación, así que aún no se puede borrar."
+    replyClosed: "Esta conversación anónima ha terminado."
+    alreadyClosed: "Esta conversación ya había terminado."
+    replyDeleted: "🗑️ <@{user}> retiró la respuesta. La persona ya no la verá, aunque puede que ya la haya leído."

@@ -31,7 +31,7 @@ const deps: Deps = {
   bot,
   i18n: new I18n(
     app.client,
-    { bot: bot.name, publishCommand: config.publishCommand, anonCommand: config.anonCommand },
+    { bot: bot.name, publishCommand: config.publishCommand, anonymousCommand: config.anonCommand },
     config.teamLanguage,
   ),
 };

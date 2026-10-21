@@ -59,6 +59,6 @@ export async function recoverDowntime(client: WebClient, { config, i18n }: Deps,
   const recovered = await dms.catchUp(client, lastAlive);
   if (recovered === 0 && startedAt - lastAlive < NOTICE_AFTER_MS) return;
   const since = slackDate(String(lastAlive / 1000));
-  const text = i18n.team.backOnline(formatDuration(startedAt - lastAlive), since, recovered);
+  const text = i18n.team.inbox.backOnline({ duration: formatDuration(startedAt - lastAlive), since, recovered });
   await client.chat.postMessage({ channel: config.teamChannelId, text });
 }

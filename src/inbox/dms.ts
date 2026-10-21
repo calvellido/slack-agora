@@ -33,11 +33,11 @@ export function registerDms(app: App, { config, store, i18n, bot }: Deps, relay:
 
     await serialized(dm.channel, async () => {
       const existing = store.conversations.latestDm(dm.channel, Date.now() - config.inboxIdleDays * DAY);
-      const teamThreadTs = await relay(client, existing, () => i18n.team.dmHeader(dm.user), dm);
+      const teamThreadTs = await relay(client, existing, () => i18n.team.inbox.thread.dmHeader({ user: dm.user }), dm);
       if (teamThreadTs) {
         store.conversations.create({ kind: 'dm', userId: dm.user, targetChannel: dm.channel, targetThreadTs: null, teamThreadTs });
         // Late DMs get one apology per person instead (see catchUp).
-        if (!dm.lateTs) await client.chat.postMessage({ channel: dm.channel, text: (await i18n.forUser(dm.user)).dmAck });
+        if (!dm.lateTs) await client.chat.postMessage({ channel: dm.channel, text: (await i18n.forUser(dm.user)).inbox.dm.ack });
       }
     });
     await client.reactions.add({ channel: dm.channel, timestamp: dm.ts, name: RECEIVED_EMOJI });
@@ -77,7 +77,7 @@ export function registerDms(app: App, { config, store, i18n, bot }: Deps, relay:
             if (await handleDm(client, dm)) relayed++;
           }
           if (relayed > 0) {
-            await client.chat.postMessage({ channel: im.id, text: (await i18n.forUser(im.user)).lateAck });
+            await client.chat.postMessage({ channel: im.id, text: (await i18n.forUser(im.user)).inbox.dm.lateAck });
             recovered += relayed;
           }
         }

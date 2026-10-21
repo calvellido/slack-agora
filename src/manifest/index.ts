@@ -33,7 +33,7 @@ const LONG_DESCRIPTION_MIN = 174;
 
 export function buildManifest(settings: AppSettings): { manifest: object; warnings: string[] } {
   const { appName, teamLanguage, publishCommand, anonCommand } = settings;
-  const t = stringsIn(teamLanguage, { bot: appName, publishCommand, anonCommand });
+  const t = stringsIn(teamLanguage, { bot: appName, publishCommand, anonymousCommand: anonCommand });
   const warnings: string[] = [];
 
   // The Home tab's text doubles as the app's long description, without Slack formatting.
@@ -50,7 +50,7 @@ export function buildManifest(settings: AppSettings): { manifest: object; warnin
   const manifest = {
     display_information: {
       name: appName,
-      description: settings.appDescription ?? t.manifestDescription,
+      description: settings.appDescription ?? t.manifest.description,
       ...(longDescription ? { long_description: longDescription } : {}),
       background_color: settings.appColor,
     },
@@ -58,22 +58,22 @@ export function buildManifest(settings: AppSettings): { manifest: object; warnin
       app_home: { home_tab_enabled: true, messages_tab_enabled: true, messages_tab_read_only_enabled: false },
       bot_user: { display_name: appName, always_online: true },
       shortcuts: [
-        { name: t.anonShortcutName, type: 'global', callback_id: ANON_SHORTCUT, description: t.anonShortcutDescription },
+        { name: t.manifest.anonymousShortcut.name, type: 'global', callback_id: ANON_SHORTCUT, description: t.manifest.anonymousShortcut.description },
         {
-          name: t.publishShortcutName,
+          name: t.manifest.publishShortcut.name,
           type: 'message',
           callback_id: PUBLISH_SHORTCUT,
-          description: t.publishShortcutDescription,
+          description: t.manifest.publishShortcut.description,
         },
       ],
       slash_commands: [
         {
           command: publishCommand,
-          description: t.publishCommandDescription,
-          usage_hint: t.publishCommandHint,
+          description: t.manifest.publishCommand.description,
+          usage_hint: t.manifest.publishCommand.hint,
           should_escape: false,
         },
-        { command: anonCommand, description: t.anonCommandDescription, should_escape: false },
+        { command: anonCommand, description: t.manifest.anonymousCommand.description, should_escape: false },
       ],
     },
     oauth_config: { scopes: { bot: [...new Set([...BOT_SCOPES, ...settings.extraScopes])].sort() } },

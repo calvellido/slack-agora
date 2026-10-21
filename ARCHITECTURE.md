@@ -39,7 +39,12 @@ src/
     anonymous.ts       Anonymous conversations and which of their messages came from whom.
     heartbeat.ts       When the bot was last running.
 
-  i18n/              Texts. en.ts is the reference; es.ts has the same keys. index.ts picks each person's language.
+  i18n/              Texts, from locales/*.yml.
+    index.ts           Each person's language, and the texts built for it.
+    catalog.ts         Reading the locale files, and the values each message takes.
+    messages.ts        The Strings type, generated from locales/en.yml by `pnpm i18n`.
+    generate.ts        Generating that type, and checking the other languages against English.
+    cli.ts             `pnpm i18n`.
 
   inbox/             Conversations by DM or @mention.
     relay.ts           Posts a message in its conversation thread, or starts a new thread.
@@ -123,9 +128,13 @@ Break one of these and anonymous mode stops being anonymous.
 
 ## Languages
 
-`i18n/en.ts` returns every text, built with the names it mentions (the bot's name and the commands). Every other language returns the same keys, which the type checker and a test enforce. `I18n` reads each person's Slack locale (`users.info`, cached for an hour) and falls back to English. What only one person sees uses `i18n.forUser(id)`; what the bot posts in the team channel uses `i18n.team`, in `TEAM_LANGUAGE`.
+The texts live in `locales/`, one YAML file per language, grouped by feature as the code is. They are written in [ICU MessageFormat](https://formatjs.github.io/docs/core-concepts/icu-syntax): `{user}` is a value, and `{days, plural, one {# day} other {# days}}` picks the right form for each language. `{bot}`, `{publishCommand}` and `{anonymousCommand}` are filled in everywhere.
 
-To add a language: copy `es.ts`, translate it, and list it in `LANGUAGES` in `i18n/index.ts`.
+English is the reference. `pnpm i18n` reads `locales/en.yml` and generates `src/i18n/messages.ts`, the `Strings` type, where a text that takes values is a function with those values named and typed: `t.inbox.thread.mentionHeader({ user, channel, permalink })`. Calling a text with a missing or wrong value fails the type check, and a test fails if the type is out of date with the English file. The same command checks the other languages: a translation can't use values the English text doesn't, nor keys it doesn't have, and must be valid ICU. A language may leave texts out; those show in English, and the command lists them.
+
+`I18n` reads each person's Slack locale (`users.info`, cached for an hour) and falls back to English. What only one person sees uses `i18n.forUser(id)`; what the bot posts in the team channel uses `i18n.team`, in `TEAM_LANGUAGE`.
+
+To add a language, copy `locales/en.yml` to `locales/<code>.yml`, with the language's code as Slack reports it (`fr` for `fr-FR`), translate what you can, and run `pnpm i18n`. To add a text, add it to `locales/en.yml`, run `pnpm i18n`, and translate it in the other files.
 
 ## The Slack app's manifest
 
@@ -140,6 +149,7 @@ pnpm test                 # node:test, every src/**/*.test.ts
 pnpm typecheck
 pnpm manifest             # writes manifest.yml from .env
 pnpm manifest --example   # updates manifest.example.yml
+pnpm i18n                 # updates the texts' types from locales/en.yml, and checks the translations
 ```
 
 Use a test workspace or a test team channel for `.env`, and run a single copy per Slack app: Slack spreads events across every open connection.

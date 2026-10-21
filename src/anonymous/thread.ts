@@ -47,7 +47,7 @@ export function createThread(app: App, { config, store, bot, i18n }: Deps): Anon
   return {
     async open(client, owner, message) {
       const conversation = store.anonymous.reserve(owner, newHandle);
-      const header = t.anonHeader;
+      const header = t.anonymous.team.header;
       let ts: string | undefined;
       try {
         const posted = await client.chat.postMessage({
@@ -70,7 +70,7 @@ export function createThread(app: App, { config, store, bot, i18n }: Deps): Anon
     },
 
     async followUp(client, conversation, message) {
-      const header = t.anonFollowUp;
+      const header = t.anonymous.team.followUp;
       let ts: string | undefined;
       try {
         ts = await postInThread(client, {

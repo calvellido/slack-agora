@@ -1,7 +1,7 @@
 import type { KnownBlock } from '@slack/types';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { es } from '#src/i18n/es.ts';
+import { stringsIn } from '#src/i18n/index.ts';
 import { DAY } from '#src/lib/time.ts';
 import { richTextFromPlain } from '#src/slack/richtext.ts';
 import type { AnonConversation } from '#src/storage/index.ts';
@@ -43,7 +43,7 @@ const thread = (c: AnonConversation, count: number): ConversationView => ({
 
 const json = (value: unknown) => JSON.stringify(value);
 const bot = { name: 'Helpdesk', avatar: 'https://example.com/helpdesk.png' };
-const t = es({ bot: 'Helpdesk', publishCommand: '/post', anonCommand: '/anon' });
+const t = stringsIn('es', { bot: 'Helpdesk', publishCommand: '/post', anonymousCommand: '/anon' });
 
 test('with no conversations the window only has general information', () => {
   const view = inboxView(t, [], 7);

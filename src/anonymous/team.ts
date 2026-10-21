@@ -20,9 +20,9 @@ export function registerTeamSide(app: App, { config, store, team, i18n }: Deps, 
     if (!conversation?.teamThreadTs || !(await team.isMember(user))) return;
     const t = await i18n.forUser(user);
     if (!store.anonymous.close(conversation.id, 'team')) {
-      return thread.ephemeral(client, conversation, user, t.anonAlreadyClosed);
+      return thread.ephemeral(client, conversation, user, t.anonymous.team.alreadyClosed);
     }
-    const text = i18n.team.anonEndedBy(user);
+    const text = i18n.team.anonymous.team.endedBy({ user });
     await thread.setStatus(client, conversation, { state: 'ended', note: text }, body.message);
     await thread.note(client, conversation, text);
   });
@@ -33,19 +33,19 @@ export function registerTeamSide(app: App, { config, store, team, i18n }: Deps, 
     const conversation = body.message ? store.anonymous.byTeamThread(body.message.ts) : undefined;
     if (!conversation?.teamThreadTs || !(await team.isMember(user))) return;
     const t = await i18n.forUser(user);
-    if (conversation.owner) return thread.ephemeral(client, conversation, user, t.anonNotDeletable);
+    if (conversation.owner) return thread.ephemeral(client, conversation, user, t.anonymous.team.notDeletable);
     await thread.remove(client, conversation);
-    await client.chat.postEphemeral({ channel, user, text: t.anonDeletedByTeam });
+    await client.chat.postEphemeral({ channel, user, text: t.anonymous.team.deletedByTeam });
   });
 
   return {
     async sendReply(client, conversation, ts, message, user, notify) {
       const t = await i18n.forUser(user);
-      if (conversation.closedAt) return notify(t.anonReplyClosed);
-      if (!store.anonymous.addMessage(ts, conversation.id, 'team', user)) return notify(t.alreadySent);
+      if (conversation.closedAt) return notify(t.anonymous.team.replyClosed);
+      if (!store.anonymous.addMessage(ts, conversation.id, 'team', user)) return notify(t.inbox.reply.alreadySent);
       store.anonymous.touch(conversation.id);
       await client.reactions.add({ channel, timestamp: ts, name: 'white_check_mark' });
-      if (message.files?.length) await notify(t.filesNotSent);
+      if (message.files?.length) await notify(t.inbox.reply.filesNotSent);
     },
 
     async deleteReply(client, ts, user) {
@@ -54,11 +54,11 @@ export function registerTeamSide(app: App, { config, store, team, i18n }: Deps, 
       const threadTs = store.anonymous.byId(message.conversationId)?.teamThreadTs ?? ts;
       if (!store.anonymous.markMessageDeleted(ts)) {
         const t = await i18n.forUser(user);
-        await client.chat.postEphemeral({ channel, user, thread_ts: threadTs, text: t.alreadyDeleted });
+        await client.chat.postEphemeral({ channel, user, thread_ts: threadTs, text: t.inbox.reply.alreadyDeleted });
         return true;
       }
       await client.reactions.remove({ channel, timestamp: ts, name: 'white_check_mark' }).catch(() => {});
-      await client.chat.postMessage({ channel, thread_ts: threadTs, text: i18n.team.anonReplyDeleted(user) });
+      await client.chat.postMessage({ channel, thread_ts: threadTs, text: i18n.team.anonymous.team.replyDeleted({ user }) });
       return true;
     },
 
@@ -68,14 +68,14 @@ export function registerTeamSide(app: App, { config, store, team, i18n }: Deps, 
       // but their threads are left alone: they aren't in this channel.
       const here = (c: AnonConversation) => c.teamChannel === channel;
       for (const conversation of store.anonymous.expire(now - config.anonIdleDays * DAY, now).filter(here)) {
-        const text = i18n.team.anonExpired(config.anonIdleDays);
+        const text = i18n.team.anonymous.team.expired({ days: config.anonIdleDays });
         await thread.setStatus(client, conversation, { state: 'ended', note: text });
         await thread.note(client, conversation, text);
       }
       // The authors can't see these any more, so the team may now delete them.
       for (const conversation of store.anonymous.purgeClosed(now - config.anonClosedVisibleDays * DAY).filter(here)) {
         const ended =
-          conversation.closedBy === 'expired' ? i18n.team.anonExpired(config.anonIdleDays) : i18n.team.anonEndedByTeam;
+          conversation.closedBy === 'expired' ? i18n.team.anonymous.team.expired({ days: config.anonIdleDays }) : i18n.team.anonymous.team.endedByTeam;
         await thread.setStatus(client, conversation, { state: 'forgotten', note: ended });
       }
     },

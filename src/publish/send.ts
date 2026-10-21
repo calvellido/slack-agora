@@ -26,12 +26,12 @@ export function createSender({ config, store, i18n }: Deps): Sender {
       try {
         sentTs = (await client.chat.postMessage({ channel, text: plainText(message), blocks: [message] })).ts;
       } catch (error) {
-        await client.chat.postMessage({ channel: teamChannel, text: t.publishFailed(poster, `<#${channel}>`, errorCode(error)) });
+        await client.chat.postMessage({ channel: teamChannel, text: t.publish.record.failed({ poster, target: `<#${channel}>`, error: errorCode(error) }) });
         return;
       }
       if (!sentTs) return;
       const { permalink } = await client.chat.getPermalink({ channel, message_ts: sentTs });
-      const header = t.published(poster, channel, permalink ?? '');
+      const header = t.publish.record.posted({ poster, channel, permalink: permalink ?? '' });
       const record = await client.chat.postMessage({
         channel: teamChannel,
         text: header,
@@ -46,7 +46,7 @@ export function createSender({ config, store, i18n }: Deps): Sender {
       try {
         dm = (await client.conversations.open({ users: user })).channel?.id;
       } catch (error) {
-        await client.chat.postMessage({ channel: teamChannel, text: t.publishFailed(poster, `<@${user}>`, errorCode(error)) });
+        await client.chat.postMessage({ channel: teamChannel, text: t.publish.record.failed({ poster, target: `<@${user}>`, error: errorCode(error) }) });
         return;
       }
       if (!dm) return;
@@ -57,20 +57,20 @@ export function createSender({ config, store, i18n }: Deps): Sender {
         try {
           sentTs = (await client.chat.postMessage({ channel: dmChannel, text: plainText(message), blocks: [message] })).ts;
         } catch (error) {
-          await client.chat.postMessage({ channel: teamChannel, text: t.publishFailed(poster, `<@${user}>`, errorCode(error)) });
+          await client.chat.postMessage({ channel: teamChannel, text: t.publish.record.failed({ poster, target: `<@${user}>`, error: errorCode(error) }) });
           return;
         }
         if (!sentTs) return;
 
         const existing = store.conversations.latestDm(dmChannel, Date.now() - config.inboxIdleDays * DAY);
-        const header = t.dmStarted(poster, user);
+        const header = t.publish.record.dmStarted({ poster, user });
         const post = { channel: teamChannel, text: header, blocks: quoted(header, [message]), unfurl_links: false };
         // In the person's ongoing conversation if there is one (and its thread still exists), else in a new one.
         let recordTs = existing && (await postInThread(client, { ...post, thread_ts: existing.teamThreadTs }));
         if (existing && recordTs) {
           store.conversations.touch(existing.id);
         } else {
-          recordTs = (await client.chat.postMessage({ ...post, blocks: [...post.blocks, context(t.replyHint(config.sendEmoji))] })).ts;
+          recordTs = (await client.chat.postMessage({ ...post, blocks: [...post.blocks, context(t.inbox.thread.replyHint({ sendEmoji: config.sendEmoji }))] })).ts;
           if (!recordTs) return;
           store.conversations.create({ kind: 'dm', userId: user, targetChannel: dmChannel, targetThreadTs: null, teamThreadTs: recordTs });
         }

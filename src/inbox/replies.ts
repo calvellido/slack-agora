@@ -29,16 +29,16 @@ export function registerReplies(app: App, { config, store, i18n }: Deps, anonymo
       await client.chat.postEphemeral({ channel: team, user, thread_ts: threadTs, text });
     };
 
-    if (!message || !threadTs || threadTs === ts) return notify(t.notInThread);
-    if (message.bot_id) return notify(t.cannotSendBotMessage);
+    if (!message || !threadTs || threadTs === ts) return notify(t.inbox.reply.notInThread);
+    if (message.bot_id) return notify(t.inbox.reply.cannotSendBotMessage);
     const anon = store.anonymous.byTeamThread(threadTs);
     const conversation = anon ? undefined : store.conversations.byTeamThread(threadTs);
-    if (!anon && !conversation) return notify(t.notAConversation);
+    if (!anon && !conversation) return notify(t.inbox.reply.notAConversation);
     const text = message.text ?? '';
-    if (!text.trim()) return notify(t.emptyReply);
+    if (!text.trim()) return notify(t.inbox.reply.emptyReply);
     if (anon) return anonymous.sendReply(client, anon, ts, message, user, notify);
     if (!conversation) return;
-    if (!store.deliveries.claim(ts, conversation.targetChannel, user)) return notify(t.alreadySent);
+    if (!store.deliveries.claim(ts, conversation.targetChannel, user)) return notify(t.inbox.reply.alreadySent);
 
     let sentTs: string | undefined;
     try {
@@ -52,12 +52,12 @@ export function registerReplies(app: App, { config, store, i18n }: Deps, anonymo
       sentTs = sent.ts;
     } catch (error) {
       store.deliveries.release(ts);
-      return notify(t.sendFailed(errorCode(error)));
+      return notify(t.inbox.reply.sendFailed({ error: errorCode(error) }));
     }
     if (sentTs) store.deliveries.complete(ts, sentTs);
     store.conversations.touch(conversation.id);
     await client.reactions.add({ channel: team, timestamp: ts, name: 'white_check_mark' });
-    if (message.files?.length) await notify(t.filesNotSent);
+    if (message.files?.length) await notify(t.inbox.reply.filesNotSent);
   }
 
   async function deleteDelivery(client: WebClient, ts: string, user: string) {
@@ -69,15 +69,15 @@ export function registerReplies(app: App, { config, store, i18n }: Deps, anonymo
     const notify = async (text: string) => {
       await client.chat.postEphemeral({ channel: team, user, thread_ts: threadTs, text });
     };
-    if (delivery.deletedAt) return notify(t.alreadyDeleted);
+    if (delivery.deletedAt) return notify(t.inbox.reply.alreadyDeleted);
 
     try {
       await client.chat.delete({ channel: delivery.targetChannel, ts: delivery.targetTs });
     } catch (error) {
-      if (errorCode(error) !== 'message_not_found') return notify(t.deleteFailed(errorCode(error)));
+      if (errorCode(error) !== 'message_not_found') return notify(t.inbox.reply.deleteFailed({ error: errorCode(error) }));
     }
     store.deliveries.markDeleted(ts);
     await client.reactions.remove({ channel: team, timestamp: ts, name: 'white_check_mark' }).catch(() => {});
-    await client.chat.postMessage({ channel: team, thread_ts: threadTs, text: i18n.team.deleted(user) });
+    await client.chat.postMessage({ channel: team, thread_ts: threadTs, text: i18n.team.inbox.reply.deleted({ user }) });
   }
 }

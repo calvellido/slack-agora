@@ -15,18 +15,18 @@ export function anonModal(t: Strings, message?: RichTextBlock): ModalView {
   return {
     type: 'modal',
     callback_id: 'anon_message',
-    title: plain(t.anonTitle),
-    submit: plain(t.anonSubmit),
-    close: plain(t.cancel),
+    title: plain(t.anonymous.form.title),
+    submit: plain(t.anonymous.form.submit),
+    close: plain(t.common.cancel),
     blocks: [
-      { type: 'section', text: mrkdwn(t.anonIntro) },
+      { type: 'section', text: mrkdwn(t.anonymous.form.intro) },
       {
         type: 'input',
         block_id: 'message',
-        label: plain(t.anonMessage),
+        label: plain(t.anonymous.form.message),
         element: { type: 'rich_text_input', action_id: 'message', initial_value: message, focus_on_load: true },
       },
-      context(t.anonPrivacy),
+      context(t.anonymous.form.privacy),
     ],
   };
 }
@@ -54,21 +54,21 @@ export const INBOX_MAX_CONVERSATIONS = 10;
 /** "Mensajes anónimos": the viewer's conversations, or general information if they have none. */
 export function inboxView(t: Strings, items: InboxItem[], closedVisibleDays: number, now = Date.now()): ModalView {
   const blocks: KnownBlock[] = [
-    { type: 'section', text: mrkdwn(t.inboxIntro) },
+    { type: 'section', text: mrkdwn(t.anonymous.window.intro) },
     {
       type: 'actions',
-      elements: [{ type: 'button', action_id: 'anon_new', style: 'primary', text: plain(t.inboxNew) }],
+      elements: [{ type: 'button', action_id: 'anon_new', style: 'primary', text: plain(t.anonymous.window.new) }],
     },
   ];
   if (items.length === 0) {
-    blocks.push(context(t.inboxEmpty));
+    blocks.push(context(t.anonymous.window.empty));
   } else {
-    blocks.push({ type: 'divider' }, { type: 'section', text: mrkdwn(t.inboxConversations) });
+    blocks.push({ type: 'divider' }, { type: 'section', text: mrkdwn(t.anonymous.window.conversations) });
     for (const { conversation, lastTs, hasNew } of items.slice(0, INBOX_MAX_CONVERSATIONS)) {
-      const title = [t.convName, hasNew ? t.inboxNewReply : ''].filter(Boolean).join('  ');
+      const title = [t.anonymous.conversation.name, hasNew ? t.anonymous.window.newReply : ''].filter(Boolean).join('  ');
       const details = [
-        conversation.teamThreadTs ? t.inboxStarted(slackDate(conversation.teamThreadTs)) : '',
-        lastTs && lastTs !== conversation.teamThreadTs ? t.inboxLast(slackDate(lastTs)) : '',
+        conversation.teamThreadTs ? t.anonymous.window.started({ date: slackDate(conversation.teamThreadTs) }) : '',
+        lastTs && lastTs !== conversation.teamThreadTs ? t.anonymous.window.last({ date: slackDate(lastTs) }) : '',
         closedStatus(t, conversation, closedVisibleDays, now),
       ]
         .filter(Boolean)
@@ -76,12 +76,12 @@ export function inboxView(t: Strings, items: InboxItem[], closedVisibleDays: num
       blocks.push({
         type: 'section',
         text: mrkdwn([title, details].filter(Boolean).join('\n')),
-        accessory: { type: 'button', action_id: 'anon_open', value: conversation.handle, text: plain(t.inboxOpen) },
+        accessory: { type: 'button', action_id: 'anon_open', value: conversation.handle, text: plain(t.anonymous.window.open) },
       });
     }
   }
-  blocks.push({ type: 'divider' }, context(t.anonPrivacy));
-  return { type: 'modal', callback_id: 'anon_inbox', title: modalTitle(t.inboxTitle), close: plain(t.anonClose), blocks };
+  blocks.push({ type: 'divider' }, context(t.anonymous.form.privacy));
+  return { type: 'modal', callback_id: 'anon_inbox', title: modalTitle(t.anonymous.window.title), close: plain(t.common.close), blocks };
 }
 
 export interface ConversationView {
@@ -125,7 +125,7 @@ export function conversationView(
 
   const status = closedStatus(t, conversation, closedVisibleDays, now);
   if (status) blocks.push({ type: 'section', text: mrkdwn(status) }, { type: 'divider' });
-  if (messages.length > shown.length) blocks.push(context(t.convHidden(messages.length - shown.length)));
+  if (messages.length > shown.length) blocks.push(context(t.anonymous.conversation.hidden({ count: messages.length - shown.length })));
 
   const groups: (typeof shown)[] = [];
   for (const message of shown) {
@@ -140,7 +140,7 @@ export function conversationView(
   for (const group of groups) {
     const first = group[0]!;
     blocks.push(speakerLine(t, first.author, first.ts, group.some((m) => m.isNew), bot));
-    for (const message of group) blocks.push(message.body ?? { type: 'section', text: mrkdwn(t.convUnavailable) });
+    for (const message of group) blocks.push(message.body ?? { type: 'section', text: mrkdwn(t.anonymous.conversation.unavailable) });
   }
 
   if (open) {
@@ -149,10 +149,10 @@ export function conversationView(
       {
         type: 'input',
         block_id: `${REPLY_BLOCK}${now}`,
-        label: plain(t.convReply),
+        label: plain(t.anonymous.conversation.reply),
         element: { type: 'rich_text_input', action_id: 'reply' },
       },
-      { type: 'actions', elements: [{ type: 'button', action_id: 'anon_end', value: conversation.handle, text: plain(t.convEnd) }] },
+      { type: 'actions', elements: [{ type: 'button', action_id: 'anon_end', value: conversation.handle, text: plain(t.anonymous.conversation.end) }] },
     );
   } else {
     blocks.push({ type: 'divider' }, deleteOwnButton(t, conversation.handle));
@@ -162,16 +162,16 @@ export function conversationView(
     type: 'modal',
     callback_id: 'anon_conversation',
     private_metadata: conversation.handle,
-    title: modalTitle(t.convTitle),
-    close: plain(t.convBack),
-    ...(open ? { submit: plain(t.convSend) } : {}),
+    title: modalTitle(t.anonymous.conversation.title),
+    close: plain(t.common.back),
+    ...(open ? { submit: plain(t.anonymous.conversation.send) } : {}),
     blocks,
   };
 }
 
 function speakerLine(t: Strings, author: AnonMessage['author'], ts: string, isNew: boolean, bot: Speaker): KnownBlock {
-  const when = [slackDate(ts), isNew ? t.convNew : ''].filter(Boolean).join(' ');
-  if (author === 'person') return context(`${t.convYou}   ${when}`);
+  const when = [slackDate(ts), isNew ? t.anonymous.conversation.new : ''].filter(Boolean).join(' ');
+  if (author === 'person') return context(`${t.anonymous.conversation.you}   ${when}`);
   return {
     type: 'context',
     elements: [
@@ -190,8 +190,8 @@ function deleteOwnButton(t: Strings, handle: string): ActionsBlock {
         action_id: 'anon_delete_own',
         value: handle,
         style: 'danger',
-        text: plain(t.convDelete),
-        confirm: { ...confirm(t, t.convDeleteConfirmTitle, t.convDeleteConfirm, t.convDeleteConfirmButton), style: 'danger' },
+        text: plain(t.anonymous.conversation.delete),
+        confirm: { ...confirm(t, t.anonymous.conversation.deleteConfirmTitle, t.anonymous.conversation.deleteConfirm, t.anonymous.conversation.deleteConfirmButton), style: 'danger' },
       },
     ],
   };
@@ -203,23 +203,23 @@ export function endView(t: Strings, handle: string): ModalView {
     type: 'modal',
     callback_id: 'anon_end',
     private_metadata: handle,
-    title: modalTitle(t.convTitle),
-    submit: plain(t.endSubmit),
-    close: plain(t.cancel),
+    title: modalTitle(t.anonymous.conversation.title),
+    submit: plain(t.anonymous.end.submit),
+    close: plain(t.common.cancel),
     blocks: [
-      { type: 'section', text: mrkdwn(t.endIntro) },
+      { type: 'section', text: mrkdwn(t.anonymous.end.intro) },
       {
         type: 'input',
         block_id: 'delete',
         optional: true,
-        label: plain(t.endDeleteLabel),
+        label: plain(t.anonymous.end.deleteLabel),
         element: {
           type: 'checkboxes',
           action_id: 'delete',
-          options: [{ text: plain(t.endDeleteOption), value: 'delete' }],
+          options: [{ text: plain(t.anonymous.end.deleteOption), value: 'delete' }],
         },
       },
-      context(t.endDeleteHint),
+      context(t.anonymous.end.deleteHint),
     ],
   };
 }
@@ -227,7 +227,7 @@ export function endView(t: Strings, handle: string): ModalView {
 function closedStatus(t: Strings, c: AnonConversation, closedVisibleDays: number, now: number): string {
   if (!c.closedAt) return '';
   const days = Math.max(1, Math.ceil((c.closedAt + closedVisibleDays * DAY - now) / DAY));
-  return c.closedBy === 'expired' ? t.convExpired(days) : t.convEndedByTeam(days);
+  return c.closedBy === 'expired' ? t.anonymous.conversation.expired({ days }) : t.anonymous.conversation.endedByTeam({ days });
 }
 
 /**
@@ -248,7 +248,7 @@ export function teamAnonStatus(t: Strings, status: TeamAnonState): KnownBlock[] 
   switch (status.state) {
     case 'open':
       return [
-        line(t.anonOpenStatus(status.sendEmoji)),
+        line(t.anonymous.team.openStatus({ sendEmoji: status.sendEmoji })),
         {
           type: 'actions',
           block_id: ACTIONS_BLOCK,
@@ -256,8 +256,8 @@ export function teamAnonStatus(t: Strings, status: TeamAnonState): KnownBlock[] 
             {
               type: 'button',
               action_id: 'anon_team_end',
-              text: plain(t.anonEndButton),
-              confirm: confirm(t, t.anonEndConfirmTitle, t.anonEndConfirm(status.closedVisibleDays), t.anonEndConfirmButton),
+              text: plain(t.anonymous.team.endButton),
+              confirm: confirm(t, t.anonymous.team.endConfirmTitle, t.anonymous.team.endConfirm({ days: status.closedVisibleDays }), t.anonymous.team.endConfirmButton),
             },
           ],
         },
@@ -266,7 +266,7 @@ export function teamAnonStatus(t: Strings, status: TeamAnonState): KnownBlock[] 
       return [line(status.note)];
     case 'forgotten':
       return [
-        line(`${status.note} ${t.anonDeletableStatus}`),
+        line(`${status.note} ${t.anonymous.team.deletableStatus}`),
         {
           type: 'actions',
           block_id: ACTIONS_BLOCK,
@@ -275,9 +275,9 @@ export function teamAnonStatus(t: Strings, status: TeamAnonState): KnownBlock[] 
               type: 'button',
               action_id: 'anon_team_delete',
               style: 'danger',
-              text: plain(t.anonDeleteButton),
+              text: plain(t.anonymous.team.deleteButton),
               confirm: {
-                ...confirm(t, t.anonDeleteConfirmTitle, t.anonDeleteConfirm, t.anonDeleteConfirmButton),
+                ...confirm(t, t.anonymous.team.deleteConfirmTitle, t.anonymous.team.deleteConfirm, t.anonymous.team.deleteConfirmButton),
                 style: 'danger',
               },
             },
@@ -294,5 +294,5 @@ export function withTeamAnonStatus(t: Strings, blocks: readonly unknown[], statu
 }
 
 function confirm(t: Strings, title: string, text: string, button: string) {
-  return { title: plain(title), text: plain(text), confirm: plain(button), deny: plain(t.cancel) };
+  return { title: plain(title), text: plain(text), confirm: plain(button), deny: plain(t.common.cancel) };
 }
