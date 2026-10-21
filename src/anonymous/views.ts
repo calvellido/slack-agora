@@ -1,7 +1,7 @@
 import type { ActionsBlock, KnownBlock, ModalView, RichTextBlock } from '@slack/types';
 import type { Strings } from '#src/i18n/index.ts';
 import { DAY } from '#src/lib/time.ts';
-import { context, modalTitle, slackDate } from '#src/slack/blocks.ts';
+import { context, modalTitle, slackDate, spacer } from '#src/slack/blocks.ts';
 import type { AnonConversation, AnonMessage } from '#src/storage/index.ts';
 
 // Views of anonymous mode, in the language of `t`. Nothing here may contain the author's identity. They are all modals, never the Home tab:
@@ -20,12 +20,14 @@ export function anonModal(t: Strings, message?: RichTextBlock): ModalView {
     close: plain(t.common.cancel),
     blocks: [
       { type: 'section', text: mrkdwn(t.anonymous.form.intro) },
+      spacer(),
       {
         type: 'input',
         block_id: 'message',
         label: plain(t.anonymous.form.message),
         element: { type: 'rich_text_input', action_id: 'message', initial_value: message, focus_on_load: true },
       },
+      spacer(),
       context(t.anonymous.form.privacy),
     ],
   };
@@ -63,8 +65,9 @@ export function inboxView(t: Strings, items: InboxItem[], closedVisibleDays: num
   if (items.length === 0) {
     blocks.push(context(t.anonymous.window.empty));
   } else {
-    blocks.push({ type: 'divider' }, { type: 'section', text: mrkdwn(t.anonymous.window.conversations) });
-    for (const { conversation, lastTs, hasNew } of items.slice(0, INBOX_MAX_CONVERSATIONS)) {
+    blocks.push(spacer(), { type: 'divider' }, { type: 'section', text: mrkdwn(t.anonymous.window.conversations) });
+    for (const [i, { conversation, lastTs, hasNew }] of items.slice(0, INBOX_MAX_CONVERSATIONS).entries()) {
+      if (i > 0) blocks.push(spacer());
       const title = [t.anonymous.conversation.name, hasNew ? t.anonymous.window.newReply : ''].filter(Boolean).join('  ');
       const details = [
         conversation.teamThreadTs ? t.anonymous.window.started({ date: slackDate(conversation.teamThreadTs) }) : '',
@@ -80,7 +83,7 @@ export function inboxView(t: Strings, items: InboxItem[], closedVisibleDays: num
       });
     }
   }
-  blocks.push({ type: 'divider' }, context(t.anonymous.form.privacy));
+  blocks.push(spacer(), { type: 'divider' }, context(t.anonymous.form.privacy));
   return { type: 'modal', callback_id: 'anon_inbox', title: modalTitle(t.anonymous.window.title), close: plain(t.common.close), blocks };
 }
 
@@ -102,8 +105,8 @@ export interface Speaker {
   avatar?: string;
 }
 
-/** Most messages shown, to stay below a modal's 100 blocks. */
-export const CONVERSATION_MAX_MESSAGES = 40;
+/** Most messages shown, to stay below a modal's 100 blocks: each can take three, with its author and a space. */
+export const CONVERSATION_MAX_MESSAGES = 30;
 
 /** Messages from the same side this close together go under one header, as in a Slack channel. */
 const GROUP_SECONDS = 10 * 60;
@@ -137,12 +140,14 @@ export function conversationView(
       groups.push([message]);
     }
   }
-  for (const group of groups) {
+  for (const [i, group] of groups.entries()) {
     const first = group[0]!;
+    if (i > 0) blocks.push(spacer());
     blocks.push(speakerLine(t, first.author, first.ts, group.some((m) => m.isNew), bot));
     for (const message of group) blocks.push(message.body ?? { type: 'section', text: mrkdwn(t.anonymous.conversation.unavailable) });
   }
 
+  blocks.push(spacer());
   if (open) {
     blocks.push(
       { type: 'divider' },
@@ -208,6 +213,7 @@ export function endView(t: Strings, handle: string): ModalView {
     close: plain(t.common.cancel),
     blocks: [
       { type: 'section', text: mrkdwn(t.anonymous.end.intro) },
+      spacer(),
       {
         type: 'input',
         block_id: 'delete',

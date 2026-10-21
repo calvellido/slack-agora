@@ -1,6 +1,6 @@
 import type { HeaderBlock, HomeView, ImageBlock, KnownBlock, SectionBlock } from '@slack/types';
 import type { Strings } from '#src/i18n/index.ts';
-import { context } from '#src/slack/blocks.ts';
+import { context, spacer } from '#src/slack/blocks.ts';
 
 // The Home tab, in the language of `t`. Everyone gets the same one, and team members also get how to act as the bot,
 // so it never gives away that someone writes anonymously: those conversations live in a modal.
@@ -17,11 +17,6 @@ export interface HomeOptions {
 
 const plain = (text: string) => ({ type: 'plain_text' as const, text });
 const mrkdwn = (text: string) => ({ type: 'mrkdwn' as const, text });
-
-/** Block Kit has no spacing of its own: a blank section adds a line's height. */
-function spacer(): SectionBlock {
-  return { type: 'section', text: mrkdwn(' ') };
-}
 
 /** Header blocks take plain text only, up to 150 characters. */
 function header(text: string): HeaderBlock {
@@ -54,6 +49,7 @@ export function homeView(t: Strings, { bot, about, banner, team }: HomeOptions):
   const intro = aboutBlocks(about ?? t.home.intro);
   // A heading at the start of the about text takes the place of the bot's name.
   if (intro[0]?.type !== 'header') intro.unshift(header(bot.name));
+  // Slack draws an image block at the image's own size, so the 72-pixel avatar stays small.
   const image = banner ?? bot.avatar;
   if (image) intro.unshift({ type: 'image', image_url: image, alt_text: bot.name } satisfies ImageBlock);
 

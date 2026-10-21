@@ -1,9 +1,14 @@
-import type { ContextBlock, KnownBlock, RichTextBlock } from '@slack/types';
+import type { ContextBlock, KnownBlock, RichTextBlock, SectionBlock } from '@slack/types';
 
 // Small Block Kit pieces shared by every feature.
 
 export function context(text: string): ContextBlock {
   return { type: 'context', elements: [{ type: 'mrkdwn', text }] };
+}
+
+/** Block Kit has no spacing of its own: a blank section adds a line's height. */
+export function spacer(): SectionBlock {
+  return { type: 'section', text: { type: 'mrkdwn', text: ' ' } };
 }
 
 /** A header line followed by a copy of someone's message. */
