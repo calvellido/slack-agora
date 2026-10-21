@@ -103,17 +103,70 @@ Nothing is unhackable, and Agora doesn't claim to be. It does its best to keep a
 
 ### What you need
 
-You need Node 26.12.1 or later, and a machine that stays on. The bot only connects out to Slack, so it needs no public address or open port.
+You need a machine that stays on, with Docker, or with Node 26.12.1 or later and pnpm (`npm install --global pnpm`). The bot only connects out to Slack, so it needs no public address or open port.
 
 ### Installing
 
-1. Copy `.env.example` to `.env` and fill in the app's part: `APP_NAME`, the commands, `TEAM_LANGUAGE` and `ABOUT`, the text at the top of the *Home* tab. Run `pnpm install`, then `pnpm manifest`, which writes `manifest.yml`. [manifest.example.yml](manifest.example.yml) shows what you get with the defaults.
+First get Agora's [latest release](https://github.com/calvellido/slack-agora/releases/latest), 1.0.0 in these examples:
+
+- With Node, clone it at the release's tag and install it: `git clone --branch v1.0.0 https://github.com/calvellido/slack-agora.git`, then `pnpm install --prod` in its folder.
+- With Docker, the image has everything, and you only need the settings file: `curl -O https://raw.githubusercontent.com/calvellido/slack-agora/v1.0.0/.env.example`. The steps below use `pnpm`, and [Running it with Docker](#running-it-with-docker) has the same commands for Docker.
+
+Then:
+
+1. Copy `.env.example` to `.env` and fill in the app's part: `APP_NAME`, the commands, `TEAM_LANGUAGE` and `ABOUT`, the text at the top of the *Home* tab. Run `pnpm manifest`, which writes `manifest.yml`. [manifest.example.yml](manifest.example.yml) shows what you get with the defaults.
 2. [Create a Slack app](https://api.slack.com/apps) *from a manifest* with that file, and install it.
 3. In *Basic Information > App-Level Tokens*, generate a token with the `connections:write` scope (`xapp-...`).
 4. In *OAuth & Permissions*, copy the Bot User OAuth Token (`xoxb-...`).
 5. Create the team's private channel, run `/invite @<bot>` in it, and copy its ID from the channel details, at the bottom of *About*.
 6. Generate the anonymity secret with `openssl rand -base64 32`, and keep a copy somewhere other than the server.
 7. Fill in the rest of `.env` and start the bot with `pnpm start`.
+
+### Running it with Docker
+
+Each release is published as an image, `ghcr.io/calvellido/slack-agora`, tagged with its version (`1.0.0`), its minor and major versions (`1.0` and `1`) and `latest`. Run these in the folder with `.env`:
+
+```sh
+# Step 1: the manifest
+docker run --rm -v "$PWD/.env:/app/.env:ro" ghcr.io/calvellido/slack-agora:1 node --env-file=.env src/manifest/cli.ts --stdout > manifest.yml
+
+# Step 7: the bot, which starts again with the machine
+docker run -d --name agora --restart unless-stopped -v "$PWD/.env:/app/.env:ro" -v agora-data:/app/data ghcr.io/calvellido/slack-agora:1
+
+# Emptying the database, as pnpm clean-db
+docker exec -it agora node --env-file=.env src/storage/cli.ts
+```
+
+The database lives in the `agora-data` volume, and `docker logs agora` shows the bot's log.
+
+### Running it with Node
+
+`pnpm start` runs the bot until you stop it. To keep it running, and have it start with the machine, run it as a service. With systemd, for example, save this as `/etc/systemd/system/agora.service`, with the folder you cloned, the path that `which node` gives, and a user that can write to `data/`:
+
+```ini
+[Unit]
+Description=Agora
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/opt/slack-agora
+ExecStart=/usr/bin/node --env-file=.env src/main.ts
+Restart=always
+User=agora
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then start it with `sudo systemctl enable --now agora`, and read its log with `journalctl -u agora`.
+
+### Updating
+
+Each release's section in [CHANGELOG.md](CHANGELOG.md), which is also its release notes, says what changed and what to do. When the app's manifest changes, for example with a new command or permission, generate it again and paste it, as in [Changing the app later](#changing-the-app-later).
+
+- With Docker, `docker pull ghcr.io/calvellido/slack-agora:1`, then replace the container: `docker rm -f agora` and the same `docker run` as above. The `1` tag gets every 1.x release; a new major version can need changes, which its notes explain.
+- With Node, `git fetch --tags`, `git checkout` the new version's tag, `pnpm install --prod`, and restart the bot.
 
 ### Settings and data
 

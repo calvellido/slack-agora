@@ -156,10 +156,20 @@ pnpm install
 pnpm dev                  # runs with .env, restarting on changes
 pnpm test                 # node:test, every src/**/*.test.ts
 pnpm typecheck
-pnpm manifest             # writes manifest.yml from .env
+pnpm check                # typecheck and test, as CI does
+pnpm generate             # updates the generated files that are committed: the texts' types and manifest.example.yml
+pnpm manifest             # writes manifest.yml from .env (--stdout prints it instead)
 pnpm manifest --example   # updates manifest.example.yml
 pnpm i18n                 # updates the texts' types from locales/en.yml, and checks the translations
 pnpm clean-db             # empties the database, after asking
 ```
 
 Use a test workspace or a test team channel for `.env`, and run a single copy per Slack app: Slack spreads events across every open connection.
+
+## Releasing
+
+CI (`.github/workflows/ci.yml`) runs `pnpm check` on every push to main and every pull request.
+
+To release a version, run `pnpm check`, set the version in `package.json`, and add its section at the top of `CHANGELOG.md`, saying what deployers have to do, such as pasting a new manifest. Commit, then tag and push the tag: `git tag v1.0.1 && git push origin v1.0.1`. The release workflow (`.github/workflows/release.yml`) runs the tests, checks that the tag matches `package.json`, publishes the Docker image for linux/amd64 and linux/arm64, and creates the GitHub release with the changelog section as its notes.
+
+The `Dockerfile` builds the image from `src/` and `locales/` only (see `.dockerignore`), and the bot in it reads `.env` itself, as `pnpm start` does. GitHub creates the image's package as private: after the first release, make it public in the package's settings, so anyone can pull it.

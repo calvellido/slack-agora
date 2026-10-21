@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "license": "MIT",
+  "packageManager": "pnpm@10.16.0",
   "description": "Agora: a Slack bot for a team to receive messages, including anonymous ones, answer them together from a private channel, and post as the bot",
   "type": "module",
   "imports": {
@@ -18,7 +19,9 @@
     "i18n": "node src/i18n/cli.ts",
     "clean-db": "node --env-file-if-exists=.env src/storage/cli.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --test 'src/**/*.test.ts'"
+    "test": "node --test 'src/**/*.test.ts'",
+    "check": "pnpm typecheck && pnpm test",
+    "generate": "pnpm i18n && pnpm manifest --example"
   },
   "dependencies": {
     "@formatjs/icu-messageformat-parser": "3.5.21",

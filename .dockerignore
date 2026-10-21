@@ -1,0 +1,8 @@
+# Only what the bot needs to run goes into the image.
+*
+!package.json
+!pnpm-lock.yaml
+!LICENSE
+!locales/
+!src/
+src/**/*.test.ts
