@@ -1,4 +1,4 @@
-# The bot, ready to run: `docker run -v "$PWD/.env:/app/.env:ro" -v agora-data:/app/data <image>`. See the README.
+# The bot, ready to run with compose.yaml (see the README). It runs the bot, or `manifest` or `clean-db` instead.
 
 FROM node:26-alpine AS dependencies
 WORKDIR /app
@@ -13,9 +13,11 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY package.json LICENSE ./
 COPY locales ./locales
 COPY src ./src
+COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/agora
 # The database, in a volume so it outlives the container.
 RUN mkdir data && chown node:node data
 VOLUME /app/data
 USER node
 # Node reads .env itself, as `pnpm start` does: Docker's --env-file would keep the quotes around values.
-CMD ["node", "--env-file-if-exists=.env", "src/main.ts"]
+ENTRYPOINT ["agora"]
+CMD ["start"]

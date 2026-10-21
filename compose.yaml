@@ -1,0 +1,12 @@
+# Agora with Docker Compose: put this file and .env in a folder, and run `docker compose up -d` there. The README has
+# the rest of the commands.
+services:
+  agora:
+    image: ghcr.io/calvellido/slack-agora:1
+    restart: unless-stopped
+    volumes:
+      - ./.env:/app/.env:ro
+      - data:/app/data
+
+volumes:
+  data:

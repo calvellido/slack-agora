@@ -2,6 +2,12 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## [1.1.0] - 2026-10-21
+
+- Simpler Docker setup: `compose.yaml` runs the bot with `docker compose up -d`, and the image takes `manifest` and `clean-db` as commands. Each release attaches `compose.yaml` and the settings template.
+
+Nothing to do when updating: the `docker run` commands from 1.0.0 still work with the new image.
+
 ## [1.0.0] - 2026-10-21
 
 The first release.
@@ -16,4 +22,5 @@ The first release.
 - `pnpm clean-db` empties the database.
 - A Docker image, for linux/amd64 and linux/arm64.
 
+[1.1.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.1.0
 [1.0.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.0.0

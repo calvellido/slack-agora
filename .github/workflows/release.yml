@@ -1,5 +1,7 @@
 # Pushing a tag such as v1.2.3 runs the tests, publishes the Docker image to ghcr.io (as 1.2.3, 1.2, 1 and latest)
-# and creates the GitHub release, with that version's section of CHANGELOG.md as its notes.
+# and creates the GitHub release, with that version's section of CHANGELOG.md as its notes, and compose.yaml and the
+# settings template attached for Docker deployments. GitHub renames files starting with a dot, so the template goes as
+# env.example.
 name: Release
 
 on:
@@ -56,4 +58,5 @@ jobs:
             inside
           ' CHANGELOG.md > notes.md
           test -s notes.md
-          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md
+          cp .env.example env.example
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md compose.yaml env.example

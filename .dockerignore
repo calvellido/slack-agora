@@ -5,4 +5,5 @@
 !LICENSE
 !locales/
 !src/
+!docker/
 src/**/*.test.ts

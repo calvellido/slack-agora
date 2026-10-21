@@ -110,7 +110,7 @@ You need a machine that stays on, with Docker, or with Node 26.12.1 or later and
 First get Agora's [latest release](https://github.com/calvellido/slack-agora/releases/latest), 1.0.0 in these examples:
 
 - With Node, clone it at the release's tag and install it: `git clone --branch v1.0.0 https://github.com/calvellido/slack-agora.git`, then `pnpm install --prod` in its folder.
-- With Docker, the image has everything, and you only need the settings file: `curl -O https://raw.githubusercontent.com/calvellido/slack-agora/v1.0.0/.env.example`. The steps below use `pnpm`, and [Running it with Docker](#running-it-with-docker) has the same commands for Docker.
+- With Docker, you only need two files, as [Running it with Docker](#running-it-with-docker) explains. The steps below use `pnpm`, and that section has the same commands for Docker.
 
 Then:
 
@@ -124,20 +124,23 @@ Then:
 
 ### Running it with Docker
 
-Each release is published as an image, `ghcr.io/calvellido/slack-agora`, tagged with its version (`1.0.0`), its minor and major versions (`1.0` and `1`) and `latest`. Run these in the folder with `.env`:
+Each release is published as an image, `ghcr.io/calvellido/slack-agora`, tagged with its version (`1.0.0`), its minor and major versions (`1.0` and `1`) and `latest`. [compose.yaml](compose.yaml) runs it with Docker Compose. Download it and the settings file, as `.env`, into an empty folder:
 
 ```sh
-# Step 1: the manifest
-docker run --rm -v "$PWD/.env:/app/.env:ro" ghcr.io/calvellido/slack-agora:1 node --env-file=.env src/manifest/cli.ts --stdout > manifest.yml
-
-# Step 7: the bot, which starts again with the machine
-docker run -d --name agora --restart unless-stopped -v "$PWD/.env:/app/.env:ro" -v agora-data:/app/data ghcr.io/calvellido/slack-agora:1
-
-# Emptying the database, as pnpm clean-db
-docker exec -it agora node --env-file=.env src/storage/cli.ts
+curl -LO https://github.com/calvellido/slack-agora/releases/latest/download/compose.yaml
+curl -Lo .env https://github.com/calvellido/slack-agora/releases/latest/download/env.example
 ```
 
-The database lives in the `agora-data` volume, and `docker logs agora` shows the bot's log.
+Then, in that folder, these take the place of the `pnpm` commands:
+
+```sh
+docker compose run --rm -T agora manifest > manifest.yml   # pnpm manifest
+docker compose up -d                                       # pnpm start; the bot starts again with the machine
+docker compose run --rm agora clean-db                     # pnpm clean-db
+docker compose logs -f                                     # the bot's log
+```
+
+The database lives in a Docker volume, which Compose keeps between updates.
 
 ### Running it with Node
 
@@ -165,7 +168,7 @@ Then start it with `sudo systemctl enable --now agora`, and read its log with `j
 
 Each release's section in [CHANGELOG.md](CHANGELOG.md), which is also its release notes, says what changed and what to do. When the app's manifest changes, for example with a new command or permission, generate it again and paste it, as in [Changing the app later](#changing-the-app-later).
 
-- With Docker, `docker pull ghcr.io/calvellido/slack-agora:1`, then replace the container: `docker rm -f agora` and the same `docker run` as above. The `1` tag gets every 1.x release; a new major version can need changes, which its notes explain.
+- With Docker, `docker compose pull && docker compose up -d`. The `1` tag in `compose.yaml` gets every 1.x release; a new major version can need changes, which its notes explain.
 - With Node, `git fetch --tags`, `git checkout` the new version's tag, `pnpm install --prod`, and restart the bot.
 
 ### Settings and data

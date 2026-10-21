@@ -170,7 +170,7 @@ Use a test workspace or a test team channel for `.env`, and run a single copy pe
 
 CI (`.github/workflows/ci.yml`) runs `pnpm check` on every push to main and every pull request.
 
-To release a version, add its section at the top of `CHANGELOG.md`, saying what deployers have to do, such as pasting a new manifest, and commit it. Then:
+Changes go under *Unreleased* at the top of `CHANGELOG.md` as they are made, saying what deployers have to do, such as pasting a new manifest. To release them, give that section the new version and date (`## [1.1.0] - 2026-10-22`) and commit it. Then:
 
 ```sh
 pnpm version patch        # or minor, or major
@@ -179,4 +179,4 @@ git push --follow-tags
 
 `pnpm version` runs `pnpm check`, sets the new version in `package.json`, checks that the changelog has its section, and commits and tags it (`chore: release v1.0.1`, `v1.0.1`). If the changelog lacks the section it stops before committing: add it, undo the version change with `git checkout package.json`, and run it again. Pushing the tag starts the release workflow (`.github/workflows/release.yml`), which runs the tests, checks that the tag matches `package.json`, publishes the Docker image for linux/amd64 and linux/arm64, and creates the GitHub release with the changelog section as its notes.
 
-The `Dockerfile` builds the image from `src/` and `locales/` only (see `.dockerignore`), and the bot in it reads `.env` itself, as `pnpm start` does. GitHub creates the image's package as private: after the first release, make it public in the package's settings, so anyone can pull it.
+The `Dockerfile` builds the image from `src/` and `locales/` only (see `.dockerignore`). Its entry point, `docker/entrypoint.sh`, runs the bot by default, or `manifest` or `clean-db`, each reading `.env` itself, as `pnpm start` does. `compose.yaml` is what Docker deployments run, and each release attaches it and `.env.example` (as `env.example`), so the README can link to the latest ones. GitHub creates the image's package as private: after the first release, make it public in the package's settings, so anyone can pull it.
