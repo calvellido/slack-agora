@@ -20,7 +20,7 @@ export interface Dms {
  * DMs to the bot: each becomes, or continues, a conversation thread in the team channel, and is marked as received.
  * Those that arrived while the bot was down are relayed late, by catchUp.
  */
-export function registerDms(app: App, { config, store, i18n, bot }: Deps, relay: Relay): Dms {
+export function registerDms(app: App, { config, store, i18n, bot, notices }: Deps, relay: Relay): Dms {
   // DMs handled recently, so one caught up at start and also delivered live isn't relayed twice.
   const handled = new Set<string>();
 
@@ -37,11 +37,17 @@ export function registerDms(app: App, { config, store, i18n, bot }: Deps, relay:
       if (teamThreadTs) {
         store.conversations.create({ kind: 'dm', userId: dm.user, targetChannel: dm.channel, targetThreadTs: null, teamThreadTs });
         // Late DMs get one apology per person instead (see catchUp).
-        if (!dm.lateTs) await client.chat.postMessage({ channel: dm.channel, text: (await i18n.forUser(dm.user)).inbox.dm.ack });
+        if (!dm.lateTs) await acknowledge(client, dm.channel, dm.user, 'ack');
       }
     });
     await client.reactions.add({ channel: dm.channel, timestamp: dm.ts, name: RECEIVED_EMOJI });
     return true;
+  }
+
+  /** The bot's automatic reply in someone's DM, in their language, so it doesn't look like the team's. */
+  async function acknowledge(client: WebClient, channel: string, user: string, which: 'ack' | 'lateAck') {
+    const t = await i18n.forUser(user);
+    await notices.toPerson(client, { channel, text: t.inbox.dm[which], username: t.notices.sender });
   }
 
   app.event('message', async ({ event, client }) => {
@@ -77,7 +83,7 @@ export function registerDms(app: App, { config, store, i18n, bot }: Deps, relay:
             if (await handleDm(client, dm)) relayed++;
           }
           if (relayed > 0) {
-            await client.chat.postMessage({ channel: im.id, text: (await i18n.forUser(im.user)).inbox.dm.lateAck });
+            await acknowledge(client, im.id, im.user, 'lateAck');
             recovered += relayed;
           }
         }

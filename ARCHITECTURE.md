@@ -31,6 +31,7 @@ src/
     blocks.ts          Small Block Kit pieces: context lines, quoted messages, dates, modal titles.
     richtext.ts        Rich text from and to what people type, and plain-text fallbacks.
     errors.ts          The Slack error code of a failed call.
+    notices.ts         Posting the bot's notices in the team channel, under their own name and icon.
 
   storage/           The SQLite database, one file per kind of data. Store (index.ts) groups them.
     database.ts        Schema and migrations.
@@ -101,6 +102,10 @@ The links for DMs and mentions could be hidden in message metadata, but finding 
 SQLite is used as the DB engine since is built into Node (`node:sqlite`), with no database server to run. Just one file in `data/`. The bot stores a few thousand rows a year at most so this shouldn't be an issue.
 
 Conversations store the team channel their thread is in, and lookups only match the current `TEAM_CHANNEL_ID`. Expiring and purging anonymous conversations covers every channel, so no author link outlives its schedule.
+
+## Who speaks: the team or the bot
+
+The bot's own identity is only the team's voice: replies sent with the send emoji, and posts and DMs sent with the publish command or shortcut. Everything the bot does on its own goes through `Notices` (`slack/notices.ts`), under a sender of its own, the bot's name with " · notices" and a robot icon (`chat:write.customize`): the messages it relays into the team channel, anonymous messages, what it reports there (a conversation ending or expiring, a reply withdrawn, a deletion, a failure, the bot back online, the record of something the team posted, the notices only one person sees) and its automatic replies in people's DMs. Short notices and automatic replies show as a small grey line; relayed and anonymous messages keep their full layout. The sender's name is in the team's language in the team channel, and in each person's language in their DM. A new kind of message should go through `Notices` unless it is something the team says.
 
 ## Why anonymous messages don't use the Messages tab
 

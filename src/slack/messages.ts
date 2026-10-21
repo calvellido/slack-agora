@@ -41,6 +41,8 @@ interface ThreadPost {
   text: string;
   blocks?: KnownBlock[];
   unfurl_links?: boolean;
+  username?: string;
+  icon_emoji?: string;
 }
 
 /**

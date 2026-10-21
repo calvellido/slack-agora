@@ -14,8 +14,10 @@ export const BOT_SCOPES = [
   'app_mentions:read', // @mentions of the bot
   'channels:read', // checking a public channel before posting in it
   'chat:write',
+  'chat:write.customize', // the bot's notices in the team channel, under their own name and icon
   'chat:write.public', // posting in public channels without joining them
   'commands',
+  'emoji:read', // checking that NOTICE_EMOJI exists in the workspace
   'groups:history', // reading the team channel's threads
   'groups:read', // the team channel's members, and private channels before posting in them
   'im:history', // DMs to the bot

@@ -53,12 +53,12 @@ export function startHeartbeat(heartbeat: Heartbeat): Uptime {
 }
 
 /** Relays the DMs sent while the bot was down, and tells the team it is back if it was away for a while. */
-export async function recoverDowntime(client: WebClient, { config, i18n }: Deps, dms: Dms, uptime: Uptime): Promise<void> {
+export async function recoverDowntime(client: WebClient, { i18n, notices }: Deps, dms: Dms, uptime: Uptime): Promise<void> {
   const { lastAlive, startedAt } = uptime;
   if (!lastAlive) return;
   const recovered = await dms.catchUp(client, lastAlive);
   if (recovered === 0 && startedAt - lastAlive < NOTICE_AFTER_MS) return;
   const since = slackDate(String(lastAlive / 1000));
   const text = i18n.team.inbox.backOnline({ duration: formatDuration(startedAt - lastAlive), since, recovered });
-  await client.chat.postMessage({ channel: config.teamChannelId, text });
+  await notices.post(client, { text });
 }

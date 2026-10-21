@@ -10,6 +10,7 @@ import { registerInbox } from './inbox/index.ts';
 import { registerPublish } from './publish/index.ts';
 import { errorCode } from './slack/errors.ts';
 import { botIdentity } from './slack/identity.ts';
+import { Notices, noticeEmoji } from './slack/notices.ts';
 import { TeamDirectory } from './slack/team-directory.ts';
 import { Store } from './storage/index.ts';
 
@@ -23,17 +24,21 @@ const uptime = startHeartbeat(store.heartbeat);
 // The Slack app, over Socket Mode, and the services every feature shares
 const app = new App({ token: config.botToken, appToken: config.appToken, socketMode: true, logLevel: config.logLevel });
 const bot = await botIdentity(app.client);
+const i18n = new I18n(
+  app.client,
+  { bot: bot.name, publishCommand: config.publishCommand, anonymousCommand: config.anonCommand },
+  config.teamLanguage,
+);
+const notices = await noticeEmoji(app.client, config.noticeEmoji);
+if (notices.warning) app.logger.warn(notices.warning);
 const deps: Deps = {
   config,
   store,
   team: new TeamDirectory(app.client, config.teamChannelId),
   anonOwner: ownerHasher(config.anonSecret),
   bot,
-  i18n: new I18n(
-    app.client,
-    { bot: bot.name, publishCommand: config.publishCommand, anonymousCommand: config.anonCommand },
-    config.teamLanguage,
-  ),
+  i18n,
+  notices: new Notices(config.teamChannelId, i18n.team.notices.sender, notices.emoji),
 };
 
 // Features

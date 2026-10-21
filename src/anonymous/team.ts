@@ -9,7 +9,7 @@ import type { AnonymousThread } from './thread.ts';
  * The team's side, in the team channel: the buttons on each thread (end, and delete once the author is forgotten),
  * replies sent with the send emoji, replies withdrawn with the delete emoji, and the hourly cleanup.
  */
-export function registerTeamSide(app: App, { config, store, team, i18n }: Deps, thread: AnonymousThread): Anonymous {
+export function registerTeamSide(app: App, { config, store, team, i18n, notices }: Deps, thread: AnonymousThread): Anonymous {
   const channel = config.teamChannelId;
 
   app.action<BlockAction<ButtonAction>>('anon_team_end', async ({ ack, body, client }) => {
@@ -35,7 +35,7 @@ export function registerTeamSide(app: App, { config, store, team, i18n }: Deps, 
     const t = await i18n.forUser(user);
     if (conversation.owner) return thread.ephemeral(client, conversation, user, t.anonymous.team.notDeletable);
     await thread.remove(client, conversation);
-    await client.chat.postEphemeral({ channel, user, text: t.anonymous.team.deletedByTeam });
+    await notices.ephemeral(client, { user, text: t.anonymous.team.deletedByTeam });
   });
 
   return {
@@ -54,11 +54,11 @@ export function registerTeamSide(app: App, { config, store, team, i18n }: Deps, 
       const threadTs = store.anonymous.byId(message.conversationId)?.teamThreadTs ?? ts;
       if (!store.anonymous.markMessageDeleted(ts)) {
         const t = await i18n.forUser(user);
-        await client.chat.postEphemeral({ channel, user, thread_ts: threadTs, text: t.inbox.reply.alreadyDeleted });
+        await notices.ephemeral(client, { user, text: t.inbox.reply.alreadyDeleted, threadTs });
         return true;
       }
       await client.reactions.remove({ channel, timestamp: ts, name: 'white_check_mark' }).catch(() => {});
-      await client.chat.postMessage({ channel, thread_ts: threadTs, text: i18n.team.anonymous.team.replyDeleted({ user }) });
+      await notices.post(client, { text: i18n.team.anonymous.team.replyDeleted({ user }), threadTs });
       return true;
     },
 

@@ -10,7 +10,7 @@ import { richTextBlocks } from '#src/slack/richtext.ts';
  * The team's reactions in the team channel: the send emoji on a thread reply sends it as the bot (anonymous threads are
  * handed to anonymous mode), and the delete emoji on the record of something the bot sent deletes it.
  */
-export function registerReplies(app: App, { config, store, i18n }: Deps, anonymous: Anonymous): void {
+export function registerReplies(app: App, { config, store, i18n, notices }: Deps, anonymous: Anonymous): void {
   const team = config.teamChannelId;
 
   app.event('reaction_added', async ({ event, client }) => {
@@ -25,9 +25,7 @@ export function registerReplies(app: App, { config, store, i18n }: Deps, anonymo
     const t = await i18n.forUser(user);
     const message = await fetchMessage(client, team, ts);
     const threadTs = message?.thread_ts;
-    const notify = async (text: string) => {
-      await client.chat.postEphemeral({ channel: team, user, thread_ts: threadTs, text });
-    };
+    const notify = (text: string) => notices.ephemeral(client, { user, text, threadTs });
 
     if (!message || !threadTs || threadTs === ts) return notify(t.inbox.reply.notInThread);
     if (message.bot_id) return notify(t.inbox.reply.cannotSendBotMessage);
@@ -66,9 +64,7 @@ export function registerReplies(app: App, { config, store, i18n }: Deps, anonymo
     if (!delivery?.targetTs) return;
     const t = await i18n.forUser(user);
     const threadTs = (await fetchMessage(client, team, ts))?.thread_ts ?? ts;
-    const notify = async (text: string) => {
-      await client.chat.postEphemeral({ channel: team, user, thread_ts: threadTs, text });
-    };
+    const notify = (text: string) => notices.ephemeral(client, { user, text, threadTs });
     if (delivery.deletedAt) return notify(t.inbox.reply.alreadyDeleted);
 
     try {
@@ -78,6 +74,6 @@ export function registerReplies(app: App, { config, store, i18n }: Deps, anonymo
     }
     store.deliveries.markDeleted(ts);
     await client.reactions.remove({ channel: team, timestamp: ts, name: 'white_check_mark' }).catch(() => {});
-    await client.chat.postMessage({ channel: team, thread_ts: threadTs, text: i18n.team.inbox.reply.deleted({ user }) });
+    await notices.post(client, { text: i18n.team.inbox.reply.deleted({ user }), threadTs });
   }
 }

@@ -4,7 +4,7 @@ import type { WebClient } from '@slack/web-api';
 import type { Deps } from '#src/deps.ts';
 import { context } from '#src/slack/blocks.ts';
 import { errorCode } from '#src/slack/errors.ts';
-import { fetchMessage, postInThread, threadMessages } from '#src/slack/messages.ts';
+import { fetchMessage, threadMessages } from '#src/slack/messages.ts';
 import { plainText } from '#src/slack/richtext.ts';
 import type { AnonConversation } from '#src/storage/index.ts';
 import { newHandle } from './keys.ts';
@@ -23,7 +23,7 @@ export interface AnonymousThread {
     status: TeamAnonState,
     parent?: { ts: string; text?: string; blocks?: unknown[] },
   ): Promise<void>;
-  /** A short note in the thread, such as who ended the conversation. */
+  /** A notice in the thread, such as who ended the conversation. */
   note(client: WebClient, conversation: AnonConversation, text: string): Promise<void>;
   /** A notice in the thread that only `user` sees. */
   ephemeral(client: WebClient, conversation: AnonConversation, user: string, text: string): Promise<void>;
@@ -34,7 +34,7 @@ export interface AnonymousThread {
   remove(client: WebClient, conversation: AnonConversation, leaveNote?: string): Promise<void>;
 }
 
-export function createThread(app: App, { config, store, bot, i18n }: Deps): AnonymousThread {
+export function createThread(app: App, { config, store, bot, i18n, notices }: Deps): AnonymousThread {
   const channel = config.teamChannelId;
   // Everything here is posted in the team channel, so in the team's language.
   const t = i18n.team;
@@ -50,13 +50,10 @@ export function createThread(app: App, { config, store, bot, i18n }: Deps): Anon
       const header = t.anonymous.team.header;
       let ts: string | undefined;
       try {
-        const posted = await client.chat.postMessage({
-          channel,
+        ts = await notices.post(client, {
           text: `${header} ${plainText(message)}`,
           blocks: [context(header), message, ...teamAnonStatus(t, openStatus)],
-          unfurl_links: false,
         });
-        ts = posted.ts;
       } catch (error) {
         app.logger.error(`Could not post an anonymous message: ${errorCode(error)}`);
       }
@@ -73,12 +70,10 @@ export function createThread(app: App, { config, store, bot, i18n }: Deps): Anon
       const header = t.anonymous.team.followUp;
       let ts: string | undefined;
       try {
-        ts = await postInThread(client, {
-          channel,
-          thread_ts: conversation.teamThreadTs!,
+        ts = await notices.post(client, {
           text: `${header} ${plainText(message)}`,
           blocks: [context(header), message],
-          unfurl_links: false,
+          threadTs: conversation.teamThreadTs!,
         });
         if (!ts) {
           store.anonymous.close(conversation.id, 'team');
@@ -102,17 +97,17 @@ export function createThread(app: App, { config, store, bot, i18n }: Deps): Anon
     },
 
     async note(client, conversation, text) {
-      if (conversation.teamThreadTs) await postInThread(client, { channel, thread_ts: conversation.teamThreadTs, text });
+      if (conversation.teamThreadTs) await notices.post(client, { text, threadTs: conversation.teamThreadTs });
     },
 
     async ephemeral(client, conversation, user, text) {
-      await client.chat.postEphemeral({ channel, user, thread_ts: conversation.teamThreadTs ?? undefined, text });
+      await notices.ephemeral(client, { user, text, threadTs: conversation.teamThreadTs ?? undefined });
     },
 
     async remove(client, conversation, leaveNote) {
       const ts = conversation.teamThreadTs;
       if (!ts) return;
-      const kept = leaveNote ? await postInThread(client, { channel, thread_ts: ts, text: leaveNote }) : undefined;
+      const kept = leaveNote ? await notices.post(client, { text: leaveNote, threadTs: ts }) : undefined;
       const ours = [...(await threadMessages(client, channel, ts)).values()]
         .filter((m) => m.ts && m.ts !== kept && m.bot_id === bot.botId)
         // The parent goes last: deleted while it still has replies, Slack leaves a "deleted message" placeholder.

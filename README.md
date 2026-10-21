@@ -28,6 +28,8 @@ Anonymous conversations arrive as *Anonymous message*, with no name or code, and
 
 Only members of the team channel can act as the bot. What the bot posts in the team channel is in `TEAM_LANGUAGE`, since everyone there shares it.
 
+Only what the team sends is posted as the bot itself: replies sent with :outbox_tray: and posts made with `PUBLISH_COMMAND`. Everything the bot does on its own comes from a separate sender with a robot icon, named after the bot (for example *Agora · notices*, or *Agora · avisos* in Spanish): the messages it relays into the team channel, anonymous messages, its notices there (a conversation ending, a reply withdrawn, the bot back online) and its automatic replies to people. Short notices and automatic replies show as small grey text.
+
 ## If the bot is down
 
 Slack only delivers messages to a running bot, so nothing answers while it is down. The *Home* tab tells people that a message without :incoming_envelope: means the bot is offline. When it is back, it relays the DMs it missed, marked with when they were sent, and apologises once to each sender. If it was away for more than 5 minutes, or relayed any late DMs, it also tells the team channel how long it was offline.
@@ -76,6 +78,16 @@ Every setting, with its default, is described in [.env.example](.env.example). T
 To change the app later, for example its name, a command, or a new version that needs other permissions, change `.env`, run `pnpm manifest`, and paste `manifest.yml` into *App Manifest* (YAML) in the app settings. Don't change the app's settings in Slack by hand, as the next manifest would undo it.
 
 Changing `TEAM_CHANNEL_ID`, say from a test channel to the real one, is safe with the same database. People's next messages start new threads in the new channel, and anonymous conversations from the old one drop out of people's windows.
+
+### A custom icon for the bot's own messages
+
+Everything the bot posts on its own shows a robot by default, so it doesn't look like a message from the team. You can use your own image instead, for example the app's icon with a small badge in a corner, by adding it to the workspace as a custom emoji:
+
+1. Prepare a square image in PNG, JPG or GIF. Slack recommends under 128 KB, with a transparent background.
+2. In Slack, open the emoji menu from the smiley in the message field, choose *Add Emoji*, upload the image and give it a name, such as `team-notices`. If you can't, your workspace may only let owners or admins add emoji.
+3. Set `NOTICE_EMOJI=team-notices` in `.env` and restart the bot.
+
+When it starts, the bot checks that the emoji exists. If it doesn't, because the name has a typo or the emoji was deleted, it uses the robot and logs a warning. Any standard emoji works too, such as `NOTICE_EMOJI=gear`.
 
 ## Not yet
 

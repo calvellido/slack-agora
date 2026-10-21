@@ -36,8 +36,10 @@ oauth_config:
       - app_mentions:read
       - channels:read
       - chat:write
+      - chat:write.customize
       - chat:write.public
       - commands
+      - emoji:read
       - groups:history
       - groups:read
       - im:history

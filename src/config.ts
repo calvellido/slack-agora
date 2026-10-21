@@ -29,6 +29,8 @@ export interface Config extends AppSettings {
   inboxIdleDays: number;
   sendEmoji: string;
   deleteEmoji: string;
+  /** The icon of the bot's notices in the team channel. */
+  noticeEmoji: string;
   logLevel: LogLevel;
   anonSecret: string;
   anonIdleDays: number;
@@ -98,6 +100,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     inboxIdleDays: positive('INBOX_IDLE_DAYS', 7),
     sendEmoji: env.SEND_EMOJI ?? 'outbox_tray',
     deleteEmoji: env.DELETE_EMOJI ?? 'wastebasket',
+    noticeEmoji: env.NOTICE_EMOJI?.trim().replace(/^:|:$/g, '') || 'robot_face',
     logLevel,
     anonSecret,
     anonIdleDays: positive('ANON_IDLE_DAYS', 30),

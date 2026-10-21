@@ -1,6 +1,7 @@
 import type { Config } from './config.ts';
 import type { I18n } from './i18n/index.ts';
 import type { BotIdentity } from './slack/identity.ts';
+import type { Notices } from './slack/notices.ts';
 import type { TeamDirectory } from './slack/team-directory.ts';
 import type { Store } from './storage/index.ts';
 
@@ -13,4 +14,6 @@ export interface Deps {
   anonOwner: (userId: string) => string;
   bot: BotIdentity;
   i18n: I18n;
+  /** Posts what happened in the team channel, apart from the team's messages. */
+  notices: Notices;
 }

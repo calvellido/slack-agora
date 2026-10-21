@@ -1,7 +1,6 @@
 import type { WebClient } from '@slack/web-api';
 import type { Deps } from '#src/deps.ts';
 import { context, quoted, slackDate } from '#src/slack/blocks.ts';
-import { postInThread } from '#src/slack/messages.ts';
 import { richTextBlocks } from '#src/slack/richtext.ts';
 import type { Conversation } from '#src/storage/index.ts';
 
@@ -26,7 +25,7 @@ export type Relay = (
   message: Incoming,
 ) => Promise<string | undefined>;
 
-export function createRelay({ config, store, i18n }: Deps): Relay {
+export function createRelay({ config, store, i18n, notices }: Deps): Relay {
   // Posted in the team channel, so in the team's language.
   const t = i18n.team;
 
@@ -38,13 +37,10 @@ export function createRelay({ config, store, i18n }: Deps): Relay {
       return { text: `${title} ${message.text}`, blocks };
     };
 
+    // Relayed by the bot on its own, so under the notices sender; the message keeps its full layout.
     if (existing) {
-      const posted = await postInThread(client, {
-        channel: config.teamChannelId,
-        thread_ts: existing.teamThreadTs,
-        ...body(t.inbox.thread.followUp({ user: message.user })),
-        unfurl_links: false,
-      });
+      const followUp = body(t.inbox.thread.followUp({ user: message.user }));
+      const posted = await notices.post(client, { ...followUp, threadTs: existing.teamThreadTs });
       if (posted) {
         store.conversations.touch(existing.id);
         return undefined;
@@ -52,7 +48,6 @@ export function createRelay({ config, store, i18n }: Deps): Relay {
     }
     const { text, blocks } = body(await header());
     blocks.push(context(t.inbox.thread.replyHint({ sendEmoji: config.sendEmoji })));
-    const parent = await client.chat.postMessage({ channel: config.teamChannelId, text, blocks, unfurl_links: false });
-    return parent.ts;
+    return notices.post(client, { text, blocks });
   };
 }

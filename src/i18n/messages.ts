@@ -7,6 +7,9 @@ export interface Strings {
     close: string;
     back: string;
   };
+  notices: {
+    sender: string;
+  };
   manifest: {
     description: string;
     anonymousShortcut: {

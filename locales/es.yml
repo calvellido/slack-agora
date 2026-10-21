@@ -7,6 +7,9 @@ common:
   close: "Cerrar"
   back: "Volver"
 
+notices:
+  sender: "{bot} · bot"
+
 manifest:
   description: "Escribe al equipo de {bot}, con tu nombre o de forma anónima"
   anonymousShortcut:
