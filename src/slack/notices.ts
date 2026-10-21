@@ -38,12 +38,18 @@ export class Notices {
     return postInThread(client, { ...message, thread_ts: notice.threadTs });
   }
 
-  /** An automatic message to someone in their DM with the bot; `username` is the sender's name in their language. */
-  async toPerson(client: WebClient, message: { channel: string; text: string; username: string }): Promise<void> {
+  /**
+   * An automatic message to someone in their DM with the bot; `username` is the sender's name in their language.
+   * `blocks` replaces the grey line, for messages that quote what the person wrote.
+   */
+  async toPerson(
+    client: WebClient,
+    message: { channel: string; text: string; username: string; blocks?: KnownBlock[] },
+  ): Promise<void> {
     await client.chat.postMessage({
       channel: message.channel,
       text: message.text,
-      blocks: [context(message.text)],
+      blocks: message.blocks ?? [context(message.text)],
       username: message.username,
       icon_emoji: this.#emoji,
     });

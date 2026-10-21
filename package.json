@@ -1,7 +1,8 @@
 {
   "name": "slack-agora",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "description": "Agora: a Slack bot for a team to receive messages, including anonymous ones, answer them together from a private channel, and post as the bot",
   "type": "module",
   "imports": {

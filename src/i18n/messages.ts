@@ -12,6 +12,14 @@ export interface Strings {
   };
   manifest: {
     description: string;
+    writeShortcut: {
+      name: string;
+      description: string;
+    };
+    writeCommand: {
+      description: string;
+      hint: string;
+    };
     anonymousShortcut: {
       name: string;
       description: string;
@@ -40,6 +48,17 @@ export interface Strings {
     dm: {
       ack: string;
       lateAck: string;
+      written: string;
+    };
+    write: {
+      title: string;
+      intro: string;
+      message: string;
+      submit: string;
+      anonymousHint: string;
+      sent: string;
+      empty: string;
+      sendFailed: string;
     };
     reply: {
       notInThread: string;
@@ -80,6 +99,8 @@ export interface Strings {
     intro: string;
     contactTitle: string;
     named: string;
+    namedButton: string;
+    namedHint: (params: { command: string }) => string;
     deliveryHint: string;
     anonymous: string;
     anonymousButton: string;
@@ -90,7 +111,7 @@ export interface Strings {
       conversations: (params: { teamChannel: string }) => string;
       reply: (params: { sendEmoji: string }) => string;
       delete: (params: { deleteEmoji: string; teamChannel: string }) => string;
-      publish: string;
+      publish: (params: { ways: string }) => string;
       publishButton: string;
     };
   };

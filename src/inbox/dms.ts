@@ -1,8 +1,12 @@
 import type { App } from '@slack/bolt';
+import type { RichTextBlock } from '@slack/types';
 import type { WebClient } from '@slack/web-api';
 import type { Deps } from '#src/deps.ts';
 import { serialized } from '#src/lib/serialized.ts';
 import { DAY } from '#src/lib/time.ts';
+import { context, quoted } from '#src/slack/blocks.ts';
+import { errorCode } from '#src/slack/errors.ts';
+import { plainText } from '#src/slack/richtext.ts';
 import { RECEIVED_EMOJI, missedDms } from './downtime.ts';
 import type { Incoming, Relay } from './relay.ts';
 
@@ -14,6 +18,11 @@ interface Dm extends Incoming {
 export interface Dms {
   /** Relays the DMs that arrived since `since` (ms) and weren't marked as received. Returns how many. */
   catchUp(client: WebClient, since: number): Promise<number>;
+  /**
+   * A message written in the form, relayed as if it were a DM. A copy goes to the person's DM, where the team's
+   * replies arrive. Throws if it couldn't reach the team.
+   */
+  write(client: WebClient, user: string, message: RichTextBlock): Promise<void>;
 }
 
 /**
@@ -31,17 +40,24 @@ export function registerDms(app: App, { config, store, i18n, bot, notices }: Dep
     handled.add(key);
     setTimeout(() => handled.delete(key), 10 * 60_000).unref();
 
-    await serialized(dm.channel, async () => {
-      const existing = store.conversations.latestDm(dm.channel, Date.now() - config.inboxIdleDays * DAY);
-      const teamThreadTs = await relay(client, existing, () => i18n.team.inbox.thread.dmHeader({ user: dm.user }), dm);
-      if (teamThreadTs) {
-        store.conversations.create({ kind: 'dm', userId: dm.user, targetChannel: dm.channel, targetThreadTs: null, teamThreadTs });
-        // Late DMs get one apology per person instead (see catchUp).
-        if (!dm.lateTs) await acknowledge(client, dm.channel, dm.user, 'ack');
-      }
-    });
+    const started = await toThread(client, dm);
+    // Late DMs get one apology per person instead (see catchUp).
+    if (started && !dm.lateTs) await acknowledge(client, dm.channel, dm.user, 'ack');
     await client.reactions.add({ channel: dm.channel, timestamp: dm.ts, name: RECEIVED_EMOJI });
     return true;
+  }
+
+  /** Relays a message to the person's conversation thread, or starts one. True if it started one. */
+  async function toThread(client: WebClient, message: Incoming & { channel: string }): Promise<boolean> {
+    return serialized(message.channel, async () => {
+      const existing = store.conversations.latestDm(message.channel, Date.now() - config.inboxIdleDays * DAY);
+      const header = () => i18n.team.inbox.thread.dmHeader({ user: message.user });
+      const teamThreadTs = await relay(client, existing, header, message);
+      if (!teamThreadTs) return false;
+      const conversation = { kind: 'dm', userId: message.user, targetChannel: message.channel, targetThreadTs: null } as const;
+      store.conversations.create({ ...conversation, teamThreadTs });
+      return true;
+    });
   }
 
   /** The bot's automatic reply in someone's DM, in their language, so it doesn't look like the team's. */
@@ -59,6 +75,23 @@ export function registerDms(app: App, { config, store, i18n, bot, notices }: Dep
   });
 
   return {
+    async write(client, user, message) {
+      const { channel } = await client.conversations.open({ users: user });
+      if (!channel?.id) throw new Error('channel_not_found');
+      const text = plainText(message);
+      const started = await toThread(client, { channel: channel.id, user, text, blocks: [message], files: 0 });
+      // The team has it now: a failed copy is only logged, so the person isn't told to send it again.
+      try {
+        const t = await i18n.forUser(user);
+        const blocks = quoted(t.inbox.dm.written, [message]);
+        if (started) blocks.push(context(t.inbox.dm.ack));
+        const copy = { channel: channel.id, text: `${t.inbox.dm.written} ${text}`, username: t.notices.sender, blocks };
+        await notices.toPerson(client, copy);
+      } catch (error) {
+        app.logger.warn(`Couldn't copy a written message to its DM: ${errorCode(error)}`);
+      }
+    },
+
     async catchUp(client, since) {
       // A minute of overlap: DMs relayed just before going down already carry the received mark.
       const oldest = String((since - 60_000) / 1000);

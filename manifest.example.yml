@@ -14,6 +14,10 @@ features:
     display_name: Agora
     always_online: true
   shortcuts:
+    - name: Write to Agora
+      type: global
+      callback_id: write_new
+      description: Write to the Agora team with your name
     - name: Anonymous message to Agora
       type: global
       callback_id: anon_new
@@ -21,14 +25,18 @@ features:
     - name: Post as Agora
       type: message
       callback_id: publish_as_bot
-      description: Post this message as Agora in a channel or by direct message
+      description: "Team only: post this message as Agora in a channel or by direct message"
   slash_commands:
-    - command: /agora-post
-      description: Post as Agora in a channel or by direct message
+    - command: /agora-write
+      description: Write to the Agora team with your name
       usage_hint: "[message]"
       should_escape: false
     - command: /agora-anon
       description: Write to the Agora team without your name
+      should_escape: false
+    - command: /agora-post
+      description: "Team only: post as Agora in a channel or by direct message"
+      usage_hint: "[message]"
       should_escape: false
 oauth_config:
   scopes:

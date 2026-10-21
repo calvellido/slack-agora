@@ -12,14 +12,20 @@ notices:
 
 manifest:
   description: "Escribe al equipo de {bot}, con tu nombre o de forma anónima"
+  writeShortcut:
+    name: "Escribir a {bot}"
+    description: "Escribe al equipo de {bot} con tu nombre"
+  writeCommand:
+    description: "Escribir al equipo de {bot} con tu nombre"
+    hint: "[texto del mensaje]"
   anonymousShortcut:
     name: "Mensaje anónimo a {bot}"
     description: "Escribe al equipo de {bot} sin tu nombre"
   publishShortcut:
     name: "Publicar como {bot}"
-    description: "Publica este mensaje como {bot} en un canal o por mensaje directo"
+    description: "Solo para el equipo: publica este mensaje como {bot} en un canal o por mensaje directo"
   publishCommand:
-    description: "Publicar como {bot} en un canal o por mensaje directo"
+    description: "Solo para el equipo: publicar como {bot} en un canal o por mensaje directo"
     hint: "[texto del mensaje]"
   anonymousCommand:
     description: "Escribir al equipo de {bot} sin tu nombre"
@@ -35,6 +41,16 @@ inbox:
   dm:
     ack: "¡Gracias por escribir! El equipo de {bot} ha recibido tu mensaje y te responderá por aquí."
     lateAck: "Perdona el retraso: {bot} estuvo sin conexión un rato. Tu mensaje ya ha llegado al equipo, que te responderá por aquí."
+    written: "📝 Escribiste al equipo de {bot}:"
+  write:
+    title: "Escribir a {bot}"
+    intro: "El equipo de {bot} verá tu nombre. Te responderá por mensaje directo, en la pestaña *Mensajes* de {bot}, donde puedes seguir escribiendo."
+    message: "Mensaje"
+    submit: "Enviar"
+    anonymousHint: "Para escribir sin tu nombre, usa `{anonymousCommand}` o *Mensajes anónimos* en la pestaña *Inicio* de {bot}."
+    sent: "✅ Enviado. El equipo te responderá en la pestaña *Mensajes* de {bot}, donde tienes una copia de tu mensaje."
+    empty: "El mensaje está vacío."
+    sendFailed: "No se ha podido enviar. Inténtalo de nuevo en unos minutos."
   reply:
     notInThread: "Solo se pueden enviar como {bot} los mensajes escritos dentro del hilo de una conversación."
     notAConversation: "Este hilo no corresponde a ninguna conversación de {bot}."
@@ -72,7 +88,9 @@ home:
   contactTitle: "Escribe al equipo"
   named: |-
     💬 *Con tu nombre*
-    Escribe desde la pestaña *Mensajes* de {bot}. El equipo ve quién eres y te responde allí.
+    Escribe desde la pestaña *Mensajes* de {bot} o con este botón. El equipo ve quién eres y te responde allí, por mensaje directo.
+  namedButton: "Escribir con tu nombre"
+  namedHint: "También puedes usar `{command}` desde cualquier canal."
   deliveryHint: "{bot} marca cada mensaje que recibe con :incoming_envelope:. Si no lo ves, {bot} está sin conexión un momento: tu mensaje no se pierde y llegará al equipo en cuanto vuelva."
   anonymous: |-
     🕶️ *Sin tu nombre*
@@ -93,7 +111,7 @@ home:
       Añade :{deleteEmoji}: al registro en <#{teamChannel}> de lo que {bot} envió.
     publish: |-
       *📣 Publicar*
-      Publica en un canal o escribe a personas como {bot} con `{publishCommand}`, el atajo de mensaje o el botón de abajo.
+      Publica en un canal o escribe a personas como {bot} con el botón de abajo{ways, select, both {, `{publishCommand}` o el atajo del menú *⋯* de un mensaje} command { o `{publishCommand}`} shortcut { o el atajo del menú *⋯* de un mensaje} other {}}.
     publishButton: "Publicar como {bot}"
 
 anonymous:

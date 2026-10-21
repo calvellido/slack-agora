@@ -18,14 +18,20 @@ notices:
 # The Slack app's settings, written to the manifest in the team's language.
 manifest:
   description: "Write to the {bot} team, with your name or anonymously"
+  writeShortcut:
+    name: "Write to {bot}"
+    description: "Write to the {bot} team with your name"
+  writeCommand:
+    description: "Write to the {bot} team with your name"
+    hint: "[message]"
   anonymousShortcut:
     name: "Anonymous message to {bot}"
     description: "Write to the {bot} team without your name"
   publishShortcut:
     name: "Post as {bot}"
-    description: "Post this message as {bot} in a channel or by direct message"
+    description: "Team only: post this message as {bot} in a channel or by direct message"
   publishCommand:
-    description: "Post as {bot} in a channel or by direct message"
+    description: "Team only: post as {bot} in a channel or by direct message"
     hint: "[message]"
   anonymousCommand:
     description: "Write to the {bot} team without your name"
@@ -44,6 +50,18 @@ inbox:
   dm:
     ack: "Thanks for writing! The {bot} team has received your message and will reply here."
     lateAck: "Sorry for the delay: {bot} was offline for a while. Your message has now reached the team, and they will reply here."
+    # Above the copy of what someone wrote in the form.
+    written: "📝 You wrote to the {bot} team:"
+  # The form to write with your name, whose message is relayed as a DM.
+  write:
+    title: "Write to {bot}"
+    intro: "The {bot} team will see your name. They reply by direct message, in {bot}'s *Messages* tab, where you can keep writing."
+    message: "Message"
+    submit: "Send"
+    anonymousHint: "To write without your name, use `{anonymousCommand}` or *Anonymous messages* on {bot}'s *Home* tab."
+    sent: "✅ Sent. The team will reply in {bot}'s *Messages* tab, where you have a copy of your message."
+    empty: "The message is empty."
+    sendFailed: "Couldn't send it. Try again in a few minutes."
   # The team's reactions in the team channel; all but the last are only seen by whoever reacted.
   reply:
     notInThread: "Only messages written inside a conversation's thread can be sent as {bot}."
@@ -86,7 +104,10 @@ home:
   contactTitle: "Write to the team"
   named: |-
     💬 *With your name*
-    Write from {bot}'s *Messages* tab. The team sees who you are and replies there.
+    Write from {bot}'s *Messages* tab or with this button. The team sees who you are and replies there, by direct message.
+  namedButton: "Write with your name"
+  # Only shown when the deployment has a command for it.
+  namedHint: "You can also use `{command}` from any channel."
   deliveryHint: "{bot} marks every message it gets with :incoming_envelope:. If you don't see it, {bot} is offline for a moment: your message is not lost and reaches the team as soon as it is back."
   anonymous: |-
     🕶️ *Without your name*
@@ -106,9 +127,10 @@ home:
     delete: |-
       *:{deleteEmoji}: Deleting*
       Add :{deleteEmoji}: to the record in <#{teamChannel}> of what {bot} sent.
+    # ways: which of the command and the message shortcut this deployment has.
     publish: |-
       *📣 Posting*
-      Post in a channel or write to people as {bot} with `{publishCommand}`, the message shortcut, or the button below.
+      Post in a channel or write to people as {bot} with the button below{ways, select, both {, `{publishCommand}`, or the shortcut in a message's *⋯* menu} command { or `{publishCommand}`} shortcut { or the shortcut in a message's *⋯* menu} other {}}.
     publishButton: "Post as {bot}"
 
 anonymous:

@@ -30,7 +30,7 @@ test('the texts use the names they are given', () => {
   for (const language of ['en', 'es']) {
     const t = stringsIn(language, names);
     assert.match(t.manifest.description, /Helpdesk/);
-    assert.match(t.home.team.publish, /\/post/);
+    assert.match(t.home.team.publish({ ways: 'both' }), /\/post/);
     assert.match(t.home.anonymousHint, /\/anon/);
   }
 });

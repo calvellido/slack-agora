@@ -11,8 +11,10 @@ export interface HomeOptions {
   about?: string;
   /** An image across the top, in place of the avatar. */
   banner?: string;
-  /** Only for team members. */
-  team?: { channel: string; sendEmoji: string; deleteEmoji: string };
+  /** The command to write with your name, if the deployment has one. */
+  writeCommand?: string;
+  /** Only for team members, with the ways to post as the bot besides the Home tab's button. */
+  team?: { channel: string; sendEmoji: string; deleteEmoji: string; publishCommand: boolean; publishShortcut: boolean };
 }
 
 const plain = (text: string) => ({ type: 'plain_text' as const, text });
@@ -45,7 +47,12 @@ export function aboutBlocks(text: string): KnownBlock[] {
   });
 }
 
-export function homeView(t: Strings, { bot, about, banner, team }: HomeOptions): HomeView {
+function publishWays({ publishCommand, publishShortcut }: { publishCommand: boolean; publishShortcut: boolean }) {
+  if (publishCommand && publishShortcut) return 'both';
+  return publishCommand ? 'command' : publishShortcut ? 'shortcut' : 'none';
+}
+
+export function homeView(t: Strings, { bot, about, banner, writeCommand, team }: HomeOptions): HomeView {
   const intro = aboutBlocks(about ?? t.home.intro);
   // A heading at the start of the about text takes the place of the bot's name.
   if (intro[0]?.type !== 'header') intro.unshift(header(bot.name));
@@ -59,6 +66,8 @@ export function homeView(t: Strings, { bot, about, banner, team }: HomeOptions):
     { type: 'divider' },
     header(t.home.contactTitle),
     { type: 'section', text: mrkdwn(t.home.named) },
+    { type: 'actions', elements: [{ type: 'button', action_id: 'write_open', text: plain(t.home.namedButton) }] },
+    ...(writeCommand ? [context(t.home.namedHint({ command: writeCommand }))] : []),
     context(t.home.deliveryHint),
     spacer(),
     { type: 'section', text: mrkdwn(t.home.anonymous) },
@@ -82,7 +91,7 @@ export function homeView(t: Strings, { bot, about, banner, team }: HomeOptions):
           mrkdwn(t.home.team.conversations({ teamChannel })),
           mrkdwn(t.home.team.reply({ sendEmoji: team.sendEmoji })),
           mrkdwn(t.home.team.delete({ teamChannel, deleteEmoji: team.deleteEmoji })),
-          mrkdwn(t.home.team.publish),
+          mrkdwn(t.home.team.publish({ ways: publishWays(team) })),
         ],
       },
       {

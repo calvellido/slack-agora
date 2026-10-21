@@ -7,6 +7,7 @@ import {
   ANON_SHORTCUT,
   BOT_SCOPES,
   PUBLISH_SHORTCUT,
+  WRITE_SHORTCUT,
   buildManifest,
   exampleManifest,
   renderManifest,
@@ -30,6 +31,7 @@ const build = (env: NodeJS.ProcessEnv) => {
 test('the manifest takes names and commands from the settings, in the team language', () => {
   const { manifest } = build({
     APP_NAME: 'Helpdesk',
+    WRITE_COMMAND: '/hd',
     PUBLISH_COMMAND: '/hd-post',
     ANONYMOUS_COMMAND: '/hd-anon',
     TEAM_LANGUAGE: 'es',
@@ -37,19 +39,33 @@ test('the manifest takes names and commands from the settings, in the team langu
   assert.equal(manifest.display_information.name, 'Helpdesk');
   assert.equal(manifest.features.bot_user.display_name, 'Helpdesk');
   assert.equal(manifest.display_information.description, 'Escribe al equipo de Helpdesk, con tu nombre o de forma anónima');
-  assert.deepEqual(manifest.features.slash_commands.map((c) => c.command), ['/hd-post', '/hd-anon']);
-  assert.deepEqual(manifest.features.shortcuts.map((s) => s.name), ['Mensaje anónimo a Helpdesk', 'Publicar como Helpdesk']);
+  assert.deepEqual(manifest.features.slash_commands.map((c) => c.command), ['/hd', '/hd-anon', '/hd-post']);
+  assert.deepEqual(manifest.features.shortcuts.map((s) => s.name), [
+    'Escribir a Helpdesk',
+    'Mensaje anónimo a Helpdesk',
+    'Publicar como Helpdesk',
+  ]);
 });
 
 test('the shortcuts use the callback IDs the handlers listen for', () => {
   const { manifest } = build({});
-  assert.deepEqual(manifest.features.shortcuts.map((s) => s.callback_id), [ANON_SHORTCUT, PUBLISH_SHORTCUT]);
+  assert.deepEqual(manifest.features.shortcuts.map((s) => s.callback_id), [WRITE_SHORTCUT, ANON_SHORTCUT, PUBLISH_SHORTCUT]);
   for (const [file, constant] of [
+    ['src/inbox/write.ts', 'WRITE_SHORTCUT'],
     ['src/anonymous/window.ts', 'ANON_SHORTCUT'],
     ['src/publish/index.ts', 'PUBLISH_SHORTCUT'],
   ] as const) {
     assert.match(readFileSync(file, 'utf8'), new RegExp(`callback_id: ${constant}`));
   }
+});
+
+test("the command to write with your name, and the team's command and message shortcut, can be left out", () => {
+  const { manifest } = build({ WRITE_COMMAND: '', PUBLISH_COMMAND: '', PUBLISH_SHORTCUT: 'false' });
+  assert.deepEqual(manifest.features.slash_commands.map((c) => c.command), ['/agora-anon']);
+  assert.deepEqual(manifest.features.shortcuts.map((s) => s.callback_id), [WRITE_SHORTCUT, ANON_SHORTCUT]);
+  assert.equal(loadAppSettings({}).publishCommand, '/agora-post');
+  assert.equal(loadAppSettings({}).writeCommand, '/agora-write');
+  assert.throws(() => loadAppSettings({ PUBLISH_SHORTCUT: 'no' }), /PUBLISH_SHORTCUT/);
 });
 
 test('extra scopes are added to the ones the code needs', () => {

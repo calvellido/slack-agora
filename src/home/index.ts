@@ -13,8 +13,15 @@ export function registerHome(app: App, { config, team, bot, i18n }: Deps): void 
       bot,
       about: config.about[language] ?? config.about.default,
       banner: config.homeBanner,
+      writeCommand: config.writeCommand,
       team: (await team.isMember(event.user))
-        ? { channel: config.teamChannelId, sendEmoji: config.sendEmoji, deleteEmoji: config.deleteEmoji }
+        ? {
+            channel: config.teamChannelId,
+            sendEmoji: config.sendEmoji,
+            deleteEmoji: config.deleteEmoji,
+            publishCommand: Boolean(config.publishCommand),
+            publishShortcut: config.publishShortcut,
+          }
         : undefined,
     };
     try {

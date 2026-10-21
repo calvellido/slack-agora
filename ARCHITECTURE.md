@@ -50,13 +50,14 @@ src/
 
   inbox/             Conversations by DM or @mention.
     relay.ts           Posts a message in its conversation thread, or starts a new thread.
-    dms.ts             DMs, live and caught up after downtime.
+    dms.ts             DMs: live, written in the form, and caught up after downtime.
+    write.ts           The form to write with your name, from the command, the shortcut or the Home tab.
     mentions.ts        @mentions in other channels.
     replies.ts         The team's reactions: send a reply as the bot, delete what it sent.
     downtime.ts        The heartbeat, which DMs were missed, and the "back online" note.
 
   publish/           Posting as the bot.
-    index.ts           The command, the message shortcut, the Home tab button, and the form submission.
+    index.ts           The Home tab button, the optional command and message shortcut, and the form submission.
     form.ts            The form, and whether the bot can post in the chosen channel.
     send.ts            Posting in a channel or DMing someone, and the record left in the team channel.
 
@@ -80,7 +81,7 @@ Each feature exports a `register…(app, deps)` function that adds its Bolt list
 
 ## How a message travels
 
-A DM to the bot (`inbox/dms.ts`). The `message` event arrives; `relay` posts it in the person's open thread in the team channel, or starts one (a new `conversations` row), and the bot reacts with :incoming_envelope: to mark it as received. A team member writes a reply in the thread and adds the send emoji: `inbox/replies.ts` finds the conversation by the thread, claims a `deliveries` row (so it is sent only once), posts the reply in the DM as the bot, and marks the team member's message with :white_check_mark:.
+A DM to the bot (`inbox/dms.ts`). The `message` event arrives; `relay` posts it in the person's open thread in the team channel, or starts one (a new `conversations` row), and the bot reacts with :incoming_envelope: to mark it as received. A message written in the form (`inbox/write.ts`) takes the same path: `dms.write` opens the person's DM with the bot, relays the message as if it had arrived there, and posts a copy of it in the DM, where the team's replies will arrive. A team member writes a reply in the thread and adds the send emoji: `inbox/replies.ts` finds the conversation by the thread, claims a `deliveries` row (so it is sent only once), posts the reply in the DM as the bot, and marks the team member's message with :white_check_mark:.
 
 An anonymous message (`anonymous/`). The author submits the form in their window (`window.ts`); `thread.ts` posts it in the team channel as *Anonymous message* and records the conversation, with the author's keyed hash as its owner. A team reply with the send emoji goes through `inbox/replies.ts` to `anonymous/team.ts`, which only records it: the author's window reads it back from the thread when opened.
 
@@ -108,7 +109,7 @@ Conversations store the team channel their thread is in, and lookups only match 
 
 ## Who speaks: the team or the bot
 
-The bot's own identity is only the team's voice: replies sent with the send emoji, and posts and DMs sent with the publish command or shortcut. Everything the bot does on its own goes through `Notices` (`slack/notices.ts`), under a sender of its own, the bot's name with " · notices" and a robot icon (`chat:write.customize`): the messages it relays into the team channel, anonymous messages, what it reports there (a conversation ending or expiring, a reply withdrawn, a deletion, a failure, the bot back online, the record of something the team posted, the notices only one person sees) and its automatic replies in people's DMs. Short notices and automatic replies show as a small grey line; relayed and anonymous messages keep their full layout. The sender's name is in the team's language in the team channel, and in each person's language in their DM. A new kind of message should go through `Notices` unless it is something the team says.
+The bot's own identity is only the team's voice: replies sent with the send emoji, and posts and DMs sent from the publish form. Everything the bot does on its own goes through `Notices` (`slack/notices.ts`), under a sender of its own, the bot's name with " · notices" and a robot icon (`chat:write.customize`): the messages it relays into the team channel, anonymous messages, what it reports there (a conversation ending or expiring, a reply withdrawn, a deletion, a failure, the bot back online, the record of something the team posted, the notices only one person sees) and its automatic replies in people's DMs. Short notices and automatic replies show as a small grey line; relayed and anonymous messages keep their full layout. The sender's name is in the team's language in the team channel, and in each person's language in their DM. A new kind of message should go through `Notices` unless it is something the team says.
 
 ## Why anonymous messages don't use the Messages tab
 

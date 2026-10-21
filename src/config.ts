@@ -14,9 +14,13 @@ export interface AppSettings {
   extraScopes: string[];
   /** Language of what the bot posts in the team channel, which everyone there shares, and of the manifest. */
   teamLanguage: Language;
-  /** Slash commands. */
-  publishCommand: string;
+  /** Slash commands. Writing with your name and the team's one are optional. */
+  writeCommand?: string;
   anonCommand: string;
+  /** Optional, since Slack shows commands to everyone. */
+  publishCommand?: string;
+  /** Whether the team has a message shortcut to post a copy of a message, which Slack also shows to everyone. */
+  publishShortcut: boolean;
   /** Optional text for the Home tab: by language, with `default` for languages without their own. */
   about: Partial<Record<Language | 'default', string>>;
 }
@@ -46,6 +50,11 @@ export function loadAppSettings(env: NodeJS.ProcessEnv = process.env): AppSettin
     if (!/^\/[\p{Ll}\d_-]{1,31}$/u.test(value)) throw new Error(`${name} must be a slash command such as ${fallback}`);
     return value;
   };
+  // Set but empty: no command.
+  const optionalCommand = (name: string, fallback: string) =>
+    env[name]?.trim() === '' ? undefined : command(name, fallback);
+  const publishShortcut = env.PUBLISH_SHORTCUT?.trim().toLowerCase() || 'true';
+  if (!['true', 'false'].includes(publishShortcut)) throw new Error('PUBLISH_SHORTCUT must be true or false');
   const appName = env.APP_NAME?.trim() || 'Agora';
   if (appName.length > 35) throw new Error('APP_NAME must be at most 35 characters');
   const appDescription = env.APP_DESCRIPTION?.trim() || undefined;
@@ -71,8 +80,10 @@ export function loadAppSettings(env: NodeJS.ProcessEnv = process.env): AppSettin
     appColor,
     extraScopes: (env.EXTRA_BOT_SCOPES ?? '').split(/[\s,]+/).filter(Boolean),
     teamLanguage,
-    publishCommand: command('PUBLISH_COMMAND', '/agora-post'),
+    writeCommand: optionalCommand('WRITE_COMMAND', '/agora-write'),
     anonCommand: command('ANONYMOUS_COMMAND', '/agora-anon'),
+    publishCommand: optionalCommand('PUBLISH_COMMAND', '/agora-post'),
+    publishShortcut: publishShortcut === 'true',
     about,
   };
 }

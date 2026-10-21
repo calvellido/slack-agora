@@ -26,7 +26,8 @@ const app = new App({ token: config.botToken, appToken: config.appToken, socketM
 const bot = await botIdentity(app.client);
 const i18n = new I18n(
   app.client,
-  { bot: bot.name, publishCommand: config.publishCommand, anonymousCommand: config.anonCommand },
+  // Without a publish command, no text mentions it.
+  { bot: bot.name, publishCommand: config.publishCommand ?? '', anonymousCommand: config.anonCommand },
   config.teamLanguage,
 );
 const notices = await noticeEmoji(app.client, config.noticeEmoji);

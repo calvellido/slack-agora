@@ -14,21 +14,24 @@ export function registerPublish(app: App, deps: Deps): void {
   const teamChannel = config.teamChannelId;
   const send = createSender(deps);
 
-  app.command(config.publishCommand, async ({ ack, command, client }) => {
-    const t = await i18n.forUser(command.user_id);
-    if (!(await team.isMember(command.user_id))) return ack(t.publish.teamOnly);
-    await ack();
-    const here = command.channel_id;
-    const text = command.text.trim();
-    await client.views.open({
-      trigger_id: command.trigger_id,
-      view: publishView(t, teamChannel, {
-        channel: /^[CG]/.test(here) && here !== teamChannel ? here : undefined,
-        message: text ? richTextFromPlain(text) : undefined,
-      }),
+  if (config.publishCommand) {
+    app.command(config.publishCommand, async ({ ack, command, client }) => {
+      const t = await i18n.forUser(command.user_id);
+      if (!(await team.isMember(command.user_id))) return ack(t.publish.teamOnly);
+      await ack();
+      const here = command.channel_id;
+      const text = command.text.trim();
+      await client.views.open({
+        trigger_id: command.trigger_id,
+        view: publishView(t, teamChannel, {
+          channel: /^[CG]/.test(here) && here !== teamChannel ? here : undefined,
+          message: text ? richTextFromPlain(text) : undefined,
+        }),
+      });
     });
-  });
+  }
 
+  // Registered even without the shortcut in the manifest, in case the app's settings still have it.
   app.shortcut<MessageShortcut>(
     { callback_id: PUBLISH_SHORTCUT, type: 'message_action' },
     async ({ ack, shortcut, client, respond }) => {

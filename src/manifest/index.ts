@@ -6,6 +6,7 @@ import { stringsIn } from '#src/i18n/index.ts';
 // in step with a hand-written manifest. `pnpm manifest` writes it to manifest.yml.
 
 /** Callback IDs of the shortcuts, which the handlers listen for. */
+export const WRITE_SHORTCUT = 'write_new';
 export const ANON_SHORTCUT = 'anon_new';
 export const PUBLISH_SHORTCUT = 'publish_as_bot';
 
@@ -34,8 +35,9 @@ const BOT_EVENTS = ['app_home_opened', 'app_mention', 'message.im', 'reaction_ad
 const LONG_DESCRIPTION_MIN = 174;
 
 export function buildManifest(settings: AppSettings): { manifest: object; warnings: string[] } {
-  const { appName, teamLanguage, publishCommand, anonCommand } = settings;
-  const t = stringsIn(teamLanguage, { bot: appName, publishCommand, anonymousCommand: anonCommand });
+  const { appName, teamLanguage, writeCommand, publishCommand, anonCommand, publishShortcut } = settings;
+  const names = { bot: appName, publishCommand: publishCommand ?? '', anonymousCommand: anonCommand };
+  const t = stringsIn(teamLanguage, names);
   const warnings: string[] = [];
 
   // The Home tab's text doubles as the app's long description, without Slack formatting or the Home tab's size marks.
@@ -63,22 +65,41 @@ export function buildManifest(settings: AppSettings): { manifest: object; warnin
       app_home: { home_tab_enabled: true, messages_tab_enabled: true, messages_tab_read_only_enabled: false },
       bot_user: { display_name: appName, always_online: true },
       shortcuts: [
+        { name: t.manifest.writeShortcut.name, type: 'global', callback_id: WRITE_SHORTCUT, description: t.manifest.writeShortcut.description },
         { name: t.manifest.anonymousShortcut.name, type: 'global', callback_id: ANON_SHORTCUT, description: t.manifest.anonymousShortcut.description },
-        {
-          name: t.manifest.publishShortcut.name,
-          type: 'message',
-          callback_id: PUBLISH_SHORTCUT,
-          description: t.manifest.publishShortcut.description,
-        },
+        ...(publishShortcut
+          ? [
+              {
+                name: t.manifest.publishShortcut.name,
+                type: 'message',
+                callback_id: PUBLISH_SHORTCUT,
+                description: t.manifest.publishShortcut.description,
+              },
+            ]
+          : []),
       ],
       slash_commands: [
-        {
-          command: publishCommand,
-          description: t.manifest.publishCommand.description,
-          usage_hint: t.manifest.publishCommand.hint,
-          should_escape: false,
-        },
+        ...(writeCommand
+          ? [
+              {
+                command: writeCommand,
+                description: t.manifest.writeCommand.description,
+                usage_hint: t.manifest.writeCommand.hint,
+                should_escape: false,
+              },
+            ]
+          : []),
         { command: anonCommand, description: t.manifest.anonymousCommand.description, should_escape: false },
+        ...(publishCommand
+          ? [
+              {
+                command: publishCommand,
+                description: t.manifest.publishCommand.description,
+                usage_hint: t.manifest.publishCommand.hint,
+                should_escape: false,
+              },
+            ]
+          : []),
       ],
     },
     oauth_config: { scopes: { bot: [...new Set([...BOT_SCOPES, ...settings.extraScopes])].sort() } },
