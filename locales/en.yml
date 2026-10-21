@@ -81,20 +81,35 @@ publish:
     failed: "⚠️ Couldn't send as {bot} to {target} (requested by <@{poster}>): `{error}`"
 
 home:
-  contact: |-
-    *Want to talk to the {bot} team?*
-    • *With your name:* write from {bot}'s *Messages* tab. The team sees who you are and replies there.
-    • *Without your name:* open *Anonymous messages*. That's where you write to the team and read its replies.
+  # Under the bot's name, when the deployment has no ABOUT text.
+  intro: "Write to the {bot} team, with your name or anonymously."
+  contactTitle: "Write to the team"
+  named: |-
+    💬 *With your name*
+    Write from {bot}'s *Messages* tab. The team sees who you are and replies there.
   deliveryHint: "{bot} marks every message it gets with :incoming_envelope:. If you don't see it, {bot} is offline for a moment: your message is not lost and reaches the team as soon as it is back."
+  anonymous: |-
+    🕶️ *Without your name*
+    Open *Anonymous messages*: that's where you write to the team and read its replies. Nothing stays in your Slack messages.
   anonymousButton: "Anonymous messages"
   anonymousHint: "Your anonymous conversations never appear on this tab, only in that window. You can also open it with `{anonymousCommand}` from any channel."
   # Only shown to team members.
-  team: |-
-    *For the {bot} team*
-    • Every conversation with {bot} shows up in <#{teamChannel}> as a thread, anonymous ones too.
-    • To reply, write in the thread and add :{sendEmoji}: to your message. {bot} sends it and marks it with :white_check_mark:.
-    • To delete something {bot} sent, add :{deleteEmoji}: to its record in <#{teamChannel}>.
-    • To post or write to someone as {bot}, use `{publishCommand}` or the message shortcut that posts as {bot}.
+  team:
+    title: "For the {bot} team"
+    onlyTeam: "👀 Only members of <#{teamChannel}> see this part."
+    conversations: |-
+      *🧵 Conversations*
+      Every conversation with {bot} is a thread in <#{teamChannel}>, anonymous ones too.
+    reply: |-
+      *:{sendEmoji}: Replying*
+      Write in the thread and add :{sendEmoji}: to your message. {bot} sends it and marks it with :white_check_mark:.
+    delete: |-
+      *:{deleteEmoji}: Deleting*
+      Add :{deleteEmoji}: to the record in <#{teamChannel}> of what {bot} sent.
+    publish: |-
+      *📣 Posting*
+      Post in a channel or write to people as {bot} with `{publishCommand}`, the message shortcut, or the button below.
+    publishButton: "Post as {bot}"
 
 anonymous:
   unavailable: "This conversation has ended."

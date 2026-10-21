@@ -70,6 +70,9 @@ test('the about text becomes the long description, without formatting, when Slac
   assert.equal(short.warnings.length, 1);
 
   assert.equal(build({}).manifest.display_information.long_description, undefined);
+
+  const sized = build({ ABOUT: `# The team\\n${'Write to us. '.repeat(15)}\\n-# Small print` });
+  assert.match(sized.manifest.display_information.long_description!, /^The team\nWrite to us\..*\nSmall print$/s);
 });
 
 test('settings Slack would reject fail early', () => {

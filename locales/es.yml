@@ -68,19 +68,33 @@ publish:
     failed: "⚠️ No se pudo enviar como {bot} a {target} (lo pidió <@{poster}>): `{error}`"
 
 home:
-  contact: |-
-    *¿Quieres hablar con el equipo de {bot}?*
-    • *Con tu nombre:* escribe desde la pestaña *Mensajes* de {bot}. El equipo ve quién eres y te responde allí.
-    • *Sin tu nombre:* abre *Mensajes anónimos*. Ahí escribes al equipo y lees sus respuestas.
+  intro: "Escribe al equipo de {bot}, con tu nombre o de forma anónima."
+  contactTitle: "Escribe al equipo"
+  named: |-
+    💬 *Con tu nombre*
+    Escribe desde la pestaña *Mensajes* de {bot}. El equipo ve quién eres y te responde allí.
   deliveryHint: "{bot} marca cada mensaje que recibe con :incoming_envelope:. Si no lo ves, {bot} está sin conexión un momento: tu mensaje no se pierde y llegará al equipo en cuanto vuelva."
+  anonymous: |-
+    🕶️ *Sin tu nombre*
+    Abre *Mensajes anónimos*: ahí escribes al equipo y lees sus respuestas. No queda nada en tus mensajes de Slack.
   anonymousButton: "Mensajes anónimos"
   anonymousHint: "Tus conversaciones anónimas nunca aparecen en esta pestaña, solo en esa ventana. También puedes abrirla con `{anonymousCommand}` desde cualquier canal."
-  team: |-
-    *Para el equipo de {bot}*
-    • Cada conversación con {bot} aparece en <#{teamChannel}> como un hilo, también las anónimas.
-    • Para responder, escribe en el hilo y añade :{sendEmoji}: a tu mensaje. {bot} lo envía y lo marca con :white_check_mark:.
-    • Para borrar algo que {bot} envió, añade :{deleteEmoji}: a su mensaje de registro en <#{teamChannel}>.
-    • Para publicar o escribir a alguien como {bot}, usa `{publishCommand}` o el atajo de mensaje para publicar como {bot}.
+  team:
+    title: "Para el equipo de {bot}"
+    onlyTeam: "👀 Solo los miembros de <#{teamChannel}> ven esta parte."
+    conversations: |-
+      *🧵 Conversaciones*
+      Cada conversación con {bot} es un hilo en <#{teamChannel}>, también las anónimas.
+    reply: |-
+      *:{sendEmoji}: Responder*
+      Escribe en el hilo y añade :{sendEmoji}: a tu mensaje. {bot} lo envía y lo marca con :white_check_mark:.
+    delete: |-
+      *:{deleteEmoji}: Borrar*
+      Añade :{deleteEmoji}: al registro en <#{teamChannel}> de lo que {bot} envió.
+    publish: |-
+      *📣 Publicar*
+      Publica en un canal o escribe a personas como {bot} con `{publishCommand}`, el atajo de mensaje o el botón de abajo.
+    publishButton: "Publicar como {bot}"
 
 anonymous:
   unavailable: "Esta conversación ya ha terminado."

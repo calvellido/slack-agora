@@ -16,6 +16,6 @@ export async function botIdentity(client: WebClient): Promise<BotIdentity> {
     botId: auth.bot_id,
     userId: auth.user_id,
     name: user?.profile?.display_name || user?.real_name || user?.name || 'Bot',
-    avatar: user?.profile?.image_72,
+    avatar: user?.profile?.image_192 ?? user?.profile?.image_72,
   };
 }

@@ -1,0 +1,99 @@
+import type { HeaderBlock, HomeView, ImageBlock, KnownBlock, SectionBlock } from '@slack/types';
+import type { Strings } from '#src/i18n/index.ts';
+import { context } from '#src/slack/blocks.ts';
+
+// The Home tab, in the language of `t`. Everyone gets the same one, and team members also get how to act as the bot,
+// so it never gives away that someone writes anonymously: those conversations live in a modal.
+
+export interface HomeOptions {
+  bot: { name: string; avatar?: string };
+  /** The deployment's ABOUT text in the viewer's language; without it, a generic intro. */
+  about?: string;
+  /** An image across the top, in place of the avatar. */
+  banner?: string;
+  /** Only for team members. */
+  team?: { channel: string; sendEmoji: string; deleteEmoji: string };
+}
+
+const plain = (text: string) => ({ type: 'plain_text' as const, text });
+const mrkdwn = (text: string) => ({ type: 'mrkdwn' as const, text });
+
+/** Block Kit has no spacing of its own: a blank section adds a line's height. */
+function spacer(): SectionBlock {
+  return { type: 'section', text: mrkdwn(' ') };
+}
+
+/** Header blocks take plain text only, up to 150 characters. */
+function header(text: string): HeaderBlock {
+  return { type: 'header', text: plain(text.length > 150 ? `${text.slice(0, 149)}…` : text) };
+}
+
+/**
+ * The about text in Slack's three text sizes: a line starting with `# ` is a heading, one starting with `-# ` small
+ * grey text, and the rest normal text. Lines of the same size in a row stay together, except headings.
+ */
+export function aboutBlocks(text: string): KnownBlock[] {
+  const runs: { size: 'heading' | 'small' | 'normal'; lines: string[] }[] = [];
+  for (const line of text.split('\n')) {
+    const size = line.startsWith('# ') ? 'heading' : line.startsWith('-# ') ? 'small' : 'normal';
+    const content = line.slice({ heading: 2, small: 3, normal: 0 }[size]);
+    const last = runs.at(-1);
+    if (last?.size === size && size !== 'heading') last.lines.push(content);
+    else runs.push({ size, lines: [content] });
+  }
+  return runs.flatMap(({ size, lines }): KnownBlock[] => {
+    const text = lines.join('\n').trim();
+    if (!text) return [];
+    if (size === 'heading') return [header(text)];
+    if (size === 'small') return [context(text)];
+    return [{ type: 'section', text: mrkdwn(text) }];
+  });
+}
+
+export function homeView(t: Strings, { bot, about, banner, team }: HomeOptions): HomeView {
+  const intro = aboutBlocks(about ?? t.home.intro);
+  // A heading at the start of the about text takes the place of the bot's name.
+  if (intro[0]?.type !== 'header') intro.unshift(header(bot.name));
+  const image = banner ?? bot.avatar;
+  if (image) intro.unshift({ type: 'image', image_url: image, alt_text: bot.name } satisfies ImageBlock);
+
+  const blocks: KnownBlock[] = [
+    ...intro,
+    spacer(),
+    { type: 'divider' },
+    header(t.home.contactTitle),
+    { type: 'section', text: mrkdwn(t.home.named) },
+    context(t.home.deliveryHint),
+    spacer(),
+    { type: 'section', text: mrkdwn(t.home.anonymous) },
+    {
+      type: 'actions',
+      elements: [{ type: 'button', action_id: 'anon_inbox', style: 'primary', text: plain(t.home.anonymousButton) }],
+    },
+    context(t.home.anonymousHint),
+  ];
+  if (team) {
+    const teamChannel = team.channel;
+    blocks.push(
+      spacer(),
+      { type: 'divider' },
+      header(t.home.team.title),
+      context(t.home.team.onlyTeam({ teamChannel })),
+      spacer(),
+      {
+        type: 'section',
+        fields: [
+          mrkdwn(t.home.team.conversations({ teamChannel })),
+          mrkdwn(t.home.team.reply({ sendEmoji: team.sendEmoji })),
+          mrkdwn(t.home.team.delete({ teamChannel, deleteEmoji: team.deleteEmoji })),
+          mrkdwn(t.home.team.publish),
+        ],
+      },
+      {
+        type: 'actions',
+        elements: [{ type: 'button', action_id: 'publish_open', text: plain(t.home.team.publishButton) }],
+      },
+    );
+  }
+  return { type: 'home', blocks };
+}

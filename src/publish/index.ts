@@ -1,11 +1,14 @@
-import type { App, MessageShortcut } from '@slack/bolt';
+import type { App, BlockAction, ButtonAction, MessageShortcut } from '@slack/bolt';
 import type { Deps } from '#src/deps.ts';
 import { PUBLISH_SHORTCUT } from '#src/manifest/index.ts';
 import { isBlank, richTextBlocks, richTextFromPlain } from '#src/slack/richtext.ts';
 import { channelProblem, publishView } from './form.ts';
 import { createSender } from './send.ts';
 
-/** Posting as the bot: the publish command and message shortcut open the form; sending it posts and DMs as the bot. */
+/**
+ * Posting as the bot: the publish command, the message shortcut and the button on the team's part of the Home tab open
+ * the form; sending it posts and DMs as the bot.
+ */
 export function registerPublish(app: App, deps: Deps): void {
   const { config, team, i18n } = deps;
   const teamChannel = config.teamChannelId;
@@ -43,6 +46,13 @@ export function registerPublish(app: App, deps: Deps): void {
       });
     },
   );
+
+  // Whoever sends the form is checked again, in case they left the team since their Home tab was published.
+  app.action<BlockAction<ButtonAction>>('publish_open', async ({ ack, body, client }) => {
+    await ack();
+    const t = await i18n.forUser(body.user.id);
+    await client.views.open({ trigger_id: body.trigger_id, view: publishView(t, teamChannel, {}) });
+  });
 
   app.view('publish', async ({ ack, body, view, client }) => {
     const poster = body.user.id;

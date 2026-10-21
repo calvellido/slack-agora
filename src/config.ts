@@ -31,6 +31,8 @@ export interface Config extends AppSettings {
   deleteEmoji: string;
   /** The icon of the bot's notices in the team channel. */
   noticeEmoji: string;
+  /** A wide image across the top of the Home tab, at a public address. */
+  homeBanner?: string;
   logLevel: LogLevel;
   anonSecret: string;
   anonIdleDays: number;
@@ -93,6 +95,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   };
   const logLevel = (env.LOG_LEVEL ?? 'info') as LogLevel;
   if (!Object.values(LogLevel).includes(logLevel)) throw new Error(`Invalid LOG_LEVEL ${logLevel}`);
+  const homeBanner = env.HOME_BANNER_URL?.trim() || undefined;
+  if (homeBanner && !/^https:\/\/\S+$/.test(homeBanner)) throw new Error('HOME_BANNER_URL must be an https:// address');
   const anonSecret = required('ANON_SECRET');
   if (anonSecret.length < 32) throw new Error('ANON_SECRET is too short: generate one with `openssl rand -base64 32`');
 
@@ -106,6 +110,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     sendEmoji: env.SEND_EMOJI ?? 'outbox_tray',
     deleteEmoji: env.DELETE_EMOJI ?? 'wastebasket',
     noticeEmoji: env.NOTICE_EMOJI?.trim().replace(/^:|:$/g, '') || 'robot_face',
+    homeBanner,
     logLevel,
     anonSecret,
     anonIdleDays: positive('ANON_IDLE_DAYS', 30),

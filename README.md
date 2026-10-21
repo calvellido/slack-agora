@@ -1,5 +1,7 @@
 # Agora
 
+<img src="assets/agora-logo.png" alt="Agora logo" width="128" align="right">
+
 A Slack bot that a team answers together, named after the public square where a community meets.
 
 People write to the bot, with their name or anonymously. The conversations show up as threads in the team's private channel, and the team replies from there as the bot. Team members can also post, or start conversations, as the bot.
@@ -22,7 +24,7 @@ Every conversation is a thread in the team channel, and later messages from the 
 
 Writing in a thread is internal discussion: the person doesn't see it. To send a message as the bot, add :outbox_tray: to it. The bot sends it and marks it with :white_check_mark:. Edits made after that are not sent, except in anonymous conversations, where the author's window always shows the current text of each reply.
 
-To post as the bot, use `PUBLISH_COMMAND`, or the message shortcut, which copies the message you use it on. It opens a form to post in a channel, DM people, or both. Public channels work without inviting the bot; private ones need `/invite`. Every post is recorded in the team channel with who made it, and a DM starts a conversation thread. To delete something the bot sent, add :wastebasket: to its record in the team channel.
+To post as the bot, use `PUBLISH_COMMAND`, the button on the bot's *Home* tab, or the message shortcut, which copies the message you use it on. It opens a form to post in a channel, DM people, or both. Public channels work without inviting the bot; private ones need `/invite`. Every post is recorded in the team channel with who made it, and a DM starts a conversation thread. To delete something the bot sent, add :wastebasket: to its record in the team channel.
 
 Anonymous conversations arrive as *Anonymous message*, with no name or code, and *End conversation* on the thread ends one. Once the bot no longer knows who wrote it, a delete button on the thread removes everything the bot posted there. Your own replies stay until each of you deletes theirs.
 
@@ -80,6 +82,14 @@ To start over with an empty database, for example after testing, run `pnpm clean
 To change the app later, for example its name, a command, or a new version that needs other permissions, change `.env`, run `pnpm manifest`, and paste `manifest.yml` into *App Manifest* (YAML) in the app settings. Don't change the app's settings in Slack by hand, as the next manifest would undo it.
 
 Changing `TEAM_CHANNEL_ID`, say from a test channel to the real one, is safe with the same database. People's next messages start new threads in the new channel, and anonymous conversations from the old one drop out of people's windows.
+
+### How the Home tab looks
+
+The *Home* tab opens with the bot's avatar, its name and the `ABOUT` text. `ABOUT` can also have a large heading and small grey text, as [.env.example](.env.example) explains.
+
+For a banner across the top instead of the avatar, put a wide image at a public https address, such as a GitHub repository, and set `HOME_BANNER_URL`. Slack fetches the image itself, so it can't come from the bot's machine. If Slack can't get it, the bot shows the tab without it and logs a warning.
+
+The app's icon is uploaded in the app settings, in *Basic Information > Display Information*. [assets/](assets/) has the Agora logo for it, and a banner with the logo in the middle.
 
 ### A custom icon for the bot's own messages
 

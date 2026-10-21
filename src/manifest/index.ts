@@ -38,9 +38,12 @@ export function buildManifest(settings: AppSettings): { manifest: object; warnin
   const t = stringsIn(teamLanguage, { bot: appName, publishCommand, anonymousCommand: anonCommand });
   const warnings: string[] = [];
 
-  // The Home tab's text doubles as the app's long description, without Slack formatting.
+  // The Home tab's text doubles as the app's long description, without Slack formatting or the Home tab's size marks.
   const about = settings.about[teamLanguage] ?? settings.about.default;
-  let longDescription = about?.replace(/[*_~`]/g, '').replace(/<[^|>]+\|([^>]+)>/g, '$1');
+  let longDescription = about
+    ?.replace(/^-?# /gm, '')
+    .replace(/[*_~`]/g, '')
+    .replace(/<[^|>]+\|([^>]+)>/g, '$1');
   if (longDescription && longDescription.length < LONG_DESCRIPTION_MIN) {
     warnings.push(
       `The about text is ${longDescription.length} characters, and Slack needs ${LONG_DESCRIPTION_MIN} for the ` +

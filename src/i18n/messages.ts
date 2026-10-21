@@ -77,11 +77,22 @@ export interface Strings {
     };
   };
   home: {
-    contact: string;
+    intro: string;
+    contactTitle: string;
+    named: string;
     deliveryHint: string;
+    anonymous: string;
     anonymousButton: string;
     anonymousHint: string;
-    team: (params: { teamChannel: string; sendEmoji: string; deleteEmoji: string }) => string;
+    team: {
+      title: string;
+      onlyTeam: (params: { teamChannel: string }) => string;
+      conversations: (params: { teamChannel: string }) => string;
+      reply: (params: { sendEmoji: string }) => string;
+      delete: (params: { deleteEmoji: string; teamChannel: string }) => string;
+      publish: string;
+      publishButton: string;
+    };
   };
   anonymous: {
     unavailable: string;

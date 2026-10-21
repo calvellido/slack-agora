@@ -56,11 +56,13 @@ src/
     downtime.ts        The heartbeat, which DMs were missed, and the "back online" note.
 
   publish/           Posting as the bot.
-    index.ts           The command, the message shortcut, and the form submission.
+    index.ts           The command, the message shortcut, the Home tab button, and the form submission.
     form.ts            The form, and whether the bot can post in the chosen channel.
     send.ts            Posting in a channel or DMing someone, and the record left in the team channel.
 
-  home/              The Home tab, the same for everyone in their language.
+  home/              The Home tab, the same for everyone in their language, plus a part for team members.
+    index.ts           Publishes it whenever someone opens it.
+    view.ts            Its blocks.
 
   anonymous/         Anonymous mode.
     window.ts          The author's side: the "Anonymous messages" window and everything done from it.
@@ -117,7 +119,7 @@ Modals, the forms and windows apps open, are not messages: Slack keeps them out 
 ## Rules that keep anonymity
 
 - The author's Slack ID is never stored, only `anonOwner(userId)`, an HMAC keyed with `ANON_SECRET`. It is cleared (`purge`) as soon as the conversation is forgotten.
-- Anonymous conversations live in modals, never on the Home tab. Slack shows the last published Home tab when the bot is opened, before the bot can replace it, so anything on it can be seen over someone's shoulder. The Home tab is the same for everyone.
+- Anonymous conversations live in modals, never on the Home tab. Slack shows the last published Home tab when the bot is opened, before the bot can replace it, so anything on it can be seen over someone's shoulder. The Home tab is the same for everyone, apart from the part only team members get.
 - Nothing visible links the author's window to the thread. The window refers to conversations by a random handle that never goes into the team channel; the team's buttons carry no value and find the conversation by the message they are on.
 - No DMs to the author. A notification would stay in their history, and its time would match the reply in the team channel.
 - No message contents or user IDs in logs. `app.error` logs Slack error codes only.
