@@ -14,7 +14,7 @@ People write to the bot, with their name or anonymously. The conversations show 
 
 ## What it does
 
-- People write to the team with their name, from the bot's *Messages* tab, a form or an @mention, and get the replies in the same place.
+- People write to the team with their name, from the bot's *Messages* tab, a form or an @mention, and get the replies in the same place, with files both ways.
 - Or without their name, in the *Anonymous messages* window, where they also read the team's replies. Nothing stays in their Slack messages, and the bot forgets who wrote a conversation once it ends.
 - Each conversation is a thread in the team's private channel. The team discusses it there, and sends a reply as the bot by adding :outbox_tray: to it.
 - Team members can also post in channels, or write to people, as the bot.

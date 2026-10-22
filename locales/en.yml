@@ -15,6 +15,30 @@ common:
 notices:
   sender: "{bot} · bot"
 
+# Copying the files of messages: why one couldn't be copied, and the notices about it.
+files:
+  # Before the files someone sent, in their conversation's thread.
+  attached: "📎 <@{user}> attached:"
+  # Naming files without copying them: in the record of a post, and in the person's copy of what they wrote.
+  included: "📎 With {count, plural, one {# file} other {# files}}: {list}"
+  # Above the files other than images, which can only be uploaded as the bot itself.
+  relayed: "Forwarded automatically: files from <@{user}>"
+  relayedTitle: "{name} · from {person}"
+  tooLarge: "{name}: it's larger than {max, number} MB"
+  notDownloadable: "{name}: it can't be downloaded, such as a link to another service"
+  needsMember: "{name}: {bot} isn't in that channel, where it can only post images. Invite it with /invite @{bot} to post other files"
+  noPermission: "{name}: {bot} doesn't have permission for files yet. Paste the new manifest into the app settings and reinstall the app"
+  failed: "{name}: it couldn't be copied"
+  # In the team channel, about what someone sent.
+  notRelayed: "📎 These files couldn't be forwarded here:\n{list}"
+  # To the person, where they wrote: in their DM, in the form, or by their @mention.
+  notReceived: "📎 These files didn't reach the {bot} team:\n{list}\nYou can share a link to them instead."
+  # In the team channel, about a reply.
+  notSent: "📎 These files weren't sent to the person:\n{list}"
+  # In the record of a post.
+  notPosted: "📎 These files weren't posted:\n{list}"
+  anonymous: "📎 Files aren't sent in anonymous conversations: the person only gets the text."
+
 # The Slack app's settings, written to the manifest in the team's language.
 manifest:
   description: "Write to the {bot} team, with your name or anonymously"
@@ -46,7 +70,6 @@ inbox:
     mentionHeader: "🔔 <@{user}> mentioned {bot} in <#{channel}> · <{permalink}|view message>"
     followUp: "<@{user}> wrote:"
     replyHint: "To reply as {bot}, write in this thread and add :{sendEmoji}: to your message."
-    filesNotRelayed: "📎 Includes {count, plural, one {a file} other {# files}} that {bot} can't forward yet."
     lateRelay: "⏱️ Sent {date}, while {bot} was offline."
   # Sent by DM to whoever wrote to the bot.
   dm:
@@ -59,10 +82,15 @@ inbox:
     title: "Write to {bot}"
     intro: "The {bot} team will see your name. They reply by direct message, in {bot}'s *Messages* tab, where you can continue the conversation."
     message: "Message"
+    attachments: "Files"
+    attachmentsHint: "Up to {max, number} MB each."
     submit: "Send"
     anonymousHint: "To write anonymously, use `{anonymousCommand}` or *Anonymous messages* on {bot}'s *Home* tab."
     sent: "✅ Sent. The team will reply in {bot}'s *Messages* tab, where you have a copy of your message."
-    empty: "The message is empty."
+    # While the files are copied, which can take a while.
+    sending: "⏳ Sending your message and its files to the team…"
+    empty: "Write a message or attach files."
+    cantSend: "These files can't be sent: {list}"
     sendFailed: "Couldn't send it. Try again in a few minutes."
   # The team's reactions in the team channel; all but the last are only seen by whoever reacted.
   reply:
@@ -70,7 +98,6 @@ inbox:
     notAConversation: "This thread isn't a {bot} conversation."
     cannotSendBotMessage: "That message is from {bot}. Write your reply in the thread and add the reaction to your own message."
     emptyReply: "That message has no text to send."
-    filesNotSent: "The text was sent, but {bot} can't send files yet."
     alreadySent: "This message was already sent."
     sendFailed: "Couldn't send the message: `{error}`"
     alreadyDeleted: "It was already deleted."
@@ -90,8 +117,12 @@ publish:
     people: "People (direct message)"
     message: "Message"
     hint: "Choose a channel, people or both. <#{teamChannel}> keeps a record of who posted it."
+    originalFiles: "Files from the original message"
+    cantPost: "These files can't be posted: {list}"
+    attachments: "Files"
+    attachmentsHint: "Up to {max, number} MB each. In a public channel {bot} isn't in, only images are posted."
     needTarget: "Choose a channel or at least one person."
-    empty: "The message is empty."
+    empty: "Write a message or attach files."
     notMember: "{bot} isn't in this private channel. Invite it first with /invite @{bot}."
     archived: "This channel is archived."
   # The records left in the team channel.
@@ -99,6 +130,7 @@ publish:
     dmStarted: "📤 <@{poster}> wrote to <@{user}> as {bot}:"
     posted: "📣 <@{poster}> posted as {bot} in <#{channel}> · <{permalink}|view message>"
     failed: "⚠️ Couldn't send as {bot} to {target} (requested by <@{poster}>): `{error}`"
+    nothingPosted: "⚠️ Nothing was sent as {bot} to {target} (requested by <@{poster}>):\n{list}"
 
 home:
   # Under the bot's name, when the deployment has no ABOUT text.

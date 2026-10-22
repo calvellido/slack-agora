@@ -25,7 +25,8 @@ const SCHEMA = `
     target_ts TEXT,
     sent_by TEXT NOT NULL,
     sent_at INTEGER NOT NULL,
-    deleted_at INTEGER
+    deleted_at INTEGER,
+    file_ids TEXT
   );
 
   CREATE TABLE IF NOT EXISTS anon_conversations (
@@ -69,11 +70,14 @@ export function openDatabase(path: string): DatabaseSync {
   // Wait for another connection's write instead of failing, as when `pnpm clean-db` runs beside the bot.
   db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;');
   db.exec(SCHEMA);
-  // Databases from before conversations recorded their team channel.
-  for (const table of ['conversations', 'anon_conversations']) {
+  // Databases from before conversations recorded their team channel, and before deliveries recorded their files.
+  const addColumn = (table: string, column: string) => {
     const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
-    if (!columns.some((c) => c.name === 'team_channel')) db.exec(`ALTER TABLE ${table} ADD COLUMN team_channel TEXT`);
-  }
+    if (!columns.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} TEXT`);
+  };
+  addColumn('conversations', 'team_channel');
+  addColumn('anon_conversations', 'team_channel');
+  addColumn('deliveries', 'file_ids');
   return db;
 }
 

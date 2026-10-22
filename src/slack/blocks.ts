@@ -6,6 +6,11 @@ export function context(text: string): ContextBlock {
   return { type: 'context', elements: [{ type: 'mrkdwn', text }] };
 }
 
+/** Text, such as a file name, made safe to put in mrkdwn, where &, < and > are special. */
+export function escapeMrkdwn(text: string): string {
+  return text.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!);
+}
+
 /** Block Kit has no spacing of its own: a blank section adds a line's height. */
 export function spacer(): SectionBlock {
   return { type: 'section', text: { type: 'mrkdwn', text: ' ' } };

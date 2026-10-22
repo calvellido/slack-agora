@@ -1,8 +1,9 @@
 import type { App, BlockAction, ButtonAction, MessageShortcut } from '@slack/bolt';
 import type { Deps } from '#src/deps.ts';
 import { PUBLISH_SHORTCUT } from '#src/manifest/index.ts';
+import { filesById, filesInForm } from '#src/slack/files.ts';
 import { isBlank, richTextBlocks, richTextFromPlain } from '#src/slack/richtext.ts';
-import { channelProblem, publishView } from './form.ts';
+import { checkChannel, fileErrors, originalInForm, publishView } from './form.ts';
 import { createSender } from './send.ts';
 
 /**
@@ -43,9 +44,15 @@ export function registerPublish(app: App, deps: Deps): void {
       }
       const [message] = richTextBlocks(shortcut.message.blocks);
       const text = shortcut.message.text;
+      const original = ((shortcut.message.files ?? []) as { id?: string; name?: string }[]).flatMap((f) =>
+        f.id ? [{ id: f.id, name: f.name || f.id }] : [],
+      );
       await client.views.open({
         trigger_id: shortcut.trigger_id,
-        view: publishView(t, teamChannel, { message: message ?? (text ? richTextFromPlain(text) : undefined) }),
+        view: publishView(t, teamChannel, {
+          message: message ?? (text ? richTextFromPlain(text) : undefined),
+          original,
+        }),
       });
     },
   );
@@ -64,22 +71,29 @@ export function registerPublish(app: App, deps: Deps): void {
     const channel = values.channel?.channel?.selected_conversation ?? undefined;
     const people = values.people?.people?.selected_users ?? [];
     const [message] = richTextBlocks([values.message?.message?.rich_text_value]);
+    const originalIds = originalInForm(values as never);
+    const attached = filesInForm(values as never);
 
     const errors: Record<string, string> = {};
     if (!(await team.isMember(poster))) errors.message = t.publish.teamOnly;
-    else if (isBlank(message)) errors.message = t.publish.form.empty;
+    else if (isBlank(message) && originalIds.length + attached.length === 0) errors.message = t.publish.form.empty;
+    let imagesOnly = false;
     if (!channel && people.length === 0) errors.channel = t.publish.form.needTarget;
     else if (channel) {
-      const problem = await channelProblem(client, channel, t);
-      if (problem) errors.channel = problem;
+      const check = await checkChannel(client, channel, t);
+      if (check.problem) errors.channel = check.problem;
+      imagesOnly = !check.member;
     }
-    if (Object.keys(errors).length > 0 || !message) {
+    const original = originalIds.length > 0 ? await filesById(client, originalIds) : [];
+    Object.assign(errors, fileErrors(t, { attached, original }, imagesOnly));
+    if (Object.keys(errors).length > 0) {
       await ack({ response_action: 'errors', errors });
       return;
     }
     await ack();
 
-    if (channel) await send.toChannel(client, poster, channel, message);
-    for (const user of people) await send.toPerson(client, poster, user, message);
+    const post = { message: isBlank(message) ? undefined : message, files: [...original, ...attached] };
+    if (channel) await send.toChannel(client, poster, channel, post);
+    for (const user of people) await send.toPerson(client, poster, user, post);
   });
 }

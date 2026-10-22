@@ -20,6 +20,8 @@ export const BOT_SCOPES = [
   'chat:write.public', // posting in public channels without joining them
   'commands',
   'emoji:read', // checking that NOTICE_EMOJI exists in the workspace
+  'files:read', // downloading the files of messages, to copy them
+  'files:write', // uploading those copies, and deleting them
   'groups:history', // reading the team channel's threads
   'groups:read', // the team channel's members, and private channels before posting in them
   'im:history', // DMs to the bot

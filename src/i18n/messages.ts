@@ -10,6 +10,22 @@ export interface Strings {
   notices: {
     sender: string;
   };
+  files: {
+    attached: (params: { user: string }) => string;
+    included: (params: { count: number; list: string }) => string;
+    relayed: (params: { user: string }) => string;
+    relayedTitle: (params: { name: string; person: string }) => string;
+    tooLarge: (params: { name: string; max: number }) => string;
+    notDownloadable: (params: { name: string }) => string;
+    needsMember: (params: { name: string }) => string;
+    noPermission: (params: { name: string }) => string;
+    failed: (params: { name: string }) => string;
+    notRelayed: (params: { list: string }) => string;
+    notReceived: (params: { list: string }) => string;
+    notSent: (params: { list: string }) => string;
+    notPosted: (params: { list: string }) => string;
+    anonymous: string;
+  };
   manifest: {
     description: string;
     writeShortcut: {
@@ -43,7 +59,6 @@ export interface Strings {
       mentionHeader: (params: { user: string; channel: string; permalink: string }) => string;
       followUp: (params: { user: string }) => string;
       replyHint: (params: { sendEmoji: string }) => string;
-      filesNotRelayed: (params: { count: number }) => string;
       lateRelay: (params: { date: string }) => string;
     };
     dm: {
@@ -55,10 +70,14 @@ export interface Strings {
       title: string;
       intro: string;
       message: string;
+      attachments: string;
+      attachmentsHint: (params: { max: number }) => string;
       submit: string;
       anonymousHint: string;
       sent: string;
+      sending: string;
       empty: string;
+      cantSend: (params: { list: string }) => string;
       sendFailed: string;
     };
     reply: {
@@ -66,7 +85,6 @@ export interface Strings {
       notAConversation: string;
       cannotSendBotMessage: string;
       emptyReply: string;
-      filesNotSent: string;
       alreadySent: string;
       sendFailed: (params: { error: string }) => string;
       alreadyDeleted: string;
@@ -85,6 +103,10 @@ export interface Strings {
       people: string;
       message: string;
       hint: (params: { teamChannel: string }) => string;
+      originalFiles: string;
+      cantPost: (params: { list: string }) => string;
+      attachments: string;
+      attachmentsHint: (params: { max: number }) => string;
       needTarget: string;
       empty: string;
       notMember: string;
@@ -94,6 +116,7 @@ export interface Strings {
       dmStarted: (params: { poster: string; user: string }) => string;
       posted: (params: { poster: string; channel: string; permalink: string }) => string;
       failed: (params: { target: string; poster: string; error: string }) => string;
+      nothingPosted: (params: { target: string; poster: string; list: string }) => string;
     };
   };
   home: {

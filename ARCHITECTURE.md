@@ -34,6 +34,8 @@ src/
     richtext.ts        Rich text from and to what people type, and plain-text fallbacks.
     errors.ts          The Slack error code of a failed call.
     notices.ts         Posting the bot's notices in the team channel, under their own name and icon.
+    files.ts           Copying the files of messages: downloads, uploads, images shown in a message, what went wrong.
+    testing.ts         Stand-ins for Slack's errors, file API and file servers, for tests.
     unknown-shortcuts.ts  Logging shortcuts the app settings have but this version doesn't.
 
   storage/           The SQLite database, one file per kind of data. Store (index.ts) groups them.
@@ -86,6 +88,8 @@ Each feature exports a `register…(app, deps)` function that adds its Bolt list
 
 A DM to the bot (`inbox/dms.ts`). The `message` event arrives; `relay` posts it in the person's open thread in the team channel, or starts one (a new `conversations` row), and the bot reacts with :incoming_envelope: to mark it as received. A message written in the form (`inbox/write.ts`) takes the same path: `dms.write` opens the person's DM with the bot, relays the message as if it had arrived there, and posts a copy of it in the DM, where the team's replies will arrive. A team member writes a reply in the thread and adds the send emoji: `inbox/replies.ts` finds the conversation by the thread, claims a `deliveries` row (so it is sent only once), posts the reply in the DM as the bot, and marks the team member's message with :white_check_mark:.
 
+Files (`slack/files.ts`). Slack doesn't share a file from one conversation into another, so whatever carries files copies them: the bot downloads each one (up to 20 MB, in memory) and uploads a copy. `relay` shows images in a notice in the thread, as an image block pointing at an unshared copy, which Slack shares with the message, and uploads other files into the thread after a notice line. A reply sent with the send emoji uploads its files into the person's DM after its text, and records the copies in `deliveries` so the delete emoji removes them too. Posts made with the posting form, with files attached in it or brought by the message shortcut, upload them after the text, or, in a public channel the bot isn't in, show the images in the message itself. What couldn't be copied is listed for the team in the thread or the record, and for the person where they wrote: in their DM, in the form and their copy of the message, or in a note only they see by their mention.
+
 An anonymous message (`anonymous/`). The author submits the form in their window (`window.ts`); `thread.ts` posts it in the team channel as *Anonymous message* and records the conversation, with the author's keyed hash as its owner. A team reply with the send emoji goes through `inbox/replies.ts` to `anonymous/team.ts`, which only records it: the author's window reads it back from the thread when opened.
 
 After downtime (`inbox/downtime.ts`). On start, the bot compares the last heartbeat with now, lists its DM conversations, relays every DM since then that lacks its :incoming_envelope:, apologises to each sender, and posts a note in the team channel if it was away more than 5 minutes.
@@ -97,7 +101,7 @@ Slack keeps the messages, but not the links between them: nothing in Slack says 
 | Table | Holds | Needed so that |
 | --- | --- | --- |
 | `conversations` | DM and mention conversations: who, where replies go, their thread in the team channel | A reply sent from a thread reaches the right person, and their next message continues the same thread |
-| `deliveries` | What the bot sent as the team: the record in the team channel, and the message it sent | The delete emoji can remove it later, and adding the send emoji twice doesn't send twice |
+| `deliveries` | What the bot sent as the team: the record in the team channel, the message it sent, and the copies of its files | The delete emoji can remove it later, and adding the send emoji twice doesn't send twice |
 | `anon_conversations` | Anonymous conversations: private handle, thread, owner hash (cleared once purged), state | The author's window finds their conversations, and conversations end and are forgotten on schedule |
 | `anon_messages` | Which messages of an anonymous thread came from the author or the team (deleted once purged) | The window shows only those, never the team's internal discussion in the same thread |
 | `meta` | The last heartbeat | After downtime, the bot knows which DMs it missed and how long it was away |
@@ -112,7 +116,7 @@ Conversations store the team channel their thread is in, and lookups only match 
 
 ## Who speaks: the team or the bot
 
-The bot's own identity is only the team's voice: replies sent with the send emoji, and posts and DMs sent from the publish form. Everything the bot does on its own goes through `Notices` (`slack/notices.ts`), under a sender of its own, the bot's name with " · notices" and a robot icon (`chat:write.customize`): the messages it relays into the team channel, anonymous messages, what it reports there (a conversation ending or expiring, a reply withdrawn, a deletion, a failure, the bot back online, the record of something the team posted, the notices only one person sees) and its automatic replies in people's DMs. Short notices and automatic replies show as a small grey line; relayed and anonymous messages keep their full layout. The sender's name is in the team's language in the team channel, and in each person's language in their DM. A new kind of message should go through `Notices` unless it is something the team says.
+Slack doesn't let apps upload files under another name, so relayed files that aren't images are the one exception: they are uploaded as the bot itself, after a notice line saying whose they are, while relayed images are shown in a notice. The bot's own identity is otherwise only the team's voice: replies sent with the send emoji, and posts and DMs sent from the publish form. Everything the bot does on its own goes through `Notices` (`slack/notices.ts`), under a sender of its own, the bot's name with " · notices" and a robot icon (`chat:write.customize`): the messages it relays into the team channel, anonymous messages, what it reports there (a conversation ending or expiring, a reply withdrawn, a deletion, a failure, the bot back online, the record of something the team posted, the notices only one person sees) and its automatic replies in people's DMs. Short notices and automatic replies show as a small grey line; relayed and anonymous messages keep their full layout. The sender's name is in the team's language in the team channel, and in each person's language in their DM. A new kind of message should go through `Notices` unless it is something the team says.
 
 ## Why anonymous messages don't use the Messages tab
 
@@ -127,6 +131,7 @@ Modals, the forms and windows apps open, are not messages: Slack keeps them out 
 - Nothing visible links the author's window to the thread. The window refers to conversations by a random handle that never goes into the team channel; the team's buttons carry no value and find the conversation by the message they are on.
 - No DMs to the author. A notification would stay in their history, and its time would match the reply in the team channel.
 - No message contents or user IDs in logs. `app.error` logs Slack error codes only.
+- No files in anonymous conversations, either way: a file belongs to whoever uploads it, and can carry details about them.
 
 Break one of these and anonymous mode stops being anonymous.
 
@@ -136,6 +141,9 @@ Break one of these and anonymous mode stops being anonymous.
 - A thread can disappear. If its first message was deleted (or the thread is in another channel), Slack silently posts a "reply" as a standalone message. `postInThread` checks, takes it back, and lets the caller start over.
 - node:sqlite returns null-prototype objects; `row()` in `storage/database.ts` hands out plain ones.
 - Modal titles are limited to 24 characters, and the bot's name goes in some: use `modalTitle()`.
+- Slack ignores custom names and icons on file uploads, contrary to its docs, so uploads always appear as the bot.
+- An image block refuses a newly uploaded image until Slack has processed it, for up to about a minute: `showImages()` tries again.
+- Deleting a file also removes the message that held only it, so deleting what the bot sent is its message, then its copies.
 - Slack's 3-second limit: commands, actions and form submissions must be acknowledged quickly. Anonymous form submissions post first and acknowledge after, so the author only sees "sent" once it is in the team channel.
 
 ## Languages

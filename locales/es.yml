@@ -10,6 +10,22 @@ common:
 notices:
   sender: "{bot} · bot"
 
+files:
+  attached: "📎 <@{user}> adjuntó:"
+  included: "📎 Con {count, plural, one {# archivo} other {# archivos}}: {list}"
+  relayed: "Reenviado automáticamente: archivos de <@{user}>"
+  relayedTitle: "{name} · de {person}"
+  tooLarge: "{name}: pesa más de {max, number} MB"
+  notDownloadable: "{name}: no se puede descargar, como un enlace a otro servicio"
+  needsMember: "{name}: {bot} no está en ese canal, donde solo puede publicar imágenes. Invítalo con /invite @{bot} para publicar otros archivos"
+  noPermission: "{name}: {bot} todavía no tiene permiso para archivos. Pega el nuevo manifiesto en la configuración de la app y vuelve a instalarla"
+  failed: "{name}: no se pudo copiar"
+  notRelayed: "📎 Estos archivos no se pudieron reenviar aquí:\n{list}"
+  notReceived: "📎 Estos archivos no han llegado al equipo de {bot}:\n{list}\nPuedes compartir un enlace a ellos."
+  notSent: "📎 Estos archivos no se enviaron a la persona:\n{list}"
+  notPosted: "📎 Estos archivos no se publicaron:\n{list}"
+  anonymous: "📎 En las conversaciones anónimas no se envían archivos: la persona solo recibe el texto."
+
 manifest:
   description: "Escribe al equipo de {bot}, con tu nombre o de forma anónima"
   writeShortcut:
@@ -37,7 +53,6 @@ inbox:
     mentionHeader: "🔔 <@{user}> mencionó a {bot} en <#{channel}> · <{permalink}|ver mensaje>"
     followUp: "<@{user}> escribió:"
     replyHint: "Para responder como {bot}, escribe en este hilo y añade :{sendEmoji}: a tu mensaje."
-    filesNotRelayed: "📎 Incluye {count, plural, one {un archivo} other {# archivos}} que {bot} todavía no puede reenviar."
     lateRelay: "⏱️ Enviado {date}, mientras {bot} estaba sin conexión."
   dm:
     ack: "¡Gracias por escribir! El equipo de {bot} ha recibido tu mensaje y te responderá por aquí."
@@ -47,17 +62,20 @@ inbox:
     title: "Escribir a {bot}"
     intro: "El equipo de {bot} verá tu nombre. Te responderá por mensaje directo, en la pestaña *Mensajes* de {bot}, donde puedes continuar la conversación."
     message: "Mensaje"
+    attachments: "Archivos"
+    attachmentsHint: "Hasta {max, number} MB cada uno."
     submit: "Enviar"
     anonymousHint: "Para escribir de manera anónima, usa `{anonymousCommand}` o *Mensajes anónimos* en la pestaña *Inicio* de {bot}."
     sent: "✅ Enviado. El equipo te responderá en la pestaña *Mensajes* de {bot}, donde tienes una copia de tu mensaje."
-    empty: "El mensaje está vacío."
+    sending: "⏳ Enviando tu mensaje y sus archivos al equipo…"
+    empty: "Escribe un mensaje o adjunta archivos."
+    cantSend: "Estos archivos no se pueden enviar: {list}"
     sendFailed: "No se ha podido enviar. Inténtalo de nuevo en unos minutos."
   reply:
     notInThread: "Solo se pueden enviar como {bot} los mensajes escritos dentro del hilo de una conversación."
     notAConversation: "Este hilo no corresponde a ninguna conversación de {bot}."
     cannotSendBotMessage: "Ese mensaje es de {bot}. Escribe tu respuesta en el hilo y añade la reacción a tu mensaje."
     emptyReply: "Ese mensaje no tiene texto que enviar."
-    filesNotSent: "Se ha enviado el texto, pero {bot} todavía no puede enviar archivos."
     alreadySent: "Este mensaje ya se envió."
     sendFailed: "No se pudo enviar el mensaje: `{error}`"
     alreadyDeleted: "Ya estaba eliminado."
@@ -75,14 +93,19 @@ publish:
     people: "Personas (mensaje directo)"
     message: "Mensaje"
     hint: "Elige un canal, personas o ambos. En <#{teamChannel}> quedará registro de quién lo publicó."
+    originalFiles: "Archivos del mensaje original"
+    cantPost: "Estos archivos no se pueden publicar: {list}"
+    attachments: "Archivos"
+    attachmentsHint: "Hasta {max, number} MB cada uno. En un canal público en el que {bot} no está, solo se publican las imágenes."
     needTarget: "Elige un canal o al menos una persona."
-    empty: "El mensaje está vacío."
+    empty: "Escribe un mensaje o adjunta archivos."
     notMember: "{bot} no está en este canal privado. Primero invita a {bot} con /invite @{bot}."
     archived: "Este canal está archivado."
   record:
     dmStarted: "📤 <@{poster}> escribió como {bot} a <@{user}>:"
     posted: "📣 <@{poster}> publicó como {bot} en <#{channel}> · <{permalink}|ver mensaje>"
     failed: "⚠️ No se pudo enviar como {bot} a {target} (lo pidió <@{poster}>): `{error}`"
+    nothingPosted: "⚠️ No se envió nada como {bot} a {target} (lo pidió <@{poster}>):\n{list}"
 
 home:
   intro: "Escribe al equipo de {bot}, con tu nombre o de forma anónima."

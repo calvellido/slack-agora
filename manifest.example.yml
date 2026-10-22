@@ -40,6 +40,8 @@ oauth_config:
       - chat:write.public
       - commands
       - emoji:read
+      - files:read
+      - files:write
       - groups:history
       - groups:read
       - im:history

@@ -45,15 +45,25 @@ test('a team message can only be claimed for sending once', () => {
 
 test('deliveries record what was sent and when it was deleted', () => {
   const store = new Store(':memory:', 'C1');
-  store.deliveries.record('9.0', 'C1', '10.0', 'U9', 1_000);
+  store.deliveries.record('9.0', 'C1', '10.0', 'U9', ['F1', 'F2'], 1_000);
   assert.deepEqual(store.deliveries.get('9.0'), {
     teamMessageTs: '9.0',
     targetChannel: 'C1',
     targetTs: '10.0',
+    fileIds: ['F1', 'F2'],
     sentBy: 'U9',
     sentAt: 1_000,
     deletedAt: null,
   });
   store.deliveries.markDeleted('9.0', 2_000);
   assert.equal(store.deliveries.get('9.0')?.deletedAt, 2_000);
+});
+
+test('a reply of files only is a delivery too, which a failed claim release leaves alone', () => {
+  const store = new Store(':memory:', 'C1');
+  assert.equal(store.deliveries.claim('11.0', 'D1', 'U9'), true);
+  store.deliveries.complete('11.0', null, ['F3']);
+  store.deliveries.release('11.0');
+  assert.deepEqual(store.deliveries.get('11.0')?.fileIds, ['F3']);
+  assert.equal(store.deliveries.get('11.0')?.targetTs, null);
 });

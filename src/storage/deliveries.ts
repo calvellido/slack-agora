@@ -5,8 +5,10 @@ import { row } from './database.ts';
 export interface Delivery {
   teamMessageTs: string;
   targetChannel: string;
-  /** Null while the send is in flight. */
+  /** The message sent. Null while the send is in flight, or when only files were sent. */
   targetTs: string | null;
+  /** The copies of files sent with it. */
+  fileIds: string[];
   sentBy: string;
   sentAt: number;
   deletedAt: number | null;
@@ -14,7 +16,7 @@ export interface Delivery {
 
 const SELECT = `
   SELECT team_message_ts AS teamMessageTs, target_channel AS targetChannel, target_ts AS targetTs,
-         sent_by AS sentBy, sent_at AS sentAt, deleted_at AS deletedAt
+         file_ids AS fileIds, sent_by AS sentBy, sent_at AS sentAt, deleted_at AS deletedAt
   FROM deliveries`;
 
 /** What the bot sent as replies or posts, so it can be deleted later from its record in the team channel. */
@@ -34,24 +36,38 @@ export class Deliveries {
     return changes === 1;
   }
 
-  complete(teamMessageTs: string, targetTs: string): void {
-    this.#db.prepare('UPDATE deliveries SET target_ts = ? WHERE team_message_ts = ?').run(targetTs, teamMessageTs);
+  complete(teamMessageTs: string, targetTs: string | null, fileIds: readonly string[] = []): void {
+    this.#db
+      .prepare('UPDATE deliveries SET target_ts = ?, file_ids = ? WHERE team_message_ts = ?')
+      .run(targetTs, JSON.stringify(fileIds), teamMessageTs);
   }
 
   /** Gives up a claim whose send failed, so it can be tried again. */
   release(teamMessageTs: string): void {
-    this.#db.prepare('DELETE FROM deliveries WHERE team_message_ts = ? AND target_ts IS NULL').run(teamMessageTs);
+    this.#db
+      .prepare('DELETE FROM deliveries WHERE team_message_ts = ? AND target_ts IS NULL AND file_ids IS NULL')
+      .run(teamMessageTs);
   }
 
-  record(teamMessageTs: string, targetChannel: string, targetTs: string, sentBy: string, now = Date.now()): void {
+  record(
+    teamMessageTs: string,
+    targetChannel: string,
+    targetTs: string | null,
+    sentBy: string,
+    fileIds: readonly string[] = [],
+    now = Date.now(),
+  ): void {
     this.#db
-      .prepare(`INSERT INTO deliveries (team_message_ts, target_channel, target_ts, sent_by, sent_at)
-                VALUES (?, ?, ?, ?, ?)`)
-      .run(teamMessageTs, targetChannel, targetTs, sentBy, now);
+      .prepare(`INSERT INTO deliveries (team_message_ts, target_channel, target_ts, file_ids, sent_by, sent_at)
+                VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(teamMessageTs, targetChannel, targetTs, JSON.stringify(fileIds), sentBy, now);
   }
 
   get(teamMessageTs: string): Delivery | undefined {
-    return row<Delivery>(this.#db.prepare(`${SELECT} WHERE team_message_ts = ?`).get(teamMessageTs));
+    const found = row<Omit<Delivery, 'fileIds'> & { fileIds: string | null }>(
+      this.#db.prepare(`${SELECT} WHERE team_message_ts = ?`).get(teamMessageTs),
+    );
+    return found && { ...found, fileIds: found.fileIds ? (JSON.parse(found.fileIds) as string[]) : [] };
   }
 
   markDeleted(teamMessageTs: string, now = Date.now()): void {

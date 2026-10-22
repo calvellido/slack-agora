@@ -45,7 +45,9 @@ export function registerTeamSide(app: App, { config, store, team, i18n, notices 
       if (!store.anonymous.addMessage(ts, conversation.id, 'team', user)) return notify(t.inbox.reply.alreadySent);
       store.anonymous.touch(conversation.id);
       await client.reactions.add({ channel, timestamp: ts, name: 'white_check_mark' });
-      if (message.files?.length) await notify(t.inbox.reply.filesNotSent);
+      // For the whole team, in the thread: the person gets the text only.
+      const threadTs = conversation.teamThreadTs!;
+      if (message.files?.length) await notices.post(client, { text: i18n.team.files.anonymous, threadTs });
     },
 
     async deleteReply(client, ts, user) {

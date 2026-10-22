@@ -12,12 +12,15 @@ import { postInThread } from './messages.ts';
  */
 export class Notices {
   #channel: string;
+  /** The emoji of the notices' icon, without colons. */
+  readonly emojiName: string;
   #emoji: string;
   #sender: { username: string; icon_emoji: string };
 
   /** `username` is the sender's name in the team's language. */
   constructor(channel: string, username: string, emoji: string) {
     this.#channel = channel;
+    this.emojiName = emoji;
     this.#emoji = `:${emoji}:`;
     this.#sender = { username, icon_emoji: this.#emoji };
   }
@@ -50,6 +53,25 @@ export class Notices {
       channel: message.channel,
       text: message.text,
       blocks: message.blocks ?? [context(message.text)],
+      username: message.username,
+      icon_emoji: this.#emoji,
+    });
+  }
+
+  /**
+   * An automatic message only `user` sees, in a channel other than the team's, such as where they mentioned the bot;
+   * `username` is the sender's name in their language.
+   */
+  async ephemeralToPerson(
+    client: WebClient,
+    message: { channel: string; user: string; threadTs?: string; text: string; username: string },
+  ): Promise<void> {
+    await client.chat.postEphemeral({
+      channel: message.channel,
+      user: message.user,
+      thread_ts: message.threadTs,
+      text: message.text,
+      blocks: [context(message.text)],
       username: message.username,
       icon_emoji: this.#emoji,
     });

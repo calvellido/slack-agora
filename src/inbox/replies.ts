@@ -3,12 +3,14 @@ import type { WebClient } from '@slack/web-api';
 import type { Anonymous } from '#src/anonymous/index.ts';
 import type { Deps } from '#src/deps.ts';
 import { errorCode } from '#src/slack/errors.ts';
+import { deleteCopies, describeProblems, uploadCopies, type AttachedFile } from '#src/slack/files.ts';
 import { fetchMessage } from '#src/slack/messages.ts';
 import { richTextBlocks } from '#src/slack/richtext.ts';
 
 /**
- * The team's reactions in the team channel: the send emoji on a thread reply sends it as the bot (anonymous threads are
- * handed to anonymous mode), and the delete emoji on the record of something the bot sent deletes it.
+ * The team's reactions in the team channel: the send emoji on a thread reply sends it as the bot, with copies of its
+ * files (anonymous threads are handed to anonymous mode), and the delete emoji on the record of something the bot sent
+ * deletes it, files included.
  */
 export function registerReplies(app: App, { config, store, i18n, notices }: Deps, anonymous: Anonymous): void {
   const team = config.teamChannelId;
@@ -33,44 +35,61 @@ export function registerReplies(app: App, { config, store, i18n, notices }: Deps
     const conversation = anon ? undefined : store.conversations.byTeamThread(threadTs);
     if (!anon && !conversation) return notify(t.inbox.reply.notAConversation);
     const text = message.text ?? '';
-    if (!text.trim()) return notify(t.inbox.reply.emptyReply);
+    const files = (message.files ?? []) as AttachedFile[];
+    // Anonymous replies send the text only, so they need some.
+    if (!text.trim() && (anon || files.length === 0)) return notify(t.inbox.reply.emptyReply);
     if (anon) return anonymous.sendReply(client, anon, ts, message, user, notify);
     if (!conversation) return;
     if (!store.deliveries.claim(ts, conversation.targetChannel, user)) return notify(t.inbox.reply.alreadySent);
 
+    const where = { channel: conversation.targetChannel, threadTs: conversation.targetThreadTs ?? undefined };
     let sentTs: string | undefined;
-    try {
-      const blocks = richTextBlocks(message.blocks);
-      const sent = await client.chat.postMessage({
-        channel: conversation.targetChannel,
-        thread_ts: conversation.targetThreadTs ?? undefined,
-        text,
-        blocks: blocks.length > 0 ? blocks : undefined,
-      });
-      sentTs = sent.ts;
-    } catch (error) {
-      store.deliveries.release(ts);
-      return notify(t.inbox.reply.sendFailed({ error: errorCode(error) }));
+    if (text.trim()) {
+      try {
+        const blocks = richTextBlocks(message.blocks);
+        const sent = await client.chat.postMessage({
+          channel: where.channel,
+          thread_ts: where.threadTs,
+          text,
+          blocks: blocks.length > 0 ? blocks : undefined,
+        });
+        sentTs = sent.ts;
+      } catch (error) {
+        store.deliveries.release(ts);
+        return notify(t.inbox.reply.sendFailed({ error: errorCode(error) }));
+      }
     }
-    if (sentTs) store.deliveries.complete(ts, sentTs);
+    // As the bot itself, which is the team's voice, so uploaded as they are.
+    const copies = files.length > 0 ? await uploadCopies(client, files, where) : { fileIds: [], problems: [] };
+    if (copies.problems.length > 0) {
+      const list = describeProblems(i18n.team, copies.problems, 'team');
+      await notices.post(client, { text: i18n.team.files.notSent({ list }), threadTs });
+    }
+    if (!sentTs && copies.fileIds.length === 0) return store.deliveries.release(ts);
+    store.deliveries.complete(ts, sentTs ?? null, copies.fileIds);
     store.conversations.touch(conversation.id);
     await client.reactions.add({ channel: team, timestamp: ts, name: 'white_check_mark' });
-    if (message.files?.length) await notify(t.inbox.reply.filesNotSent);
   }
 
   async function deleteDelivery(client: WebClient, ts: string, user: string) {
     if (await anonymous.deleteReply(client, ts, user)) return;
     const delivery = store.deliveries.get(ts);
-    if (!delivery?.targetTs) return;
+    if (!delivery || (!delivery.targetTs && delivery.fileIds.length === 0)) return;
     const t = await i18n.forUser(user);
     const threadTs = (await fetchMessage(client, team, ts))?.thread_ts ?? ts;
     const notify = (text: string) => notices.ephemeral(client, { user, text, threadTs });
     if (delivery.deletedAt) return notify(t.inbox.reply.alreadyDeleted);
 
     try {
-      await client.chat.delete({ channel: delivery.targetChannel, ts: delivery.targetTs });
+      if (delivery.targetTs) await client.chat.delete({ channel: delivery.targetChannel, ts: delivery.targetTs });
     } catch (error) {
       if (errorCode(error) !== 'message_not_found') return notify(t.inbox.reply.deleteFailed({ error: errorCode(error) }));
+    }
+    // Deleting the copies also removes the messages that held only them.
+    try {
+      await deleteCopies(client, delivery.fileIds);
+    } catch (error) {
+      return notify(t.inbox.reply.deleteFailed({ error: errorCode(error) }));
     }
     store.deliveries.markDeleted(ts);
     await client.reactions.remove({ channel: team, timestamp: ts, name: 'white_check_mark' }).catch(() => {});

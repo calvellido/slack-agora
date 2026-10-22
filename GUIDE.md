@@ -8,9 +8,13 @@ Everything about using and running Agora, in detail. The [README](README.md) has
 
 To write with your name, use the bot's *Messages* tab, @mention it in a channel it is in, or open a form with `WRITE_COMMAND` or the button on the bot's *Home* tab. The whole team reads it, and the replies come back where you wrote: in the *Messages* tab, or in the thread of your mention. What you send from the form also goes to the *Messages* tab, with a copy of your message, so you can keep writing there. The bot marks every message it receives with :incoming_envelope:, so you know it got there.
 
+Files you attach, up to 20 MB each, in the *Messages* tab, with an @mention or in the form, which has a field for them, reach the team with your message, and the files the team attaches to its replies reach you the same way. If one can't be copied, for example because it's larger or it's a link to another service, the bot tells you which, so you can share a link instead: in your DM, in the form, or in a note only you see by your @mention.
+
 ### Without your name
 
 To write without your name, open *Anonymous messages*, from the button on the bot's *Home* tab or with `ANONYMOUS_COMMAND`. That window is where you write, read the team's replies (new ones are marked 🆕) and write again. Nothing stays in your Slack messages, and your anonymous conversations never show on the *Home* tab, only in that window. You can have up to 3 of them open at once.
+
+Anonymous conversations are text only: files can't be attached to them, and the files the team attaches to its replies aren't sent, so nothing attached can give anyone away.
 
 ### Ending an anonymous conversation
 
@@ -32,9 +36,13 @@ Every conversation is a thread in the team channel, and later messages from the 
 
 Writing in a thread is internal discussion: the person doesn't see it. To send a message as the bot, add :outbox_tray: to it. The bot sends it and marks it with :white_check_mark:. Edits made after that are not sent, except in anonymous conversations, where the author's window always shows the current text of each reply.
 
+Files attached to the reply, up to 20 MB each, are sent with it, and a reply can be files alone. Any that can't be sent are listed in the thread, for the whole team. Deleting the reply with :wastebasket: deletes its files too.
+
 ### Posting as the bot
 
 To post as the bot, use the button on the bot's *Home* tab, `PUBLISH_COMMAND`, or the message shortcut, which copies the message you use it on. It opens a form to post in a channel, DM people, or both. Public channels work without inviting the bot; private ones need `/invite`. Every post is recorded in the team channel with who made it, and a DM starts a conversation thread. To delete something the bot sent, add :wastebasket: to its record in the team channel.
+
+The form has a field to attach files, up to 10, and the message shortcut also lists the files of the message you use it on, ticked, so you can untick any you don't want posted. A post can be files alone, and the bot posts copies, so the post shows only the bot; the files you attach in the form stay in your own Slack files. Each file can be up to 20 MB, and in a public channel the bot isn't in, it can only post images: other files need the bot invited there first. The form refuses to post files it can tell won't go, saying which and why, so you can remove them or choose another channel. The record in the team channel names the files posted, without copying them there, and says if one still failed while it was being copied. :wastebasket: on the record deletes the files too.
 
 ### Who sees the command and the shortcut
 
@@ -56,6 +64,8 @@ Only members of the team channel can act as the bot. What the bot posts in the t
 
 Only what the team sends is posted as the bot itself: replies sent with :outbox_tray: and posts made from the posting form. Everything the bot does on its own comes from a separate sender with a robot icon, named after the bot (for example *Agora · notices*, or *Agora · avisos* in Spanish): the messages it relays into the team channel, anonymous messages, its notices there (a conversation ending, a reply withdrawn, the bot back online) and its automatic replies to people. Short notices and automatic replies show as small grey text.
 
+One exception, which Slack imposes: apps can't upload files under another name. So relayed images show in a notice, but other relayed files, such as PDFs, appear as uploaded by the bot itself, right after a notice line saying whose they are.
+
 ## If the bot is down
 
 Slack only delivers messages to a running bot, so nothing answers while it is down. The *Home* tab tells people that a message without :incoming_envelope: means the bot is offline. When it is back, it relays the DMs it missed, marked with when they were sent, and apologises once to each sender. If it was away for more than 5 minutes, or relayed any late DMs, it also tells the team channel how long it was offline.
@@ -73,6 +83,8 @@ Some things are not recovered:
 ### Messages with your name
 
 DMs and @mentions are not anonymous: the team sees who wrote them.
+
+Files are copied, not shared: the team channel keeps its copy even if the person deletes the original, as with the text the bot relays, and exports of the channel include it. The bot holds each file in memory only while copying it, never on disk. Photos can carry details such as where and with what they were taken, which the bot doesn't remove.
 
 ### Anonymous messages
 
@@ -211,5 +223,4 @@ When it starts, the bot checks that the emoji exists. If it doesn't, because the
 
 ## Not yet
 
-- Files are not forwarded in either direction, although the team is told when a message had some.
 - Editing something the bot already sent.
