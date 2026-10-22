@@ -2,7 +2,7 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
-## [Unreleased]
+## [1.3.0] - 2026-10-22
 
 - The bottom of the *Home* tab shows the version that is running.
 - `APP_LONG_DESCRIPTION` gives the *About* tab a text of its own, apart from the *Home* tab's `ABOUT`.
@@ -36,6 +36,7 @@ The first release.
 - `pnpm clean-db` empties the database.
 - A Docker image, for linux/amd64 and linux/arm64.
 
+[1.3.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.3.0
 [1.2.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.2.0
 [1.1.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.1.0
 [1.0.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.0.0
