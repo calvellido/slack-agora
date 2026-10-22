@@ -2,7 +2,7 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
-## [Unreleased]
+## [1.2.0] - 2026-10-22
 
 - The bottom of the *Home* tab and the end of the *About* tab say the bot is open source, link to its code and invite contributions. `SOURCE_URL` changes the link, for a fork, or removes the note.
 - The README is now a short overview with a quick start, and `GUIDE.md` has the details.
@@ -29,5 +29,6 @@ The first release.
 - `pnpm clean-db` empties the database.
 - A Docker image, for linux/amd64 and linux/arm64.
 
+[1.2.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.2.0
 [1.1.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.1.0
 [1.0.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.0.0
