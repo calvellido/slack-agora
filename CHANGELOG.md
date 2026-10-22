@@ -2,6 +2,13 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## [1.5.0] - 2026-10-22
+
+- The global shortcuts for the two forms, *Write to …* and *Anonymous message to …*, are now off by default, since Slack lists them next to the commands that open the same forms, which confuses people. `WRITE_SHORTCUT=true` and `ANONYMOUS_SHORTCUT=true` bring them back.
+- The bot logs a warning when Slack sends a shortcut it doesn't know, which happens when the app's settings are older than its manifest, and Slack then shows the shortcut failing.
+
+To keep those shortcuts, set those two settings before generating the manifest again. Otherwise, the next manifest you paste removes them, and people use the commands or the *Home* tab's buttons instead.
+
 ## [1.4.1] - 2026-10-22
 
 - `pnpm manifest` warns when `APP_COLOR` is light, since Slack refuses light colours.
@@ -45,6 +52,7 @@ The first release.
 - `pnpm clean-db` empties the database.
 - A Docker image, for linux/amd64 and linux/arm64.
 
+[1.5.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.5.0
 [1.4.1]: https://github.com/calvellido/slack-agora/releases/tag/v1.4.1
 [1.4.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.4.0
 [1.3.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.3.0
