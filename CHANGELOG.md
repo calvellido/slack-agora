@@ -2,6 +2,16 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## [2.1.0] - 2026-10-22
+
+- @mentions get the :incoming_envelope: mark that DMs get, and when one starts a conversation, its author gets a note only they see, thanking them.
+- A message that can't reach the team tells the person to send it again, instead of nothing.
+- The posting form, once sent, shows how it went for each channel and person, with a link to the post, instead of closing.
+- The delete emoji on something the bot didn't send says what it deletes. The buttons of anonymous threads say why when they can't act, and their notes show in the channel, where the buttons are, instead of inside the thread.
+- Slack's usual refusals, such as a channel the bot isn't in, an archived one or one where only some people can post, are explained in words instead of by their codes.
+
+No new permissions: updating the bot is enough.
+
 ## [2.0.0] - 2026-10-22
 
 - Files in conversations with your name, both ways, up to 20 MB each, including from the form to write with your name, which has a field for them. What people attach reaches the team's thread, images in a notice and other files right after it, and what the team attaches to a reply reaches the person with the text. A reply can be files alone, and deleting it with the delete emoji deletes its files too.
@@ -60,6 +70,7 @@ The first release.
 - `pnpm clean-db` empties the database.
 - A Docker image, for linux/amd64 and linux/arm64.
 
+[2.1.0]: https://github.com/calvellido/slack-agora/releases/tag/v2.1.0
 [2.0.0]: https://github.com/calvellido/slack-agora/releases/tag/v2.0.0
 [1.5.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.5.0
 [1.4.1]: https://github.com/calvellido/slack-agora/releases/tag/v1.4.1
