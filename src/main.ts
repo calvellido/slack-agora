@@ -1,4 +1,4 @@
-import { App } from '@slack/bolt';
+import { App, SocketModeReceiver } from '@slack/bolt';
 import { registerAnonymous } from './anonymous/index.ts';
 import { ownerHasher } from './anonymous/keys.ts';
 import { loadConfig } from './config.ts';
@@ -7,6 +7,7 @@ import { registerHome } from './home/index.ts';
 import { I18n } from './i18n/index.ts';
 import { recoverDowntime, startHeartbeat } from './inbox/downtime.ts';
 import { registerInbox } from './inbox/index.ts';
+import { startMonitorPings } from './monitor.ts';
 import { ANON_SHORTCUT, PUBLISH_SHORTCUT, WRITE_SHORTCUT } from './manifest/index.ts';
 import { registerPublish } from './publish/index.ts';
 import { errorCode } from './slack/errors.ts';
@@ -23,8 +24,10 @@ const config = loadConfig();
 const store = new Store(config.dbPath, config.teamChannelId);
 const uptime = startHeartbeat(store.heartbeat);
 
-// The Slack app, over Socket Mode, and the services every feature shares
-const app = new App({ token: config.botToken, appToken: config.appToken, socketMode: true, logLevel: config.logLevel });
+// The Slack app, over Socket Mode, and the services every feature shares. The receiver is made here, for its
+// connection's events.
+const receiver = new SocketModeReceiver({ appToken: config.appToken, logLevel: config.logLevel });
+const app = new App({ token: config.botToken, receiver, logLevel: config.logLevel });
 const bot = await botIdentity(app.client);
 const i18n = new I18n(
   app.client,
@@ -56,7 +59,10 @@ app.error(async (error) => {
   app.logger.error(`Listener failed: ${errorCode(error.original ?? error)}`);
 });
 
-// Start
+// Start, telling the monitor, if there is one, while the bot is connected
+const monitor = config.heartbeatUrl
+  ? startMonitorPings(config.heartbeatUrl, receiver.client, app.logger, config.heartbeatMinutes * 60_000)
+  : undefined;
 await app.start();
 try {
   const { channel } = await app.client.conversations.info({ channel: config.teamChannelId });
@@ -78,6 +84,7 @@ const cleanupTimer = setInterval(cleanup, 60 * 60_000);
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, async () => {
     clearInterval(cleanupTimer);
+    monitor?.stop();
     uptime.stop();
     await app.stop();
     store.close();

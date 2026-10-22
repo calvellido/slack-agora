@@ -46,6 +46,10 @@ export interface Config extends AppSettings {
   homeBanner?: string;
   /** Whether the Home tab lists the people in the team channel, who read what people write. */
   homeTeamMembers: boolean;
+  /** A monitor's address the bot calls while it is up, so the monitor alerts when the calls stop. */
+  heartbeatUrl?: string;
+  /** How often it is called: once a day by default, as a monitor's checks often expect. */
+  heartbeatMinutes: number;
   logLevel: LogLevel;
   anonSecret: string;
   anonIdleDays: number;
@@ -135,6 +139,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   if (!Object.values(LogLevel).includes(logLevel)) throw new Error(`Invalid LOG_LEVEL ${logLevel}`);
   const homeBanner = env.HOME_BANNER_URL?.trim() || undefined;
   if (homeBanner && !/^https:\/\/\S+$/.test(homeBanner)) throw new Error('HOME_BANNER_URL must be an https:// address');
+  const heartbeatUrl = env.HEARTBEAT_URL?.trim() || undefined;
+  if (heartbeatUrl && !/^https:\/\/\S+$/.test(heartbeatUrl)) throw new Error('HEARTBEAT_URL must be an https:// address');
   const anonSecret = required('ANON_SECRET');
   if (anonSecret.length < 32) throw new Error('ANON_SECRET is too short: generate one with `openssl rand -base64 32`');
 
@@ -150,6 +156,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     noticeEmoji: env.NOTICE_EMOJI?.trim().replace(/^:|:$/g, '') || 'robot_face',
     homeBanner,
     homeTeamMembers: flag(env, 'HOME_TEAM_MEMBERS', false),
+    heartbeatUrl,
+    heartbeatMinutes: positive('HEARTBEAT_MINUTES', 1440),
     logLevel,
     anonSecret,
     anonIdleDays: positive('ANON_IDLE_DAYS', 30),

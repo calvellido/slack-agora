@@ -19,6 +19,7 @@ src/
   main.ts            Entry point: settings, database, Slack connection, features, start, background work.
   config.ts          Reads .env: AppSettings (what names the deployment, shared with the manifest) and Config.
   deps.ts            Deps: the shared services every feature receives.
+  monitor.ts         Calls HEARTBEAT_URL while connected to Slack, for a monitor to alert when the calls stop.
 
   lib/               Generic helpers, nothing Slack-specific.
     once.ts            Doing something once per key, such as telling someone about a message once.

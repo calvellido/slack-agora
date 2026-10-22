@@ -72,6 +72,18 @@ One exception, which Slack imposes: apps can't upload files under another name. 
 
 Slack only delivers messages to a running bot, so nothing answers while it is down. The *Home* tab tells people that a message without :incoming_envelope: means the bot is offline. When it is back, it relays the DMs it missed, marked with when they were sent, and apologises once to each sender. If it was away for more than 5 minutes, or relayed any late DMs, it also tells the team channel how long it was offline.
 
+### Getting alerted
+
+To hear about it while the bot is down, and not only once it's back, give it a monitor to call. The bot calls `HEARTBEAT_URL` every `HEARTBEAT_MINUTES` while it is connected to Slack, once a day (1440) by default, and the monitor alerts you when the calls stop, whether the bot, its machine or its connection is down. The calls go out from the machine, so nothing needs to reach it, and they carry nothing but the fact that the bot is up.
+
+With [Healthchecks.io](https://healthchecks.io), which has a free plan and can also run on your own server:
+
+1. Create a check, and set its period to how often the bot calls, `HEARTBEAT_MINUTES`, and its grace time to 5 or 10 minutes, so a restart for an update doesn't set it off. You hear about the bot being down after about the period and the grace time together, so a shorter `HEARTBEAT_MINUTES`, such as 5, lets the monitor alert you sooner.
+2. Choose how it alerts you, such as by email or Telegram.
+3. Set `HEARTBEAT_URL` in `.env` to the check's ping URL and restart the bot. The check shows as up after its first call.
+
+Keep the ping URL secret: anyone with it could make the check look up.
+
 ### What isn't recovered
 
 Some things are not recovered:
