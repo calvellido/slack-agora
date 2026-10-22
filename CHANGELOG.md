@@ -2,6 +2,11 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## [1.4.0] - 2026-10-22
+
+- `HOME_TEAM_MEMBERS=true` lists the people in the team channel on the *Home* tab, with their photos, so people know who reads what they write.
+- The *Home* tab has more space between the two ways to write and between the rows of the team's instructions, and all its buttons look the same, so neither way to write looks preferred.
+
 ## [1.3.0] - 2026-10-22
 
 - The bottom of the *Home* tab shows the version that is running.
@@ -36,6 +41,7 @@ The first release.
 - `pnpm clean-db` empties the database.
 - A Docker image, for linux/amd64 and linux/arm64.
 
+[1.4.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.4.0
 [1.3.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.3.0
 [1.2.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.2.0
 [1.1.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.1.0
