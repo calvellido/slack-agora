@@ -2,6 +2,15 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## [2.2.0] - 2026-10-22
+
+- Editing a reply already sent edits what the person got, as anonymous conversations already did. A reply sent as files alone can't be given text later, nor a reply left without text, and the bot says so.
+- Editing a DM edits the team's copy, keeping its header and small print. Deleting a DM takes its text out of the team's channel, leaving a note that the person deleted it, and deletes the copies of its files.
+- Each time, whoever made the change is told it went through, once per message, or why it couldn't.
+- DMs relayed by earlier versions stay as the team got them, as those versions kept no record of their copies, and the person is told so when they edit or delete one.
+
+This version needs the `message.groups` event, for edits in the team channel: generate the manifest again and paste it into the app settings, which may ask to reinstall the app. Until then, edits of replies aren't sent.
+
 ## [2.1.0] - 2026-10-22
 
 - @mentions get the :incoming_envelope: mark that DMs get, and when one starts a conversation, its author gets a note only they see, thanking them.
@@ -70,6 +79,7 @@ The first release.
 - `pnpm clean-db` empties the database.
 - A Docker image, for linux/amd64 and linux/arm64.
 
+[2.2.0]: https://github.com/calvellido/slack-agora/releases/tag/v2.2.0
 [2.1.0]: https://github.com/calvellido/slack-agora/releases/tag/v2.1.0
 [2.0.0]: https://github.com/calvellido/slack-agora/releases/tag/v2.0.0
 [1.5.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.5.0
