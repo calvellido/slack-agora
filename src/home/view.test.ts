@@ -66,3 +66,17 @@ test("the team's part only mentions the ways to post the deployment has", () => 
   assert.equal(publishing({ publishCommand: false }), " or the shortcut in a message's *⋯* menu.");
   assert.equal(publishing({ publishCommand: false, publishShortcut: false }), '.');
 });
+
+test('the bottom of the Home tab says where to read the code, when there is somewhere', () => {
+  const view = homeView(t, { bot: { name: 'Helpdesk' }, sourceUrl: 'https://github.com/example/helpdesk/' });
+  assert.deepEqual(view.blocks.at(-1), {
+    type: 'context',
+    elements: [
+      {
+        type: 'mrkdwn',
+        text: '🔓 Helpdesk is open source: anyone can read its code, at <https://github.com/example/helpdesk/|github.com/example/helpdesk>, and see how it works. If you find something to improve, contributions are welcome there.',
+      },
+    ],
+  });
+  assert.doesNotMatch(JSON.stringify(homeView(t, { bot: { name: 'Helpdesk' } })), /open source/);
+});

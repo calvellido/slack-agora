@@ -23,6 +23,8 @@ export interface AppSettings {
   publishShortcut: boolean;
   /** Optional text for the Home tab: by language, with `default` for languages without their own. */
   about: Partial<Record<Language | 'default', string>>;
+  /** Where the bot's code can be read, mentioned on the Home and About tabs; none if the deployment leaves it empty. */
+  sourceUrl?: string;
 }
 
 export interface Config extends AppSettings {
@@ -44,6 +46,9 @@ export interface Config extends AppSettings {
   anonMaxOpen: number;
 }
 
+/** Agora's own repository, the default SOURCE_URL. A deployment running its own fork points to that instead. */
+export const AGORA_REPOSITORY = 'https://github.com/calvellido/slack-agora';
+
 export function loadAppSettings(env: NodeJS.ProcessEnv = process.env): AppSettings {
   const command = (name: string, fallback: string): string => {
     const value = env[name]?.trim() || fallback;
@@ -55,6 +60,8 @@ export function loadAppSettings(env: NodeJS.ProcessEnv = process.env): AppSettin
     env[name]?.trim() === '' ? undefined : command(name, fallback);
   const publishShortcut = env.PUBLISH_SHORTCUT?.trim().toLowerCase() || 'true';
   if (!['true', 'false'].includes(publishShortcut)) throw new Error('PUBLISH_SHORTCUT must be true or false');
+  const sourceUrl = env.SOURCE_URL === undefined ? AGORA_REPOSITORY : env.SOURCE_URL.trim() || undefined;
+  if (sourceUrl && !/^https:\/\/\S+$/.test(sourceUrl)) throw new Error('SOURCE_URL must be an https:// address');
   const appName = env.APP_NAME?.trim() || 'Agora';
   if (appName.length > 35) throw new Error('APP_NAME must be at most 35 characters');
   const appDescription = env.APP_DESCRIPTION?.trim() || undefined;
@@ -85,6 +92,7 @@ export function loadAppSettings(env: NodeJS.ProcessEnv = process.env): AppSettin
     publishCommand: optionalCommand('PUBLISH_COMMAND', '/agora-post'),
     publishShortcut: publishShortcut === 'true',
     about,
+    sourceUrl,
   };
 }
 

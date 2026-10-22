@@ -14,6 +14,7 @@ export function registerHome(app: App, { config, team, bot, i18n }: Deps): void 
       about: config.about[language] ?? config.about.default,
       banner: config.homeBanner,
       writeCommand: config.writeCommand,
+      sourceUrl: config.sourceUrl,
       team: (await team.isMember(event.user))
         ? {
             channel: config.teamChannelId,

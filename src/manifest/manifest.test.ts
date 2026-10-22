@@ -77,7 +77,7 @@ test('extra scopes are added to the ones the code needs', () => {
 
 test('the about text becomes the long description, without formatting, when Slack accepts its length', () => {
   const long = `Somos *el equipo*. ${'Escríbenos. '.repeat(15)}`;
-  const withAbout = build({ TEAM_LANGUAGE: 'es', ABOUT: 'Hi', ABOUT_ES: long });
+  const withAbout = build({ TEAM_LANGUAGE: 'es', ABOUT: 'Hi', ABOUT_ES: long, SOURCE_URL: '' });
   assert.equal(withAbout.manifest.display_information.long_description, long.replaceAll('*', '').trim());
   assert.deepEqual(withAbout.warnings, []);
 
@@ -87,8 +87,19 @@ test('the about text becomes the long description, without formatting, when Slac
 
   assert.equal(build({}).manifest.display_information.long_description, undefined);
 
-  const sized = build({ ABOUT: `# The team\\n${'Write to us. '.repeat(15)}\\n-# Small print` });
+  const sized = build({ ABOUT: `# The team\\n${'Write to us. '.repeat(15)}\\n-# Small print`, SOURCE_URL: '' });
   assert.match(sized.manifest.display_information.long_description!, /^The team\nWrite to us\..*\nSmall print$/s);
+});
+
+test('the long description ends saying where to read the code, Agora\'s repository unless SOURCE_URL says otherwise', () => {
+  const about = 'We are the people team, and we read everything you write to us. '.repeat(3).trim();
+  const upstream = build({ ABOUT: about }).manifest.display_information.long_description!;
+  assert.ok(upstream.startsWith(`${about}\n\nAgora is open source`));
+  assert.match(upstream, /at https:\/\/github\.com\/calvellido\/slack-agora, and see how it works/);
+  const fork = build({ ABOUT: about, SOURCE_URL: 'https://example.com/fork' }).manifest.display_information.long_description!;
+  assert.match(fork, /at https:\/\/example\.com\/fork,/);
+  assert.equal(build({ ABOUT: about, SOURCE_URL: '' }).manifest.display_information.long_description, about);
+  assert.throws(() => loadAppSettings({ SOURCE_URL: 'github.com/x' }), /SOURCE_URL/);
 });
 
 test('settings Slack would reject fail early', () => {

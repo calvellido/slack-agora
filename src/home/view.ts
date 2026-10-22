@@ -13,6 +13,8 @@ export interface HomeOptions {
   banner?: string;
   /** The command to write with your name, if the deployment has one. */
   writeCommand?: string;
+  /** Where the bot's code can be read, for the note at the bottom. */
+  sourceUrl?: string;
   /** Only for team members, with the ways to post as the bot besides the Home tab's button. */
   team?: { channel: string; sendEmoji: string; deleteEmoji: string; publishCommand: boolean; publishShortcut: boolean };
 }
@@ -52,7 +54,7 @@ function publishWays({ publishCommand, publishShortcut }: { publishCommand: bool
   return publishCommand ? 'command' : publishShortcut ? 'shortcut' : 'none';
 }
 
-export function homeView(t: Strings, { bot, about, banner, writeCommand, team }: HomeOptions): HomeView {
+export function homeView(t: Strings, { bot, about, banner, writeCommand, sourceUrl, team }: HomeOptions): HomeView {
   const intro = aboutBlocks(about ?? t.home.intro);
   // A heading at the start of the about text takes the place of the bot's name.
   if (intro[0]?.type !== 'header') intro.unshift(header(bot.name));
@@ -99,6 +101,10 @@ export function homeView(t: Strings, { bot, about, banner, writeCommand, team }:
         elements: [{ type: 'button', action_id: 'publish_open', text: plain(t.home.team.publishButton) }],
       },
     );
+  }
+  if (sourceUrl) {
+    const label = sourceUrl.replace(/^https:\/\//, '').replace(/\/$/, '');
+    blocks.push(spacer(), { type: 'divider' }, context(t.home.source({ url: sourceUrl, label })));
   }
   return { type: 'home', blocks };
 }

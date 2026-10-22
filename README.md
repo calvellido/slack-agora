@@ -193,6 +193,8 @@ The *Home* tab opens with the bot's avatar, its name and the `ABOUT` text. `ABOU
 
 For a banner across the top instead of the avatar, put a wide image at a public https address, such as a GitHub repository, and set `HOME_BANNER_URL`. Slack fetches the image itself, so it can't come from the bot's machine. If Slack can't get it, the bot shows the tab without it and logs a warning.
 
+At the bottom, the *Home* tab says the bot is open source, links to its code and invites contributions, and the *About* tab ends with the same. The link is Agora's repository. If you run a changed version, point `SOURCE_URL` to yours, so people can read the code that actually runs, or set it empty to leave the note out.
+
 The app's icon is uploaded in the app settings, in *Basic Information > Display Information*. [assets/](assets/) has the Agora logo for it, and a banner with the logo in the middle.
 
 ### A custom icon for the bot's own messages
@@ -210,9 +212,9 @@ When it starts, the bot checks that the emoji exists. If it doesn't, because the
 - Files are not forwarded in either direction, although the team is told when a message had some.
 - Editing something the bot already sent.
 
-## Working on the code
+## Contributing
 
-See [ARCHITECTURE.md](ARCHITECTURE.md).
+Ideas, bug reports and improvements are welcome, as issues and pull requests in [this repository](https://github.com/calvellido/slack-agora). [ARCHITECTURE.md](ARCHITECTURE.md) explains how the code works, and `pnpm check` runs the same checks as CI.
 
 ## License
 

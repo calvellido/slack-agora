@@ -29,6 +29,7 @@ manifest:
     hint: "[texto del mensaje]"
   anonymousCommand:
     description: "Escribir al equipo de {bot} sin tu nombre"
+  source: "{bot} es de código abierto: cualquiera puede leer su código, en {url}, y ver cómo funciona. Las contribuciones son bienvenidas."
 
 inbox:
   thread:
@@ -113,6 +114,7 @@ home:
       *📣 Publicar*
       Publica en un canal o escribe a personas como {bot} con el botón de abajo{ways, select, both {, `{publishCommand}` o el atajo del menú *⋯* de un mensaje} command { o `{publishCommand}`} shortcut { o el atajo del menú *⋯* de un mensaje} other {}}.
     publishButton: "Publicar como {bot}"
+  source: "🔓 {bot} es de código abierto: cualquiera puede leer su código, en <{url}|{label}>, y ver cómo funciona. Si encuentras algo que mejorar, allí las contribuciones son bienvenidas."
 
 anonymous:
   unavailable: "Esta conversación ya ha terminado."

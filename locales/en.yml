@@ -35,6 +35,8 @@ manifest:
     hint: "[message]"
   anonymousCommand:
     description: "Write to the {bot} team without your name"
+  # At the end of the About tab's text, in plain text.
+  source: "{bot} is open source: anyone can read its code, at {url}, and see how it works. Contributions are welcome."
 
 # Conversations by DM or @mention.
 inbox:
@@ -132,6 +134,8 @@ home:
       *📣 Posting*
       Post in a channel or write to people as {bot} with the button below{ways, select, both {, `{publishCommand}`, or the shortcut in a message's *⋯* menu} command { or `{publishCommand}`} shortcut { or the shortcut in a message's *⋯* menu} other {}}.
     publishButton: "Post as {bot}"
+  # At the bottom, for everyone.
+  source: "🔓 {bot} is open source: anyone can read its code, at <{url}|{label}>, and see how it works. If you find something to improve, contributions are welcome there."
 
 anonymous:
   unavailable: "This conversation has ended."
