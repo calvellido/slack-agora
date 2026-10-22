@@ -114,7 +114,7 @@ home:
       *📣 Publicar*
       Publica en un canal o escribe a personas como {bot} con el botón de abajo{ways, select, both {, `{publishCommand}` o el atajo del menú *⋯* de un mensaje} command { o `{publishCommand}`} shortcut { o el atajo del menú *⋯* de un mensaje} other {}}.
     publishButton: "Publicar como {bot}"
-  source: "{bot} es una instancia de Agora, un proyecto de código abierto. Cualquiera puede leer su código en <{url}|{label}>, y ver cómo funciona. Si encuentras algo que mejorar, las contribuciones son bienvenidas."
+  source: "Esta aplicación de Slack está ejecutando una instancia de Agora, un proyecto de código abierto. Cualquiera puede leer su código en <{url}|{label}>, y ver cómo funciona. Si encuentras algo que mejorar, las contribuciones son bienvenidas."
   version: "Versión {version}"
 
 anonymous:

@@ -135,7 +135,7 @@ home:
       Post in a channel or write to people as {bot} with the button below{ways, select, both {, `{publishCommand}`, or the shortcut in a message's *⋯* menu} command { or `{publishCommand}`} shortcut { or the shortcut in a message's *⋯* menu} other {}}.
     publishButton: "Post as {bot}"
   # At the bottom, for everyone.
-  source: "{bot} is an instance of Agora, an open source project. Anyone can read its code at <{url}|{label}>, and see how it works. If you find something to improve, contributions are welcome."
+  source: "This Slack app is running an instance of Agora, an open source project. Anyone can read its code at <{url}|{label}>, and see how it works. If you find something to improve, contributions are welcome."
   # The version that is running, under that.
   version: "Version {version}"
 
