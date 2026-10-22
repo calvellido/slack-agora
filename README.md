@@ -46,10 +46,11 @@ curl -Lo .env https://github.com/calvellido/slack-agora/releases/latest/download
 - [SECURITY.md](SECURITY.md): how someone could try to get at anonymous messages or the bot's data, and how to make it harder.
 - [ARCHITECTURE.md](ARCHITECTURE.md): how the code works.
 - [CHANGELOG.md](CHANGELOG.md): what changed in each version, and what to do when updating.
+- [ROADMAP.md](ROADMAP.md): ideas for what could come next, and what each would take.
 
 ## Contributing
 
-Ideas, bug reports and improvements are welcome, as issues and pull requests in [this repository](https://github.com/calvellido/slack-agora). [ARCHITECTURE.md](ARCHITECTURE.md) explains how the code works, and `pnpm check` runs the same checks as CI.
+Ideas, bug reports and improvements are welcome, as issues and pull requests in [this repository](https://github.com/calvellido/slack-agora). [ROADMAP.md](ROADMAP.md) lists ideas that are open to anyone. [ARCHITECTURE.md](ARCHITECTURE.md) explains how the code works, and `pnpm check` runs the same checks as CI.
 
 ## License
 

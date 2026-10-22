@@ -239,3 +239,5 @@ When it starts, the bot checks that the emoji exists. If it doesn't, because the
 ## Not yet
 
 - Editing a post made with the posting form: delete it and post it again.
+
+More ideas, and what each would take, are in [ROADMAP.md](ROADMAP.md).
