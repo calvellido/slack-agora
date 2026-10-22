@@ -51,6 +51,7 @@ export function registerWrite(app: App, { config, i18n }: Deps, dms: Dms): void 
     });
   }
 
+  // Registered even without the shortcut in the manifest, in case the app's settings still have it.
   app.shortcut<GlobalShortcut>({ callback_id: WRITE_SHORTCUT, type: 'shortcut' }, async ({ ack, shortcut, client }) => {
     await ack();
     await open(client, shortcut.trigger_id, shortcut.user.id);

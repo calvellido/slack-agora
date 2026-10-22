@@ -14,14 +14,6 @@ features:
     display_name: Agora
     always_online: true
   shortcuts:
-    - name: Write to Agora
-      type: global
-      callback_id: write_new
-      description: Write to the Agora team with your name
-    - name: Anonymous message to Agora
-      type: global
-      callback_id: anon_new
-      description: Write to the Agora team without your name
     - name: Post as Agora
       type: message
       callback_id: publish_as_bot

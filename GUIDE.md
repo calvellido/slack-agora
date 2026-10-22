@@ -6,11 +6,11 @@ Everything about using and running Agora, in detail. The [README](README.md) has
 
 ### With your name
 
-To write with your name, use the bot's *Messages* tab, @mention it in a channel it is in, or open a form with `WRITE_COMMAND`, the shortcut, or the button on the bot's *Home* tab. The whole team reads it, and the replies come back where you wrote: in the *Messages* tab, or in the thread of your mention. What you send from the form also goes to the *Messages* tab, with a copy of your message, so you can keep writing there. The bot marks every message it receives with :incoming_envelope:, so you know it got there.
+To write with your name, use the bot's *Messages* tab, @mention it in a channel it is in, or open a form with `WRITE_COMMAND` or the button on the bot's *Home* tab. The whole team reads it, and the replies come back where you wrote: in the *Messages* tab, or in the thread of your mention. What you send from the form also goes to the *Messages* tab, with a copy of your message, so you can keep writing there. The bot marks every message it receives with :incoming_envelope:, so you know it got there.
 
 ### Without your name
 
-To write without your name, open *Anonymous messages*, from the button on the bot's *Home* tab, with `ANONYMOUS_COMMAND`, or with the shortcut. That window is where you write, read the team's replies (new ones are marked 🆕) and write again. Nothing stays in your Slack messages, and your anonymous conversations never show on the *Home* tab, only in that window. You can have up to 3 of them open at once.
+To write without your name, open *Anonymous messages*, from the button on the bot's *Home* tab or with `ANONYMOUS_COMMAND`. That window is where you write, read the team's replies (new ones are marked 🆕) and write again. Nothing stays in your Slack messages, and your anonymous conversations never show on the *Home* tab, only in that window. You can have up to 3 of them open at once.
 
 ### Ending an anonymous conversation
 
@@ -39,6 +39,10 @@ To post as the bot, use the button on the bot's *Home* tab, `PUBLISH_COMMAND`, o
 ### Who sees the command and the shortcut
 
 Slack shows an app's commands and shortcuts to everyone in the workspace, and has no way to show them only to some people. So anyone can see the command and the message shortcut for posting, although only the team can use them, and anyone else who tries just gets a note saying so. The button on the *Home* tab only shows to the team. To keep the command or the shortcut out of sight, set `PUBLISH_COMMAND=` (empty) or `PUBLISH_SHORTCUT=false` in `.env` and update the app's manifest (see *Setting it up*); the team then posts from the *Home* tab.
+
+### Commands or shortcuts
+
+When someone types `/`, Slack lists the app's commands next to its global shortcuts. Agora can have both for writing to the team, `WRITE_SHORTCUT=true` and `ANONYMOUS_SHORTCUT=true`, but they're off by default, and it's best to keep them off: a command and a shortcut that open the same form, side by side in the same list, look like two different things, and people can't tell which to use. The commands also take text, so `/agora-write Hello` opens the form already written, and people who don't use commands have the buttons on the bot's *Home* tab. If you'd rather offer shortcuts, consider leaving the matching command out, with `WRITE_COMMAND=` (empty); the anonymous command is always there.
 
 ### Anonymous conversations
 

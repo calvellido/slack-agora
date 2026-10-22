@@ -7,11 +7,13 @@ import { registerHome } from './home/index.ts';
 import { I18n } from './i18n/index.ts';
 import { recoverDowntime, startHeartbeat } from './inbox/downtime.ts';
 import { registerInbox } from './inbox/index.ts';
+import { ANON_SHORTCUT, PUBLISH_SHORTCUT, WRITE_SHORTCUT } from './manifest/index.ts';
 import { registerPublish } from './publish/index.ts';
 import { errorCode } from './slack/errors.ts';
 import { botIdentity } from './slack/identity.ts';
 import { Notices, noticeEmoji } from './slack/notices.ts';
 import { TeamDirectory } from './slack/team-directory.ts';
+import { warnAboutUnknownShortcuts } from './slack/unknown-shortcuts.ts';
 import { Store } from './storage/index.ts';
 
 // The entry point: reads the settings, opens the database, connects to Slack, registers every feature and starts.
@@ -43,6 +45,7 @@ const deps: Deps = {
 };
 
 // Features
+warnAboutUnknownShortcuts(app, [WRITE_SHORTCUT, ANON_SHORTCUT, PUBLISH_SHORTCUT]);
 const anonymous = registerAnonymous(app, deps);
 const inbox = registerInbox(app, deps, anonymous);
 registerPublish(app, deps);

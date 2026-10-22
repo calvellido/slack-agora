@@ -50,7 +50,7 @@ export function contrastWithWhite(hex: string): number {
 }
 
 export function buildManifest(settings: AppSettings): { manifest: object; warnings: string[] } {
-  const { appName, teamLanguage, writeCommand, publishCommand, anonCommand, publishShortcut } = settings;
+  const { appName, teamLanguage, writeCommand, publishCommand, anonCommand } = settings;
   const names = { bot: appName, publishCommand: publishCommand ?? '', anonymousCommand: anonCommand };
   const t = stringsIn(teamLanguage, names);
   const warnings: string[] = [];
@@ -78,6 +78,14 @@ export function buildManifest(settings: AppSettings): { manifest: object; warnin
     longDescription = undefined;
   }
 
+  const shortcut = (on: boolean, type: string, callback_id: string, text: { name: string; description: string }) =>
+    on ? [{ name: text.name, type, callback_id, description: text.description }] : [];
+  const shortcuts = [
+    ...shortcut(settings.writeShortcut, 'global', WRITE_SHORTCUT, t.manifest.writeShortcut),
+    ...shortcut(settings.anonShortcut, 'global', ANON_SHORTCUT, t.manifest.anonymousShortcut),
+    ...shortcut(settings.publishShortcut, 'message', PUBLISH_SHORTCUT, t.manifest.publishShortcut),
+  ];
+
   const manifest = {
     display_information: {
       name: appName,
@@ -88,20 +96,7 @@ export function buildManifest(settings: AppSettings): { manifest: object; warnin
     features: {
       app_home: { home_tab_enabled: true, messages_tab_enabled: true, messages_tab_read_only_enabled: false },
       bot_user: { display_name: appName, always_online: true },
-      shortcuts: [
-        { name: t.manifest.writeShortcut.name, type: 'global', callback_id: WRITE_SHORTCUT, description: t.manifest.writeShortcut.description },
-        { name: t.manifest.anonymousShortcut.name, type: 'global', callback_id: ANON_SHORTCUT, description: t.manifest.anonymousShortcut.description },
-        ...(publishShortcut
-          ? [
-              {
-                name: t.manifest.publishShortcut.name,
-                type: 'message',
-                callback_id: PUBLISH_SHORTCUT,
-                description: t.manifest.publishShortcut.description,
-              },
-            ]
-          : []),
-      ],
+      ...(shortcuts.length > 0 ? { shortcuts } : {}),
       slash_commands: [
         ...(writeCommand
           ? [

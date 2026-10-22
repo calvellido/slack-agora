@@ -23,6 +23,9 @@ export interface AppSettings {
   publishCommand?: string;
   /** Whether the team has a message shortcut to post a copy of a message, which Slack also shows to everyone. */
   publishShortcut: boolean;
+  /** Whether there are global shortcuts for the two forms, which Slack lists next to the commands; off by default. */
+  writeShortcut: boolean;
+  anonShortcut: boolean;
   /** Optional text for the Home tab: by language, with `default` for languages without their own. */
   about: Partial<Record<Language | 'default', string>>;
   /** Where the bot's code can be read, mentioned on the Home and About tabs; none if the deployment leaves it empty. */
@@ -50,6 +53,13 @@ export interface Config extends AppSettings {
   anonMaxOpen: number;
 }
 
+/** A setting that is true or false, or `fallback` when it isn't set. */
+function flag(env: NodeJS.ProcessEnv, name: string, fallback: boolean): boolean {
+  const value = env[name]?.trim().toLowerCase() || String(fallback);
+  if (value !== 'true' && value !== 'false') throw new Error(`${name} must be true or false`);
+  return value === 'true';
+}
+
 /** Agora's own repository, the default SOURCE_URL. A deployment running its own fork points to that instead. */
 export const AGORA_REPOSITORY = 'https://github.com/calvellido/slack-agora';
 
@@ -62,8 +72,6 @@ export function loadAppSettings(env: NodeJS.ProcessEnv = process.env): AppSettin
   // Set but empty: no command.
   const optionalCommand = (name: string, fallback: string) =>
     env[name]?.trim() === '' ? undefined : command(name, fallback);
-  const publishShortcut = env.PUBLISH_SHORTCUT?.trim().toLowerCase() || 'true';
-  if (!['true', 'false'].includes(publishShortcut)) throw new Error('PUBLISH_SHORTCUT must be true or false');
   const sourceUrl = env.SOURCE_URL === undefined ? AGORA_REPOSITORY : env.SOURCE_URL.trim() || undefined;
   if (sourceUrl && !/^https:\/\/\S+$/.test(sourceUrl)) throw new Error('SOURCE_URL must be an https:// address');
   const appName = env.APP_NAME?.trim() || 'Agora';
@@ -99,7 +107,9 @@ export function loadAppSettings(env: NodeJS.ProcessEnv = process.env): AppSettin
     writeCommand: optionalCommand('WRITE_COMMAND', '/agora-write'),
     anonCommand: command('ANONYMOUS_COMMAND', '/agora-anon'),
     publishCommand: optionalCommand('PUBLISH_COMMAND', '/agora-post'),
-    publishShortcut: publishShortcut === 'true',
+    publishShortcut: flag(env, 'PUBLISH_SHORTCUT', true),
+    writeShortcut: flag(env, 'WRITE_SHORTCUT', false),
+    anonShortcut: flag(env, 'ANONYMOUS_SHORTCUT', false),
     about,
     sourceUrl,
   };
@@ -123,11 +133,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   };
   const logLevel = (env.LOG_LEVEL ?? 'info') as LogLevel;
   if (!Object.values(LogLevel).includes(logLevel)) throw new Error(`Invalid LOG_LEVEL ${logLevel}`);
-  const flag = (name: string, fallback: boolean): boolean => {
-    const value = env[name]?.trim().toLowerCase() || String(fallback);
-    if (value !== 'true' && value !== 'false') throw new Error(`${name} must be true or false`);
-    return value === 'true';
-  };
   const homeBanner = env.HOME_BANNER_URL?.trim() || undefined;
   if (homeBanner && !/^https:\/\/\S+$/.test(homeBanner)) throw new Error('HOME_BANNER_URL must be an https:// address');
   const anonSecret = required('ANON_SECRET');
@@ -144,7 +149,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     deleteEmoji: env.DELETE_EMOJI ?? 'wastebasket',
     noticeEmoji: env.NOTICE_EMOJI?.trim().replace(/^:|:$/g, '') || 'robot_face',
     homeBanner,
-    homeTeamMembers: flag('HOME_TEAM_MEMBERS', false),
+    homeTeamMembers: flag(env, 'HOME_TEAM_MEMBERS', false),
     logLevel,
     anonSecret,
     anonIdleDays: positive('ANON_IDLE_DAYS', 30),

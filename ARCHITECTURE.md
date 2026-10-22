@@ -34,6 +34,7 @@ src/
     richtext.ts        Rich text from and to what people type, and plain-text fallbacks.
     errors.ts          The Slack error code of a failed call.
     notices.ts         Posting the bot's notices in the team channel, under their own name and icon.
+    unknown-shortcuts.ts  Logging shortcuts the app settings have but this version doesn't.
 
   storage/           The SQLite database, one file per kind of data. Store (index.ts) groups them.
     database.ts        Schema, migrations, and emptying it.

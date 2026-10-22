@@ -19,7 +19,7 @@ type Manifest = {
   display_information: { name: string; description: string; long_description?: string };
   features: {
     bot_user: { display_name: string };
-    shortcuts: { name: string; callback_id: string }[];
+    shortcuts?: { name: string; callback_id: string }[];
     slash_commands: { command: string; description: string }[];
   };
   oauth_config: { scopes: { bot: string[] } };
@@ -36,6 +36,8 @@ test('the manifest takes names and commands from the settings, in the team langu
     WRITE_COMMAND: '/hd',
     PUBLISH_COMMAND: '/hd-post',
     ANONYMOUS_COMMAND: '/hd-anon',
+    WRITE_SHORTCUT: 'true',
+    ANONYMOUS_SHORTCUT: 'true',
     TEAM_LANGUAGE: 'es',
   });
   assert.equal(manifest.display_information.name, 'Helpdesk');
@@ -43,7 +45,7 @@ test('the manifest takes names and commands from the settings, in the team langu
   const es = stringsIn('es', { bot: 'Helpdesk', publishCommand: '/hd-post', anonymousCommand: '/hd-anon' });
   assert.equal(manifest.display_information.description, es.manifest.description);
   assert.deepEqual(manifest.features.slash_commands.map((c) => c.command), ['/hd', '/hd-anon', '/hd-post']);
-  assert.deepEqual(manifest.features.shortcuts.map((s) => s.name), [
+  assert.deepEqual(manifest.features.shortcuts!.map((s) => s.name), [
     es.manifest.writeShortcut.name,
     es.manifest.anonymousShortcut.name,
     es.manifest.publishShortcut.name,
@@ -51,8 +53,8 @@ test('the manifest takes names and commands from the settings, in the team langu
 });
 
 test('the shortcuts use the callback IDs the handlers listen for', () => {
-  const { manifest } = build({});
-  assert.deepEqual(manifest.features.shortcuts.map((s) => s.callback_id), [WRITE_SHORTCUT, ANON_SHORTCUT, PUBLISH_SHORTCUT]);
+  const { manifest } = build({ WRITE_SHORTCUT: 'true', ANONYMOUS_SHORTCUT: 'true' });
+  assert.deepEqual(manifest.features.shortcuts!.map((s) => s.callback_id), [WRITE_SHORTCUT, ANON_SHORTCUT, PUBLISH_SHORTCUT]);
   for (const [file, constant] of [
     ['src/inbox/write.ts', 'WRITE_SHORTCUT'],
     ['src/anonymous/window.ts', 'ANON_SHORTCUT'],
@@ -65,10 +67,17 @@ test('the shortcuts use the callback IDs the handlers listen for', () => {
 test("the command to write with your name, and the team's command and message shortcut, can be left out", () => {
   const { manifest } = build({ WRITE_COMMAND: '', PUBLISH_COMMAND: '', PUBLISH_SHORTCUT: 'false' });
   assert.deepEqual(manifest.features.slash_commands.map((c) => c.command), ['/agora-anon']);
-  assert.deepEqual(manifest.features.shortcuts.map((s) => s.callback_id), [WRITE_SHORTCUT, ANON_SHORTCUT]);
+  assert.equal(manifest.features.shortcuts, undefined);
   assert.equal(loadAppSettings({}).publishCommand, '/agora-post');
   assert.equal(loadAppSettings({}).writeCommand, '/agora-write');
   assert.throws(() => loadAppSettings({ PUBLISH_SHORTCUT: 'no' }), /PUBLISH_SHORTCUT/);
+});
+
+test('the global shortcuts for the two forms are off unless set, leaving only the commands in Slack\'s / list', () => {
+  assert.deepEqual(build({}).manifest.features.shortcuts!.map((s) => s.callback_id), [PUBLISH_SHORTCUT]);
+  const { manifest } = build({ WRITE_SHORTCUT: 'true' });
+  assert.deepEqual(manifest.features.shortcuts!.map((s) => s.callback_id), [WRITE_SHORTCUT, PUBLISH_SHORTCUT]);
+  assert.throws(() => loadAppSettings({ WRITE_SHORTCUT: 'off' }), /WRITE_SHORTCUT/);
 });
 
 test('extra scopes are added to the ones the code needs', () => {

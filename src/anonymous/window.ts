@@ -93,6 +93,7 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
     await client.views.open({ trigger_id: command.trigger_id, view: newConversationView(t, command.user_id, text) });
   });
 
+  // Registered even without the shortcut in the manifest, in case the app's settings still have it.
   app.shortcut<GlobalShortcut>({ callback_id: ANON_SHORTCUT, type: 'shortcut' }, async ({ ack, shortcut, client }) => {
     await ack();
     await openInbox(client, shortcut.trigger_id, shortcut.user.id);
