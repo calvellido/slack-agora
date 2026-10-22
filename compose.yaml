@@ -1,4 +1,4 @@
-# Agora with Docker Compose: put this file and .env in a folder, and run `docker compose up -d` there. The README has
+# Agora with Docker Compose: put this file and .env in a folder, and run `docker compose up -d` there. GUIDE.md has
 # the rest of the commands.
 services:
   agora:

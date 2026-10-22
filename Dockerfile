@@ -1,4 +1,4 @@
-# The bot, ready to run with compose.yaml (see the README). It runs the bot, or `manifest` or `clean-db` instead.
+# The bot, ready to run with compose.yaml (see GUIDE.md). It runs the bot, or `manifest` or `clean-db` instead.
 
 FROM node:26-alpine AS dependencies
 WORKDIR /app

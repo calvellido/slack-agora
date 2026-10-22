@@ -5,6 +5,7 @@ What changed in each version, and what to do when updating to it. Versions follo
 ## [Unreleased]
 
 - The bottom of the *Home* tab and the end of the *About* tab say the bot is open source, link to its code and invite contributions. `SOURCE_URL` changes the link, for a fork, or removes the note.
+- The README is now a short overview with a quick start, and `GUIDE.md` has the details.
 
 To update the *About* tab, generate the manifest again and paste it into the app settings.
 
