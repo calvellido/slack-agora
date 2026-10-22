@@ -35,11 +35,28 @@ const BOT_EVENTS = ['app_home_opened', 'app_mention', 'message.im', 'reaction_ad
 /** Slack rejects a shorter long description. */
 const LONG_DESCRIPTION_MIN = 174;
 
+/**
+ * How much a colour contrasts with white, from 1 (white itself) to 21 (black), as WCAG measures it. Slack refuses
+ * background colours that are too light, without saying how light, so below 3 the manifest gets a warning.
+ */
+export function contrastWithWhite(hex: string): number {
+  const digits = hex.slice(1).length === 3 ? [...hex.slice(1)].map((d) => d + d) : hex.slice(1).match(/../g)!;
+  const [r, g, b] = digits.map((d) => {
+    const c = parseInt(d, 16) / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+  return 1.05 / (luminance + 0.05);
+}
+
 export function buildManifest(settings: AppSettings): { manifest: object; warnings: string[] } {
   const { appName, teamLanguage, writeCommand, publishCommand, anonCommand, publishShortcut } = settings;
   const names = { bot: appName, publishCommand: publishCommand ?? '', anonymousCommand: anonCommand };
   const t = stringsIn(teamLanguage, names);
   const warnings: string[] = [];
+  if (contrastWithWhite(settings.appColor) < 3) {
+    warnings.push(`APP_COLOR ${settings.appColor} looks light, and Slack refuses light colours: choose a darker one.`);
+  }
 
   // The About tab's text, or else the Home tab's, without Slack formatting or the Home tab's size marks, followed by
   // where to read the code. Slack shows it without links, so links keep their address, in readable form.

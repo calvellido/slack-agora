@@ -10,6 +10,7 @@ import {
   PUBLISH_SHORTCUT,
   WRITE_SHORTCUT,
   buildManifest,
+  contrastWithWhite,
   exampleManifest,
   renderManifest,
 } from './index.ts';
@@ -112,6 +113,14 @@ test("the About tab can have its own text instead of the Home tab's", () => {
   const { manifest } = build({ ABOUT: 'Hello! Write to us here.', APP_LONG_DESCRIPTION: own, SOURCE_URL: '' });
   assert.equal(manifest.display_information.long_description, own.replace('\\n', '\n'));
   assert.throws(() => loadAppSettings({ APP_LONG_DESCRIPTION: 'x'.repeat(4001) }), /APP_LONG_DESCRIPTION/);
+});
+
+test('a light APP_COLOR gets a warning, since Slack refuses light colours', () => {
+  assert.deepEqual(build({}).warnings, []);
+  assert.match(build({ APP_COLOR: '#ffffff' }).warnings.join(), /APP_COLOR #ffffff looks light/);
+  assert.match(build({ APP_COLOR: '#eee' }).warnings.join(), /APP_COLOR #eee looks light/);
+  assert.deepEqual(build({ APP_COLOR: '#0000AA' }).warnings, []);
+  assert.equal(Math.round(contrastWithWhite('#000')), 21);
 });
 
 test('settings Slack would reject fail early', () => {

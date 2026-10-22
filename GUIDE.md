@@ -191,6 +191,8 @@ At the bottom, the *Home* tab says the bot is open source, links to its code and
 
 The app's *About* tab shows `APP_DESCRIPTION`, a short line, and `APP_LONG_DESCRIPTION`, a longer text of at least 174 characters, both in `TEAM_LANGUAGE`, since Slack has no way to give each language its own. They're for anyone who looks the app up, while the *Home* tab is for the people who use it. Without `APP_LONG_DESCRIPTION`, the *About* tab has the `ABOUT` text in `TEAM_LANGUAGE`. Slack shows that tab as plain text, without links, so links in it keep their address, after their text.
 
+`APP_COLOR` is the background of the card with the app's details, which shows when someone hovers over or clicks its name. Slack only accepts dark colours, and `pnpm manifest` warns about light ones.
+
 The app's icon is uploaded in the app settings, in *Basic Information > Display Information*. [assets/](assets/) has the Agora logo for it, and a banner with the logo in the middle.
 
 ### A custom icon for the bot's own messages
