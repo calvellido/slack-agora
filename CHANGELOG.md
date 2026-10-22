@@ -2,6 +2,16 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## [2.2.1] - 2026-10-22
+
+- Editing or deleting a DM right after sending it, while its files were still being copied, now reaches the team's copy. So does a deletion right after an edit, which could put the edited text back.
+- Deleting a DM also deletes the note naming its files that couldn't be copied, and a DM deleted while it has replies in its thread is deleted for the team too. When a step fails, the rest is still deleted, and the person is told what stayed.
+- The person is told about every edit that doesn't reach the team, also after one that did, and when the team had already removed the message.
+- Editing a reply while it is still being sent waits for it instead of being lost, and an edit always replaces what the person sees.
+- A DM whose copy can't be recorded is still marked as received, so it isn't relayed a second time after a restart.
+
+No new permissions: updating the bot is enough.
+
 ## [2.2.0] - 2026-10-22
 
 - Editing a reply already sent edits what the person got, as anonymous conversations already did. A reply sent as files alone can't be given text later, nor a reply left without text, and the bot says so.
@@ -79,6 +89,7 @@ The first release.
 - `pnpm clean-db` empties the database.
 - A Docker image, for linux/amd64 and linux/arm64.
 
+[2.2.1]: https://github.com/calvellido/slack-agora/releases/tag/v2.2.1
 [2.2.0]: https://github.com/calvellido/slack-agora/releases/tag/v2.2.0
 [2.1.0]: https://github.com/calvellido/slack-agora/releases/tag/v2.1.0
 [2.0.0]: https://github.com/calvellido/slack-agora/releases/tag/v2.0.0
