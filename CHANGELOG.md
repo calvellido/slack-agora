@@ -2,6 +2,14 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## [2.0.0] - 2026-10-22
+
+- Files in conversations with your name, both ways, up to 20 MB each, including from the form to write with your name, which has a field for them. What people attach reaches the team's thread, images in a notice and other files right after it, and what the team attaches to a reply reaches the person with the text. A reply can be files alone, and deleting it with the delete emoji deletes its files too.
+- The posting form has a field to attach files, and posting with the message shortcut also posts the files of that message, listed in the form to untick any. A post can be files alone. The form refuses files it can tell won't be posted, saying which and why, before anything is sent, and the record in the team channel names the files posted. In a public channel the bot isn't in, it posts the images, and the record lists the other files, which need the bot invited there.
+- When a file can't be copied, for being too large, a link to another service, or for lack of permission, the team sees which and why in the thread or the record, and the person is told about the ones they sent, where they sent them. In anonymous threads, the team sees in the thread that files aren't sent, instead of a note only one person saw for a moment.
+
+This version needs two new permissions, `files:read` and `files:write`: generate the manifest again, paste it into the app settings and reinstall the app. Until then, the bot tells the team that it doesn't have permission for files.
+
 ## [1.5.0] - 2026-10-22
 
 - The global shortcuts for the two forms, *Write to …* and *Anonymous message to …*, are now off by default, since Slack lists them next to the commands that open the same forms, which confuses people. `WRITE_SHORTCUT=true` and `ANONYMOUS_SHORTCUT=true` bring them back.
@@ -52,6 +60,7 @@ The first release.
 - `pnpm clean-db` empties the database.
 - A Docker image, for linux/amd64 and linux/arm64.
 
+[2.0.0]: https://github.com/calvellido/slack-agora/releases/tag/v2.0.0
 [1.5.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.5.0
 [1.4.1]: https://github.com/calvellido/slack-agora/releases/tag/v1.4.1
 [1.4.0]: https://github.com/calvellido/slack-agora/releases/tag/v1.4.0
