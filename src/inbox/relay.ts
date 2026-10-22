@@ -1,7 +1,7 @@
 import type { ContextBlock, KnownBlock } from '@slack/types';
 import type { WebClient } from '@slack/web-api';
 import type { Deps } from '#src/deps.ts';
-import { context, quoted, slackDate } from '#src/slack/blocks.ts';
+import { context, messageBody, slackDate } from '#src/slack/blocks.ts';
 import {
   describeProblems,
   fileName,
@@ -27,13 +27,18 @@ export interface Incoming {
 
 /**
  * What the relay did: the thread it started, if it started one, the message it posted, the notice showing the images,
- * the copies of the files, and the files it couldn't copy.
+ * the copies of the files, the files it couldn't copy, and the notice telling the team which.
  */
 export interface Relayed extends Copies {
   started?: string;
   ts?: string;
   noticeTs?: string;
+  problemsTs?: string;
 }
+
+/** Block IDs of the copy of the message in what the relay posts start with this, so an edit can find it. */
+const BODY_BLOCK = 'relayed-body-';
+const markBody = (blocks: KnownBlock[]): KnownBlock[] => blocks.map((b, i) => ({ ...b, block_id: `${BODY_BLOCK}${i}` }));
 
 /**
  * Posts a message in its conversation thread in the team channel, with copies of its files. Without a thread (or if
@@ -59,10 +64,10 @@ export function createRelay({ config, store, i18n, notices }: Deps): Relay {
    * is an automatic relay, with the notices' emoji, and each copy's title says whose it is. Whatever couldn't be copied
    * is told to the team.
    */
-  async function copyFiles(client: WebClient, threadTs: string, message: Incoming): Promise<Copies & { noticeTs?: string }> {
+  async function copyFiles(client: WebClient, threadTs: string, message: Incoming): Promise<Omit<Relayed, 'started' | 'ts'>> {
     const images = message.files.filter(isImage);
     const others = message.files.filter((f) => !isImage(f));
-    const copies: Copies & { noticeTs?: string } = { fileIds: [], problems: [] };
+    const copies: Omit<Relayed, 'started' | 'ts'> = { fileIds: [], problems: [] };
     if (images.length > 0) {
       const line = t.files.attached({ user: message.user });
       const shown = await showImages(client, images, (blocks) =>
@@ -82,14 +87,14 @@ export function createRelay({ config, store, i18n, notices }: Deps): Relay {
     }
     if (copies.problems.length > 0) {
       const list = describeProblems(t, copies.problems, 'team');
-      await notices.post(client, { text: t.files.notRelayed({ list }), threadTs });
+      copies.problemsTs = await notices.post(client, { text: t.files.notRelayed({ list }), threadTs });
     }
     return copies;
   }
 
   return async (client, existing, header, message) => {
     const body = (title: string) => {
-      const blocks = quoted(title, richTextBlocks(message.blocks), message.text);
+      const blocks = [context(title), ...markBody(messageBody(richTextBlocks(message.blocks), message.text))];
       if (message.lateTs) blocks.push(context(t.inbox.thread.lateRelay({ date: slackDate(message.lateTs) })));
       return { text: `${title} ${message.text}`, blocks };
     };
@@ -118,12 +123,20 @@ export function createRelay({ config, store, i18n, notices }: Deps): Relay {
 
 /**
  * The blocks of a relayed message with its copy of the message replaced by `body`, keeping the header above it and
- * the small print below it, which are the context blocks. The text that goes with them starts with the header.
+ * the small print below it. The copy is found by its block IDs or, in messages relayed before it had them, as every
+ * block but the context ones. The text that goes with the blocks starts with the header's.
  */
 export function withBody(blocks: readonly unknown[], body: KnownBlock[], bodyText: string): { blocks: KnownBlock[]; text: string } {
-  const [header, ...after] = (blocks as KnownBlock[]).filter((b) => b.type === 'context') as ContextBlock[];
+  const all = blocks as KnownBlock[];
+  const marked = all.some((b) => b.block_id?.startsWith(BODY_BLOCK));
+  const inBody = (b: KnownBlock) => (marked ? Boolean(b.block_id?.startsWith(BODY_BLOCK)) : b.type !== 'context');
+  const kept = all.filter((b) => !inBody(b));
+  // Where the copy was, or else under the header: everything before the copy is kept, so the index is the same.
+  const first = all.findIndex(inBody);
+  const at = first === -1 ? Math.min(1, kept.length) : first;
+  const header = kept[0]?.type === 'context' ? (kept[0] as ContextBlock) : undefined;
   const headerText = header?.elements.map((e) => ('text' in e ? e.text : '')).join(' ') ?? '';
-  return { blocks: [...(header ? [header] : []), ...body, ...after], text: `${headerText} ${bodyText}`.trim() };
+  return { blocks: [...kept.slice(0, at), ...markBody(body), ...kept.slice(at)], text: `${headerText} ${bodyText}`.trim() };
 }
 
 /** How a person's name shows in Slack, for the titles of their files; their ID if Slack can't say. */

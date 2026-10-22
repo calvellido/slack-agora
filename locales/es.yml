@@ -66,6 +66,7 @@ inbox:
     followUp: "<@{user}> escribió:"
     replyHint: "Para responder como {bot}, escribe en este hilo y añade :{sendEmoji}: a tu mensaje. Los cambios que hagas después también se envían."
     deletedByPerson: "🗑️ <@{user}> eliminó este mensaje."
+    deletedByAuthor: "🗑️ Quien escribió este mensaje lo eliminó."
     lateRelay: "⏱️ Enviado {date}, mientras {bot} estaba sin conexión."
   dm:
     ack: "¡Gracias por escribir! El equipo de {bot} ha recibido tu mensaje y te responderá por aquí."
@@ -73,6 +74,9 @@ inbox:
     written: "📝 Escribiste al equipo de {bot}:"
     editForwarded: "✏️ El equipo de {bot} también ve tu cambio."
     deletedForTeam: "🗑️ También se ha eliminado para el equipo de {bot}."
+    editFailed: "✏️ Este cambio no ha llegado al equipo de {bot}, que sigue viendo el mensaje como estaba. Para corregir o añadir algo, escribe un mensaje nuevo."
+    editGone: "✏️ Tu cambio no ha llegado al equipo de {bot}, que ya había quitado este mensaje de su canal. Para decirle algo, escribe un mensaje nuevo."
+    deletedPartly: "🗑️ Se ha eliminado para el equipo de {bot}, pero {bot} no ha podido eliminar algunos de sus archivos del canal del equipo. Si quieres que también desaparezcan, pídeselo al equipo."
     edited: "✏️ Los cambios no llegan al equipo de {bot}, que tiene tu mensaje tal como lo enviaste. Para corregir o añadir algo, escribe un mensaje nuevo."
     deleted: "🗑️ Eliminar un mensaje aquí no lo elimina para el equipo de {bot}, que ya lo ha recibido. Si quieres que también lo elimine, escríbele para pedírselo."
   mention:

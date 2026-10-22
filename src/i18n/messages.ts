@@ -72,6 +72,7 @@ export interface Strings {
       followUp: (params: { user: string }) => string;
       replyHint: (params: { sendEmoji: string }) => string;
       deletedByPerson: (params: { user: string }) => string;
+      deletedByAuthor: string;
       lateRelay: (params: { date: string }) => string;
     };
     dm: {
@@ -80,6 +81,9 @@ export interface Strings {
       written: string;
       editForwarded: string;
       deletedForTeam: string;
+      editFailed: string;
+      editGone: string;
+      deletedPartly: string;
       edited: string;
       deleted: string;
     };

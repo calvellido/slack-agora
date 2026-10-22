@@ -10,6 +10,8 @@ export interface RelayedDm {
   teamTs: string;
   /** The notice that shows its images, if it had any. */
   noticeTs: string | null;
+  /** The notice naming its files that couldn't be copied, if any. */
+  problemsTs: string | null;
   /** The copies of its files. */
   fileIds: string[];
   createdAt: number;
@@ -17,7 +19,7 @@ export interface RelayedDm {
 
 const SELECT = `
   SELECT dm_channel AS dmChannel, dm_ts AS dmTs, team_channel AS teamChannel, team_ts AS teamTs,
-         notice_ts AS noticeTs, file_ids AS fileIds, created_at AS createdAt
+         notice_ts AS noticeTs, problems_ts AS problemsTs, file_ids AS fileIds, created_at AS createdAt
   FROM relays`;
 
 export class Relays {
@@ -29,9 +31,19 @@ export class Relays {
 
   record(relayed: Omit<RelayedDm, 'createdAt'>, now = Date.now()): void {
     this.#db
-      .prepare(`INSERT OR REPLACE INTO relays (dm_channel, dm_ts, team_channel, team_ts, notice_ts, file_ids, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)`)
-      .run(relayed.dmChannel, relayed.dmTs, relayed.teamChannel, relayed.teamTs, relayed.noticeTs, JSON.stringify(relayed.fileIds), now);
+      .prepare(`INSERT OR REPLACE INTO relays (dm_channel, dm_ts, team_channel, team_ts, notice_ts, problems_ts, file_ids,
+                                               created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(
+        relayed.dmChannel,
+        relayed.dmTs,
+        relayed.teamChannel,
+        relayed.teamTs,
+        relayed.noticeTs,
+        relayed.problemsTs,
+        JSON.stringify(relayed.fileIds),
+        now,
+      );
   }
 
   get(dmChannel: string, dmTs: string): RelayedDm | undefined {

@@ -8,6 +8,7 @@ import { AnonymousConversations } from './anonymous.ts';
 import { emptyDatabase, openDatabase, rowCounts } from './database.ts';
 import { Deliveries } from './deliveries.ts';
 import { Heartbeat } from './heartbeat.ts';
+import { Relays } from './relays.ts';
 
 test('emptying the database deletes every row, leaves nothing of them in its files, and keeps it usable', (t) => {
   const dir = mkdtempSync(join(tmpdir(), 'agora-'));
@@ -42,5 +43,19 @@ test('a database from before deliveries recorded their files gets the column, an
   old.close();
   const db = openDatabase(path);
   assert.deepEqual(new Deliveries(db).get('1.0')?.fileIds, []);
+  db.close();
+});
+
+test('a database from before relays recorded the notice naming files gets the column, and its relays none', (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'agora-'));
+  t.after(() => rmSync(dir, { recursive: true }));
+  const path = join(dir, 'old.db');
+  const old = new DatabaseSync(path);
+  old.exec(`CREATE TABLE relays (dm_channel TEXT NOT NULL, dm_ts TEXT NOT NULL, team_channel TEXT NOT NULL, team_ts TEXT NOT NULL,
+            notice_ts TEXT, file_ids TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY (dm_channel, dm_ts));
+            INSERT INTO relays VALUES ('D1', '5.0', 'CTEAM', '1.0', NULL, '[]', 1000);`);
+  old.close();
+  const db = openDatabase(path);
+  assert.equal(new Relays(db).get('D1', '5.0')?.problemsTs, null);
   db.close();
 });

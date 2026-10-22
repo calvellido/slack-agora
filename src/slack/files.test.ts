@@ -104,3 +104,34 @@ test('deleting copies also deletes the messages that show them, which would othe
     ['chat.delete', '3.0'],
   ]);
 });
+
+test('deleting copies tries every one and every message, then says what failed', async () => {
+  const calls: Call[] = [];
+  const shared = (ts: string) => ({ file: { shares: { private: { CTEAM: [{ ts }] } } } });
+  const client = {
+    files: {
+      info: async ({ file }: { file: string }) => (file === 'FLIMIT' ? Promise.reject(slackError('fatal_error')) : shared(file === 'FCOPY1' ? '3.0' : '4.0')),
+      delete: async (args: { file: string }) => {
+        calls.push({ method: 'files.delete', args });
+        if (args.file === 'FCOPY1') throw slackError('fatal_error');
+        return { ok: true };
+      },
+    },
+    chat: {
+      delete: async (args: { ts: string }) => {
+        calls.push({ method: 'chat.delete', args });
+        // A team member's message the copy was shared in again.
+        if (args.ts === '4.0') throw slackError('cant_delete_message');
+        return { ok: true };
+      },
+    },
+  } as unknown as WebClient;
+  await assert.rejects(deleteCopiesAndMessages(client, 'CTEAM', ['FCOPY1', 'FCOPY2', 'FLIMIT']), /fatal_error/);
+  assert.deepEqual(calls.map((c) => [c.method, c.args.file ?? c.args.ts]), [
+    ['files.delete', 'FCOPY1'],
+    ['files.delete', 'FCOPY2'],
+    ['files.delete', 'FLIMIT'],
+    ['chat.delete', '3.0'],
+    ['chat.delete', '4.0'],
+  ]);
+});

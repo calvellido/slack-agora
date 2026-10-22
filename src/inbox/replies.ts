@@ -2,7 +2,10 @@ import type { App } from '@slack/bolt';
 import type { WebClient } from '@slack/web-api';
 import type { Anonymous } from '#src/anonymous/index.ts';
 import type { Deps } from '#src/deps.ts';
+import { onceFor } from '#src/lib/once.ts';
+import { serialized } from '#src/lib/serialized.ts';
 import { DAY } from '#src/lib/time.ts';
+import { messageBody } from '#src/slack/blocks.ts';
 import { describeError, errorCode } from '#src/slack/errors.ts';
 import { deleteCopies, describeProblems, uploadCopies, type AttachedFile } from '#src/slack/files.ts';
 import { fetchMessage } from '#src/slack/messages.ts';
@@ -16,20 +19,29 @@ import { richTextBlocks } from '#src/slack/richtext.ts';
 export function registerReplies(app: App, { config, store, i18n, notices }: Deps, anonymous: Anonymous): void {
   const team = config.teamChannelId;
 
+  // Sending a reply, editing it and deleting it happen one after another, so an edit made while the reply is still
+  // being sent, its files uploading, waits for it instead of finding nothing sent yet.
+  const inTurn = (ts: string, task: () => Promise<unknown>) => serialized(`reply:${ts}`, task);
+
   app.event('reaction_added', async ({ event, client }) => {
     const { item } = event;
     if (item.type !== 'message' || item.channel !== team) return;
-    if (event.reaction === config.sendEmoji) await sendReply(client, item.ts, event.user);
-    else if (event.reaction === config.deleteEmoji) await deleteDelivery(client, item.ts, event.user);
+    if (event.reaction === config.sendEmoji) await inTurn(item.ts, () => sendReply(client, item.ts, event.user));
+    else if (event.reaction === config.deleteEmoji) await inTurn(item.ts, () => deleteDelivery(client, item.ts, event.user));
   });
 
   // Anonymous replies need nothing: the person reads them from the channel, edits included.
-  const toldAboutEdit = new Set<string>();
+  const firstEdit = onceFor(DAY);
   app.event('message', async ({ event, client }) => {
     if (event.channel !== team || event.subtype !== 'message_changed') return;
     const after = event.message as { ts?: string; user?: string; text?: string; blocks?: unknown[]; thread_ts?: string; edited?: unknown };
-    const before = event.previous_message as { text?: string };
+    const before = (event.previous_message ?? {}) as { text?: string };
     if (!after.ts || !after.user || !after.edited || after.text === before.text) return;
+    const { ts } = after;
+    await inTurn(ts, () => sendEdit(client, { ...after, ts, user: after.user! }));
+  });
+
+  async function sendEdit(client: WebClient, after: { ts: string; user: string; text?: string; blocks?: unknown[]; thread_ts?: string }) {
     const delivery = store.deliveries.get(after.ts);
     if (!delivery || delivery.deletedAt || (!delivery.targetTs && delivery.fileIds.length === 0)) return;
     const { ts, user } = after;
@@ -41,22 +53,15 @@ export function registerReplies(app: App, { config, store, i18n, notices }: Deps
     const text = after.text ?? '';
     if (!text.trim()) return notify(t.inbox.reply.editEmpty({ deleteEmoji: config.deleteEmoji }));
     try {
-      const blocks = richTextBlocks(after.blocks);
-      await client.chat.update({
-        channel: delivery.targetChannel,
-        ts: delivery.targetTs,
-        text,
-        blocks: blocks.length > 0 ? blocks : undefined,
-      });
+      // Always with blocks: without them, Slack would keep showing the ones sent before.
+      const blocks = messageBody(richTextBlocks(after.blocks), text);
+      await client.chat.update({ channel: delivery.targetChannel, ts: delivery.targetTs, text, blocks });
     } catch (error) {
       return notify(t.inbox.reply.editFailed({ reason: describeError(t, error) }));
     }
     // Once per reply: the thread's hint already says edits are sent.
-    if (toldAboutEdit.has(ts)) return;
-    toldAboutEdit.add(ts);
-    setTimeout(() => toldAboutEdit.delete(ts), DAY).unref();
-    await notify(t.inbox.reply.editSent);
-  });
+    if (firstEdit(ts)) await notify(t.inbox.reply.editSent);
+  }
 
   async function sendReply(client: WebClient, ts: string, user: string) {
     // Only `user` sees these notices, so in their language.

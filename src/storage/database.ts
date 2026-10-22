@@ -35,6 +35,7 @@ const SCHEMA = `
     team_channel TEXT NOT NULL,
     team_ts TEXT NOT NULL,
     notice_ts TEXT,
+    problems_ts TEXT,
     file_ids TEXT NOT NULL,
     created_at INTEGER NOT NULL,
     PRIMARY KEY (dm_channel, dm_ts)
@@ -81,7 +82,8 @@ export function openDatabase(path: string): DatabaseSync {
   // Wait for another connection's write instead of failing, as when `pnpm clean-db` runs beside the bot.
   db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;');
   db.exec(SCHEMA);
-  // Databases from before conversations recorded their team channel, and before deliveries recorded their files.
+  // Databases from before conversations recorded their team channel, before deliveries recorded their files, and
+  // before relays recorded the notice about files that couldn't be copied.
   const addColumn = (table: string, column: string) => {
     const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
     if (!columns.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} TEXT`);
@@ -89,6 +91,7 @@ export function openDatabase(path: string): DatabaseSync {
   addColumn('conversations', 'team_channel');
   addColumn('anon_conversations', 'team_channel');
   addColumn('deliveries', 'file_ids');
+  addColumn('relays', 'problems_ts');
   return db;
 }
 

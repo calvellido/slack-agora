@@ -87,7 +87,7 @@ Some things are not recovered:
 
 DMs and @mentions are not anonymous: the team sees who wrote them.
 
-Files are copied, not shared: the team channel keeps its copy even if the person deletes the original file, as with the text the bot relays, and exports of the channel include it. Deleting the whole DM deletes the team's copies of its text and files, though not from exports already made. The bot holds each file in memory only while copying it, never on disk. Photos can carry details such as where and with what they were taken, which the bot doesn't remove.
+Files are copied, not shared: the team channel keeps its copy even if the person deletes the original file, as with the text the bot relays, and exports of the channel include it. Deleting the whole DM deletes the team's copies of its text and files, and the note naming any that couldn't be copied, though not from exports already made. The bot holds each file in memory only while copying it, never on disk. Photos can carry details such as where and with what they were taken, which the bot doesn't remove.
 
 ### Anonymous messages
 

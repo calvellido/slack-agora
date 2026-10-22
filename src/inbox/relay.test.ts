@@ -1,13 +1,16 @@
+import type { KnownBlock } from '@slack/types';
 import type { WebClient } from '@slack/web-api';
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
 import type { Deps } from '#src/deps.ts';
 import { I18n, stringsIn } from '#src/i18n/index.ts';
 import { describeProblems } from '#src/slack/files.ts';
+import { context } from '#src/slack/blocks.ts';
 import { Notices } from '#src/slack/notices.ts';
+import { richTextFromPlain } from '#src/slack/richtext.ts';
 import { attached, fakeFileApi, serveFiles, type Call } from '#src/slack/testing.ts';
 import { Store } from '#src/storage/index.ts';
-import { createRelay } from './relay.ts';
+import { createRelay, withBody } from './relay.ts';
 
 let server: ReturnType<typeof serveFiles>;
 beforeEach(() => (server = serveFiles()));
@@ -49,14 +52,18 @@ test("a message's images go in a notice, its other files after it, and what coul
   const { client, calls, relay } = setup();
   const files = [attached('foto.jpg'), attached('acta.pdf'), attached('video.mp4', { size: 50 * 1024 * 1024 })];
   const relayed = await relay(client, undefined, () => 'Direct message from <@U1>', { user: 'U1', text: 'Hola', blocks: undefined, files });
-  // The notice with the image is message 2.0, and the copies are the image's and the PDF's.
+  // The notice with the image is message 2.0, the copies are the image's and the PDF's, and 3.0 names the video.
   assert.deepEqual(relayed, {
     started: '1.0',
     ts: '1.0',
     noticeTs: '2.0',
+    problemsTs: '3.0',
     fileIds: ['FCOPY1', 'FCOPY2'],
     problems: [{ name: 'video.mp4', problem: 'tooLarge' }],
   });
+  // The copy of the message is marked, for edits to find it.
+  const thread0 = calls.find((c) => c.method === 'chat.postMessage')!.args.blocks as KnownBlock[];
+  assert.deepEqual(thread0.map((b) => b.block_id), [undefined, 'relayed-body-0', undefined]);
 
   const t = stringsIn('en', names);
   const images = calls.filter((c) => c.method === 'chat.postMessage')[1];
@@ -97,4 +104,23 @@ test('files other than images need no notice before them, as their own message s
       ['files.completeUploadExternal', 'CTEAM'],
     ],
   );
+});
+
+test("a relayed message's copy of the message is replaced by its block IDs, or by its place in older copies", () => {
+  const header = context('<@U1> wrote:');
+  const hint = context('To reply…');
+  const marked = [header, { ...richTextFromPlain('Hola'), block_id: 'relayed-body-0' }, hint];
+  const edited = { ...richTextFromPlain('Hola, equipo'), block_id: 'relayed-body-0' };
+  assert.deepEqual(withBody(marked, [richTextFromPlain('Hola, equipo')], 'Hola, equipo'), {
+    blocks: [header, edited, hint],
+    text: '<@U1> wrote: Hola, equipo',
+  });
+  // Relayed by 2.2.0, without the marks: everything but the context blocks.
+  assert.deepEqual(withBody([header, richTextFromPlain('Hola'), hint], [richTextFromPlain('Hola, equipo')], 'Hola, equipo').blocks, [
+    header,
+    edited,
+    hint,
+  ]);
+  // A copy left without text gets it back under the header.
+  assert.deepEqual(withBody([header, hint], [richTextFromPlain('Hola, equipo')], 'Hola, equipo').blocks, [header, edited, hint]);
 });

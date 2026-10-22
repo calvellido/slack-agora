@@ -86,6 +86,8 @@ inbox:
     replyHint: "To reply as {bot}, write in this thread and add :{sendEmoji}: to your message. Later edits are sent too."
     # In place of the copy of a DM the person deleted.
     deletedByPerson: "🗑️ <@{user}> deleted this message."
+    # The same, when Slack doesn't say who.
+    deletedByAuthor: "🗑️ Whoever wrote this message deleted it."
     lateRelay: "⏱️ Sent {date}, while {bot} was offline."
   # Sent by DM to whoever wrote to the bot.
   dm:
@@ -96,6 +98,10 @@ inbox:
     # When someone edits or deletes a DM, and the team's copy follows.
     editForwarded: "✏️ The {bot} team sees your edit too."
     deletedForTeam: "🗑️ Deleted for the {bot} team too."
+    # When the team's copy couldn't follow: Slack refused the edit, the team had removed the copy, or some files stayed.
+    editFailed: "✏️ This edit didn't reach the {bot} team, which still sees the message as it was before. To correct or add something, write a new message."
+    editGone: "✏️ Your edit didn't reach the {bot} team, which had already removed this message from its channel. To tell them something, write a new message."
+    deletedPartly: "🗑️ Deleted for the {bot} team, but {bot} couldn't delete some of its files from the team's channel. If you want them gone too, ask the team."
     # When the team's copy can't follow, as for DMs relayed by an earlier version.
     edited: "✏️ Edits don't reach the {bot} team, which has your message as you first sent it. To correct or add something, write a new message."
     deleted: "🗑️ Deleting a message here doesn't delete it for the {bot} team, which already has it. If you want them to delete it too, write and ask them."

@@ -54,12 +54,22 @@ test("a DM that can't reach the team is not marked as received, and the person i
 
 test("a DM's files that didn't reach the team are told after the thanks", async () => {
   const problems = [{ name: 'big.zip', problem: 'tooLarge' as const }];
-  const { calls, store, dm, told } = setup(async () => ({ started: '1.0', ts: '1.0', noticeTs: '2.0', fileIds: ['FCOPY1'], problems }));
+  const { calls, store, dm, told } = setup(async () => ({ started: '1.0', ts: '1.0', noticeTs: '2.0', problemsTs: '3.0', fileIds: ['FCOPY1'], problems }));
   await dm({ user: 'U1', ts: '5.0', text: 'Hola', subtype: 'file_share' });
   assert.deepEqual(told(), [t.inbox.dm.ack, t.files.notReceived({ list: describeProblems(t, problems, 'person') })]);
   assert.ok(calls.some((c) => c.method === 'reactions.add' && c.args.name === 'incoming_envelope'));
   // What it posted is kept, so the copy can follow the DM's edits and deletion.
   const { createdAt, ...copy } = store.relays.get('D1', '5.0')!;
   assert.ok(createdAt);
-  assert.deepEqual(copy, { dmChannel: 'D1', dmTs: '5.0', teamChannel: 'CTEAM', teamTs: '1.0', noticeTs: '2.0', fileIds: ['FCOPY1'] });
+  assert.deepEqual(copy, { dmChannel: 'D1', dmTs: '5.0', teamChannel: 'CTEAM', teamTs: '1.0', noticeTs: '2.0', problemsTs: '3.0', fileIds: ['FCOPY1'] });
+});
+
+test("a DM whose copy can't be recorded is still thanked and marked, as the team has it", async () => {
+  const { calls, store, dm, told } = setup(async () => ({ started: '1.0', ts: '1.0', fileIds: [], problems: [] }));
+  store.relays.record = () => {
+    throw new Error('database is locked');
+  };
+  await dm({ user: 'U1', ts: '5.0', text: 'Hola' });
+  assert.deepEqual(told(), [t.inbox.dm.ack]);
+  assert.ok(calls.some((c) => c.method === 'reactions.add'));
 });

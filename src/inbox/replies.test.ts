@@ -53,13 +53,13 @@ function setup(replies: Record<string, Record<string, unknown>>) {
   registerReplies(app, deps, { deleteReply: async () => false } as unknown as Anonymous);
   const react = (at: string, reaction: string) =>
     handlers.reaction_added!({ event: { item: { type: 'message', channel: 'CTEAM', ts: at }, reaction, user: 'UTEAM' }, client });
-  const edit = (at: string, before: string, after: string) =>
+  const edit = (at: string, before: string | undefined, after: string) =>
     handlers.message!({
       event: {
         channel: 'CTEAM',
         subtype: 'message_changed',
         message: { ts: at, user: 'UTEAM', thread_ts: '1.0', text: after, edited: { ts: '9.0' } },
-        previous_message: { ts: at, user: 'UTEAM', text: before },
+        previous_message: before === undefined ? undefined : { ts: at, user: 'UTEAM', text: before },
       },
       client,
     });
@@ -117,6 +117,9 @@ test('editing a reply already sent edits what was sent, and its author is told o
   await edit('2.0', 'Here it is, signed', 'Here it is, signed.');
   const updates = calls.filter((c) => c.method === 'chat.update').map((c) => [c.args.channel, c.args.text]);
   assert.deepEqual(updates, [['D1', 'Here it is, signed'], ['D1', 'Here it is, signed.']]);
+  // Always with blocks, so Slack doesn't keep showing the old ones: here the text, as the edit had no rich text.
+  const blocks = calls.find((c) => c.method === 'chat.update')!.args.blocks;
+  assert.deepEqual(blocks, [{ type: 'section', text: { type: 'mrkdwn', text: 'Here it is, signed' } }]);
   const t = stringsIn('en', names);
   const told = calls.filter((c) => c.method === 'chat.postEphemeral').map((c) => [c.args.user, c.args.thread_ts, c.args.text]);
   assert.deepEqual(told, [['UTEAM', '1.0', t.inbox.reply.editSent]]);
@@ -133,4 +136,13 @@ test("an edit that can't be sent says why", async () => {
     t.inbox.reply.editFilesOnly({ sendEmoji: 'outbox_tray' }),
     t.inbox.reply.editEmpty({ deleteEmoji: 'wastebasket' }),
   ]);
+});
+
+test('an edit made while the reply is still being sent waits for it, and is sent', async () => {
+  const { calls, react, edit } = setup({ '5.0': { text: 'Here it is', files: [attached('acta.pdf')] } });
+  const sending = react('5.0', 'outbox_tray');
+  // Slack may leave out the message as it was.
+  await edit('5.0', undefined, 'Here it is, signed');
+  await sending;
+  assert.deepEqual(calls.filter((c) => c.method === 'chat.update').map((c) => c.args.text), ['Here it is, signed']);
 });

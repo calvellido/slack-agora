@@ -121,17 +121,15 @@ async function upload(
   return { id: file_id, title };
 }
 
+/** files.info for each of `ids`, all at once: each one the file, or why Slack couldn't describe it. */
+function fileInfos(client: WebClient, ids: readonly string[]) {
+  return Promise.allSettled(ids.map(async (id) => (await client.files.info({ file: id })).file));
+}
+
 /** The files of `ids`, as files.info describes them; one it can't read comes back with nothing to download. */
 export async function filesById(client: WebClient, ids: readonly string[]): Promise<AttachedFile[]> {
-  return Promise.all(
-    ids.map(async (id) => {
-      try {
-        return ((await client.files.info({ file: id })).file as AttachedFile | undefined) ?? { id };
-      } catch {
-        return { id };
-      }
-    }),
-  );
+  const infos = await fileInfos(client, ids);
+  return infos.map((info, i) => (info.status === 'fulfilled' && info.value ? (info.value as AttachedFile) : { id: ids[i] }));
 }
 
 /**
@@ -209,40 +207,52 @@ export async function showImages(
   }
 }
 
-/** Deletes copies, which also removes the messages that held only them. */
+/** Errors that mean a copy is already deleted, and with it any message that held only it. */
+const GONE = ['file_not_found', 'file_deleted'];
+
+/**
+ * Deletes copies, which also removes the messages that held only them. It tries every one, then throws the first
+ * error, so one failure doesn't leave the rest behind.
+ */
 export async function deleteCopies(client: WebClient, fileIds: readonly string[]): Promise<void> {
+  const errors: unknown[] = [];
   for (const file of fileIds) {
     try {
       await client.files.delete({ file });
     } catch (error) {
-      if (!['file_not_found', 'file_deleted'].includes(errorCode(error))) throw error;
+      if (!GONE.includes(errorCode(error))) errors.push(error);
     }
   }
+  if (errors.length > 0) throw errors[0];
 }
 
 /**
  * Deletes copies and the messages in `channel` that show them, which would otherwise stay, holding a deleted file,
- * when they have text of their own, such as the line above relayed files. Slack says where each copy was shared.
+ * when they have text of their own, such as the line above relayed files. Slack says where each copy was shared; a
+ * message someone else shared one in isn't the bot's to delete. It tries everything, then throws the first error.
  */
 export async function deleteCopiesAndMessages(client: WebClient, channel: string, fileIds: readonly string[]): Promise<void> {
+  const errors: unknown[] = [];
   const messages = new Set<string>();
-  for (const file of fileIds) {
-    try {
-      const { file: info } = await client.files.info({ file });
-      const shares = [...(info?.shares?.private?.[channel] ?? []), ...(info?.shares?.public?.[channel] ?? [])];
-      for (const share of shares) if (share.ts) messages.add(share.ts);
-    } catch {
-      // Already deleted: its message, if any, went with it.
+  for (const info of await fileInfos(client, fileIds)) {
+    if (info.status === 'rejected') {
+      if (!GONE.includes(errorCode(info.reason))) errors.push(info.reason);
+      continue;
+    }
+    const shares = info.value?.shares;
+    for (const share of [...(shares?.private?.[channel] ?? []), ...(shares?.public?.[channel] ?? [])]) {
+      if (share.ts) messages.add(share.ts);
     }
   }
-  await deleteCopies(client, fileIds);
+  await deleteCopies(client, fileIds).catch((error: unknown) => errors.push(error));
   for (const ts of messages) {
     try {
       await client.chat.delete({ channel, ts });
     } catch (error) {
-      if (errorCode(error) !== 'message_not_found') throw error;
+      if (!['message_not_found', 'cant_delete_message'].includes(errorCode(error))) errors.push(error);
     }
   }
+  if (errors.length > 0) throw errors[0];
 }
 
 /** The names of the files of `files` that were copied: those without a problem. */

@@ -3,6 +3,7 @@ import type { RichTextBlock } from '@slack/types';
 import type { WebClient } from '@slack/web-api';
 import type { Deps } from '#src/deps.ts';
 import type { Strings } from '#src/i18n/index.ts';
+import { onceFor } from '#src/lib/once.ts';
 import { serialized } from '#src/lib/serialized.ts';
 import { DAY } from '#src/lib/time.ts';
 import { context, escapeMrkdwn, quoted } from '#src/slack/blocks.ts';
@@ -35,36 +36,38 @@ export interface Dms {
 }
 
 
+/** The bot's automatic messages in someone's DM, in their language, so they don't look like the team's. */
+export function tellPerson({ i18n, notices }: Pick<Deps, 'i18n' | 'notices'>) {
+  return async (client: WebClient, channel: string, user: string, text: (t: Strings) => string): Promise<void> => {
+    const t = await i18n.forUser(user);
+    await notices.toPerson(client, { channel, text: text(t), username: t.notices.sender });
+  };
+}
+
 /**
  * DMs to the bot: each becomes, or continues, a conversation thread in the team channel, and is marked as received.
  * Those that arrived while the bot was down are relayed late, by catchUp.
  */
-export function registerDms(app: App, { config, store, i18n, bot, notices }: Deps, relay: Relay): Dms {
+export function registerDms(app: App, deps: Deps, relay: Relay): Dms {
+  const { config, store, i18n, bot, notices } = deps;
+  const tell = tellPerson(deps);
   // DMs handled recently, so one caught up at start and also delivered live isn't relayed twice.
-  const handled = new Set<string>();
+  const firstTime = onceFor(10 * 60_000);
 
   /**
    * Relays a DM to its conversation thread and marks it as received. False if it was already handled, or if it
    * couldn't reach the team, which the person is told so they can send it again.
    */
   async function handleDm(client: WebClient, dm: Dm): Promise<boolean> {
-    const key = `${dm.channel}:${dm.ts}`;
-    if (handled.has(key)) return false;
-    handled.add(key);
-    setTimeout(() => handled.delete(key), 10 * 60_000).unref();
+    if (!firstTime(`${dm.channel}:${dm.ts}`)) return false;
 
     let relayed: Relayed;
     try {
-      relayed = await toThread(client, dm);
+      relayed = await toThread(client, dm, dm.ts);
     } catch (error) {
       app.logger.error(`Relaying a DM failed: ${errorCode(error)}`);
       await tell(client, dm.channel, dm.user, (t) => t.inbox.relayFailed);
       return false;
-    }
-    if (relayed.ts) {
-      const { fileIds, noticeTs } = relayed;
-      const copy = { teamChannel: config.teamChannelId, teamTs: relayed.ts, noticeTs: noticeTs ?? null, fileIds };
-      store.relays.record({ dmChannel: dm.channel, dmTs: dm.ts, ...copy });
     }
     // Late DMs get one apology per person instead (see catchUp).
     if (relayed.started && !dm.lateTs) await tell(client, dm.channel, dm.user, (t) => t.inbox.dm.ack);
@@ -75,8 +78,11 @@ export function registerDms(app: App, { config, store, i18n, bot, notices }: Dep
     return true;
   }
 
-  /** Relays a message to the person's conversation thread, or starts one, and records the thread it started. */
-  async function toThread(client: WebClient, message: Incoming & { channel: string }): Promise<Relayed> {
+  /**
+   * Relays a message to the person's conversation thread, or starts one, and records the thread it started. For a DM,
+   * `dmTs`, it also records what it posted, which edits and deletions of the DM wait for (see changes.ts).
+   */
+  async function toThread(client: WebClient, message: Incoming & { channel: string }, dmTs?: string): Promise<Relayed> {
     return serialized(message.channel, async () => {
       const existing = store.conversations.latestDm(message.channel, Date.now() - config.inboxIdleDays * DAY);
       const header = () => i18n.team.inbox.thread.dmHeader({ user: message.user });
@@ -85,14 +91,24 @@ export function registerDms(app: App, { config, store, i18n, bot, notices }: Dep
         const conversation = { kind: 'dm', userId: message.user, targetChannel: message.channel, targetThreadTs: null } as const;
         store.conversations.create({ ...conversation, teamThreadTs: relayed.started });
       }
+      if (dmTs && relayed.ts) {
+        // The team has the DM either way: without the record, its copy just can't follow edits, so a failure is logged.
+        try {
+          store.relays.record({
+            dmChannel: message.channel,
+            dmTs,
+            teamChannel: config.teamChannelId,
+            teamTs: relayed.ts,
+            noticeTs: relayed.noticeTs ?? null,
+            problemsTs: relayed.problemsTs ?? null,
+            fileIds: relayed.fileIds,
+          });
+        } catch (error) {
+          app.logger.error(`Recording the copy of a DM failed: ${errorCode(error)}`);
+        }
+      }
       return relayed;
     });
-  }
-
-  /** The bot's automatic reply in someone's DM, in their language, so it doesn't look like the team's. */
-  async function tell(client: WebClient, channel: string, user: string, text: (t: Strings) => string) {
-    const t = await i18n.forUser(user);
-    await notices.toPerson(client, { channel, text: text(t), username: t.notices.sender });
   }
 
   // Edits and deletions are followed in changes.ts.
