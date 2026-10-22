@@ -26,6 +26,17 @@ export interface Strings {
     notPosted: (params: { list: string }) => string;
     anonymous: string;
   };
+  errors: {
+    notInChannel: string;
+    archived: string;
+    channelNotFound: string;
+    restricted: string;
+    deactivated: string;
+    bot: string;
+    tooLong: string;
+    rateLimited: string;
+    missingScope: string;
+  };
   manifest: {
     description: string;
     writeShortcut: {
@@ -54,6 +65,7 @@ export interface Strings {
     source: (params: { address: string }) => string;
   };
   inbox: {
+    relayFailed: string;
     thread: {
       dmHeader: (params: { user: string }) => string;
       mentionHeader: (params: { user: string; channel: string; permalink: string }) => string;
@@ -65,6 +77,9 @@ export interface Strings {
       ack: string;
       lateAck: string;
       written: string;
+    };
+    mention: {
+      ack: string;
     };
     write: {
       title: string;
@@ -86,9 +101,10 @@ export interface Strings {
       cannotSendBotMessage: string;
       emptyReply: string;
       alreadySent: string;
-      sendFailed: (params: { error: string }) => string;
+      sendFailed: (params: { reason: string }) => string;
       alreadyDeleted: string;
-      deleteFailed: (params: { error: string }) => string;
+      deleteFailed: (params: { reason: string }) => string;
+      nothingToDelete: (params: { deleteEmoji: string; sendEmoji: string }) => string;
       deleted: (params: { user: string }) => string;
     };
     backOnline: (params: { duration: string; since: string; recovered: number }) => string;
@@ -115,8 +131,17 @@ export interface Strings {
     record: {
       dmStarted: (params: { poster: string; user: string }) => string;
       posted: (params: { poster: string; channel: string; permalink: string }) => string;
-      failed: (params: { target: string; poster: string; error: string }) => string;
+      postedNoLink: (params: { poster: string; channel: string }) => string;
+      failed: (params: { target: string; poster: string; reason: string }) => string;
       nothingPosted: (params: { target: string; poster: string; list: string }) => string;
+    };
+    done: {
+      sending: string;
+      posted: (params: { target: string; permalink: string }) => string;
+      sent: (params: { target: string }) => string;
+      nothing: (params: { target: string; list: string }) => string;
+      failed: (params: { target: string; reason: string }) => string;
+      record: (params: { deleteEmoji: string; teamChannel: string }) => string;
     };
   };
   home: {

@@ -26,6 +26,17 @@ files:
   notPosted: "📎 Estos archivos no se publicaron:\n{list}"
   anonymous: "📎 En las conversaciones anónimas no se envían archivos: la persona solo recibe el texto."
 
+errors:
+  notInChannel: "{bot} no está en ese canal. Invítalo con /invite @{bot}"
+  archived: "ese canal está archivado"
+  channelNotFound: "{bot} no encuentra ese canal, que puede haberse eliminado"
+  restricted: "en ese canal solo pueden publicar algunas personas"
+  deactivated: "la cuenta de esa persona está desactivada"
+  bot: "es un bot, y los bots no reciben mensajes directos"
+  tooLong: "el mensaje es demasiado largo"
+  rateLimited: "Slack está limitando lo rápido que {bot} puede publicar. Inténtalo de nuevo en un minuto"
+  missingScope: "a {bot} le falta un permiso. Pega el nuevo manifiesto en la configuración de la app y vuelve a instalarla"
+
 manifest:
   description: "Escribe al equipo de {bot}, con tu nombre o de forma anónima"
   writeShortcut:
@@ -48,6 +59,7 @@ manifest:
   source: "Esta aplicación de Slack de {bot} es de código abierto, puedes revisarla en {address}. Cualquier sugerencia o aportación es bienvenida."
 
 inbox:
+  relayFailed: "⚠️ Tu mensaje no ha podido llegar al equipo de {bot}. Prueba a enviarlo de nuevo en unos minutos."
   thread:
     dmHeader: "💬 Mensaje directo de <@{user}>"
     mentionHeader: "🔔 <@{user}> mencionó a {bot} en <#{channel}> · <{permalink}|ver mensaje>"
@@ -58,6 +70,8 @@ inbox:
     ack: "¡Gracias por escribir! El equipo de {bot} ha recibido tu mensaje y te responderá por aquí."
     lateAck: "Perdona el retraso: {bot} estuvo sin conexión un rato. Tu mensaje ya ha llegado al equipo, que te responderá por aquí."
     written: "📝 Escribiste al equipo de {bot}:"
+  mention:
+    ack: "¡Gracias por escribir! El equipo de {bot} ha recibido tu mensaje y te responderá en el hilo de tu mensaje."
   write:
     title: "Escribir a {bot}"
     intro: "El equipo de {bot} verá tu nombre. Te responderá por mensaje directo, en la pestaña *Mensajes* de {bot}, donde puedes continuar la conversación."
@@ -77,9 +91,10 @@ inbox:
     cannotSendBotMessage: "Ese mensaje es de {bot}. Escribe tu respuesta en el hilo y añade la reacción a tu mensaje."
     emptyReply: "Ese mensaje no tiene texto que enviar."
     alreadySent: "Este mensaje ya se envió."
-    sendFailed: "No se pudo enviar el mensaje: `{error}`"
+    sendFailed: "No se pudo enviar el mensaje: {reason}"
     alreadyDeleted: "Ya estaba eliminado."
-    deleteFailed: "No se pudo eliminar: `{error}`"
+    deleteFailed: "No se pudo eliminar: {reason}"
+    nothingToDelete: "Aquí no hay nada que eliminar: :{deleteEmoji}: elimina lo que envió {bot}, añadido a una respuesta enviada con :{sendEmoji}: o al registro de una publicación."
     deleted: "🗑️ <@{user}> eliminó lo que {bot} había enviado."
   backOnline: "✅ {bot} vuelve a estar en marcha tras {duration} sin conexión (desde {since}). {recovered, plural, =0 {No llegó ningún mensaje directo mientras tanto.} one {Ha reenviado # mensaje directo que llegó mientras tanto.} other {Ha reenviado # mensajes directos que llegaron mientras tanto.}}"
 
@@ -104,8 +119,16 @@ publish:
   record:
     dmStarted: "📤 <@{poster}> escribió como {bot} a <@{user}>:"
     posted: "📣 <@{poster}> publicó como {bot} en <#{channel}> · <{permalink}|ver mensaje>"
-    failed: "⚠️ No se pudo enviar como {bot} a {target} (lo pidió <@{poster}>): `{error}`"
+    postedNoLink: "📣 <@{poster}> publicó como {bot} en <#{channel}>"
+    failed: "⚠️ No se pudo enviar como {bot} a {target} (lo pidió <@{poster}>): {reason}"
     nothingPosted: "⚠️ No se envió nada como {bot} a {target} (lo pidió <@{poster}>):\n{list}"
+  done:
+    sending: "⏳ Enviando…"
+    posted: "✅ Publicado en {target} · <{permalink}|ver mensaje>"
+    sent: "✅ Enviado a {target}"
+    nothing: "⚠️ No se envió nada a {target}:\n{list}"
+    failed: "⚠️ No se pudo enviar a {target}: {reason}"
+    record: "Para eliminarlo, añade :{deleteEmoji}: a su registro en <#{teamChannel}>."
 
 home:
   intro: "Escribe al equipo de {bot}, con tu nombre o de forma anónima."

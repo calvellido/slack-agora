@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { stringsIn } from '#src/i18n/index.ts';
 import { describeProblems, filesInForm } from '#src/slack/files.ts';
-import { attached } from '#src/slack/testing.ts';
-import { fileErrors, originalInForm, publishView } from './form.ts';
+import { attached, slackError } from '#src/slack/testing.ts';
+import { fileErrors, originalInForm, publishView, resultView } from './form.ts';
 
 const t = stringsIn('en', { bot: 'Helpdesk', publishCommand: '/post', anonymousCommand: '/anon' });
 
@@ -41,4 +41,30 @@ test("files that wouldn't be posted stop the form, under the field they came fro
     attachments: t.publish.form.cantPost({ list: describeProblems(t, [{ name: 'video.mp4', problem: 'tooLarge' }], 'team', 'plain') }),
     original: t.publish.form.cantPost({ list: describeProblems(t, [{ name: 'acta.pdf', problem: 'needsMember' }], 'team', 'plain') }),
   });
+});
+
+test('once sent, the form says how it went for each channel and person, and how to delete what went', () => {
+  const problems = [{ name: 'acta.pdf', problem: 'needsMember' as const }];
+  const record = { teamChannel: 'CTEAM', deleteEmoji: 'wastebasket' };
+  const view = resultView(
+    t,
+    [
+      { target: '<#CPUBLIC>', outcome: { status: 'sent', permalink: 'https://slack.example/p1', problems } },
+      { target: '<@U1>', outcome: { status: 'sent', problems: [] } },
+      { target: '<@U2>', outcome: { status: 'failed', error: slackError('user_disabled') } },
+    ],
+    record,
+  );
+  const [result, footer] = view.blocks as { text?: { text: string }; elements?: { text: string }[] }[];
+  assert.equal(
+    result!.text!.text,
+    [
+      `${t.publish.done.posted({ target: '<#CPUBLIC>', permalink: 'https://slack.example/p1' })}\n${t.files.notPosted({ list: describeProblems(t, problems, 'team') })}`,
+      t.publish.done.sent({ target: '<@U1>' }),
+      t.publish.done.failed({ target: '<@U2>', reason: t.errors.deactivated }),
+    ].join('\n\n'),
+  );
+  assert.equal(footer!.elements![0]!.text, t.publish.done.record(record));
+  // Nothing to delete when nothing went.
+  assert.equal(resultView(t, [{ target: '<@U2>', outcome: { status: 'nothing', problems } }], record).blocks.length, 1);
 });

@@ -6,7 +6,7 @@ import { I18n, stringsIn } from '#src/i18n/index.ts';
 import { describeProblems } from '#src/slack/files.ts';
 import { Notices } from '#src/slack/notices.ts';
 import { richTextFromPlain } from '#src/slack/richtext.ts';
-import { attached, fakeFileApi, serveFiles, type Call } from '#src/slack/testing.ts';
+import { attached, fakeFileApi, serveFiles, slackError, type Call } from '#src/slack/testing.ts';
 import { Store } from '#src/storage/index.ts';
 import { createSender } from './send.ts';
 
@@ -85,4 +85,27 @@ test('when nothing at all can be posted, the team is told what and why', async (
     [['CTEAM', t.publish.record.nothingPosted({ poster: 'UTEAM', target: '<#CPUBLIC>', list })]],
   );
   assert.equal(store.deliveries.get('1.0'), undefined);
+});
+
+test('each send says how it went, for the form to tell whoever posted', async () => {
+  const { client, send } = setup();
+  const sent = await send.toChannel(client, 'UTEAM', 'CPUBLIC', { message: richTextFromPlain('Notice'), files: [attached('acta.pdf')] });
+  assert.deepEqual(sent, { status: 'sent', permalink: 'https://slack.example/p1', problems: [{ name: 'acta.pdf', problem: 'needsMember' }] });
+  assert.deepEqual(await send.toChannel(client, 'UTEAM', 'CPUBLIC', { files: [attached('acta.pdf')] }), {
+    status: 'nothing',
+    problems: [{ name: 'acta.pdf', problem: 'needsMember' }],
+  });
+});
+
+test("a send Slack refuses is recorded with the reason in words, and returned as failed", async () => {
+  const { client, calls, send } = setup();
+  const refused = slackError('is_archived');
+  const failing = { ...client, conversations: { info: async () => Promise.reject(refused) } } as unknown as WebClient;
+  assert.deepEqual(await send.toChannel(failing, 'UTEAM', 'COLD', { message: richTextFromPlain('Notice'), files: [] }), {
+    status: 'failed',
+    error: refused,
+  });
+  const t = stringsIn('en', names);
+  const record = calls.find((c) => c.method === 'chat.postMessage')!.args;
+  assert.equal(record.text, t.publish.record.failed({ poster: 'UTEAM', target: '<#COLD>', reason: t.errors.archived }));
 });

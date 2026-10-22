@@ -4,7 +4,7 @@ import type { Deps } from '#src/deps.ts';
 import { serialized } from '#src/lib/serialized.ts';
 import { DAY } from '#src/lib/time.ts';
 import { context, escapeMrkdwn, quoted } from '#src/slack/blocks.ts';
-import { errorCode } from '#src/slack/errors.ts';
+import { describeError } from '#src/slack/errors.ts';
 import {
   copiedNames,
   describeProblems,
@@ -23,11 +23,17 @@ export interface Post {
   files: readonly AttachedFile[];
 }
 
+/** How a send went, for the form to tell whoever posted: the record in the team channel tells the team. */
+export type Outcome =
+  | { status: 'sent'; permalink?: string; problems: Copies['problems'] }
+  | { status: 'nothing'; problems: Copies['problems'] }
+  | { status: 'failed'; error: unknown };
+
 /** Sending as the bot. Each send leaves a record in the team channel saying who sent it, which can delete it later. */
 export interface Sender {
-  toChannel(client: WebClient, poster: string, channel: string, post: Post): Promise<void>;
+  toChannel(client: WebClient, poster: string, channel: string, post: Post): Promise<Outcome>;
   /** DMs someone as the bot. Their answers land in the same team channel thread as the message. */
-  toPerson(client: WebClient, poster: string, user: string, post: Post): Promise<void>;
+  toPerson(client: WebClient, poster: string, user: string, post: Post): Promise<Outcome>;
 }
 
 /** What was sent: the message's ts, if there was text, and the copies of the files. */
@@ -79,18 +85,26 @@ export function createSender({ config, store, i18n, notices }: Deps): Sender {
     ];
   }
 
+  /** A link to what was posted; none if Slack can't give one, as the post is out anyway. */
   async function permalink(client: WebClient, channel: string, sent: Sent): Promise<string> {
-    if (sent.ts) return (await client.chat.getPermalink({ channel, message_ts: sent.ts })).permalink ?? '';
-    const { file } = await client.files.info({ file: sent.fileIds[0]! });
-    return file?.permalink ?? '';
+    try {
+      if (sent.ts) return (await client.chat.getPermalink({ channel, message_ts: sent.ts })).permalink ?? '';
+      const { file } = await client.files.info({ file: sent.fileIds[0]! });
+      return file?.permalink ?? '';
+    } catch {
+      return '';
+    }
   }
 
-  const failed = (client: WebClient, poster: string, target: string, error: unknown) =>
-    notices.post(client, { text: t.publish.record.failed({ poster, target, error: errorCode(error) }) });
+  async function failed(client: WebClient, poster: string, target: string, error: unknown): Promise<Outcome> {
+    await notices.post(client, { text: t.publish.record.failed({ poster, target, reason: describeError(t, error) }) });
+    return { status: 'failed', error };
+  }
 
-  async function nothingSent(client: WebClient, poster: string, target: string, sent: Sent) {
+  async function nothingSent(client: WebClient, poster: string, target: string, sent: Sent): Promise<Outcome> {
     const list = describeProblems(t, sent.problems, 'team');
     await notices.post(client, { text: t.publish.record.nothingPosted({ poster, target, list }) });
+    return { status: 'nothing', problems: sent.problems };
   }
 
   return {
@@ -99,36 +113,37 @@ export function createSender({ config, store, i18n, notices }: Deps): Sender {
       try {
         sent = await sendToChannel(client, channel, post);
       } catch (error) {
-        await failed(client, poster, `<#${channel}>`, error);
-        return;
+        return failed(client, poster, `<#${channel}>`, error);
       }
       if (!sent.ts && sent.fileIds.length === 0) return nothingSent(client, poster, `<#${channel}>`, sent);
-      const header = t.publish.record.posted({ poster, channel, permalink: await permalink(client, channel, sent) });
+      const link = await permalink(client, channel, sent);
+      const header = link
+        ? t.publish.record.posted({ poster, channel, permalink: link })
+        : t.publish.record.postedNoLink({ poster, channel });
       const blocks = [...quoted(header, post.message ? [post.message] : []), ...filesNote(post, sent)];
       const recordTs = await notices.post(client, { text: header, blocks });
       if (recordTs) store.deliveries.record(recordTs, channel, sent.ts ?? null, poster, sent.fileIds);
+      return { status: 'sent', permalink: link || undefined, problems: sent.problems };
     },
 
     async toPerson(client, poster, user, post) {
       let dm: string | undefined;
       try {
         dm = (await client.conversations.open({ users: user })).channel?.id;
+        if (!dm) throw new Error('channel_not_found');
       } catch (error) {
-        await failed(client, poster, `<@${user}>`, error);
-        return;
+        return failed(client, poster, `<@${user}>`, error);
       }
-      if (!dm) return;
       const dmChannel = dm;
 
-      await serialized(dmChannel, async () => {
+      return serialized(dmChannel, async (): Promise<Outcome> => {
         let sent: Sent;
         try {
           const ts = post.message ? await postText(client, dmChannel, post.message) : undefined;
           const copies = post.files.length > 0 ? await uploadCopies(client, post.files, { channel: dmChannel }) : undefined;
           sent = { ts, fileIds: copies?.fileIds ?? [], problems: copies?.problems ?? [] };
         } catch (error) {
-          await failed(client, poster, `<@${user}>`, error);
-          return;
+          return failed(client, poster, `<@${user}>`, error);
         }
         if (!sent.ts && sent.fileIds.length === 0) return nothingSent(client, poster, `<@${user}>`, sent);
 
@@ -142,10 +157,12 @@ export function createSender({ config, store, i18n, notices }: Deps): Sender {
         } else {
           const hint = context(t.inbox.thread.replyHint({ sendEmoji: config.sendEmoji }));
           recordTs = await notices.post(client, { text: header, blocks: [...blocks, hint] });
-          if (!recordTs) return;
-          store.conversations.create({ kind: 'dm', userId: user, targetChannel: dmChannel, targetThreadTs: null, teamThreadTs: recordTs });
+          if (recordTs) {
+            store.conversations.create({ kind: 'dm', userId: user, targetChannel: dmChannel, targetThreadTs: null, teamThreadTs: recordTs });
+          }
         }
-        store.deliveries.record(recordTs, dmChannel, sent.ts ?? null, poster, sent.fileIds);
+        if (recordTs) store.deliveries.record(recordTs, dmChannel, sent.ts ?? null, poster, sent.fileIds);
+        return { status: 'sent', problems: sent.problems };
       });
     },
   };

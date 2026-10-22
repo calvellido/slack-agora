@@ -6,7 +6,7 @@ Everything about using and running Agora, in detail. The [README](README.md) has
 
 ### With your name
 
-To write with your name, use the bot's *Messages* tab, @mention it in a channel it is in, or open a form with `WRITE_COMMAND` or the button on the bot's *Home* tab. The whole team reads it, and the replies come back where you wrote: in the *Messages* tab, or in the thread of your mention. What you send from the form also goes to the *Messages* tab, with a copy of your message, so you can keep writing there. The bot marks every message it receives with :incoming_envelope:, so you know it got there.
+To write with your name, use the bot's *Messages* tab, @mention it in a channel it is in, or open a form with `WRITE_COMMAND` or the button on the bot's *Home* tab. The whole team reads it, and the replies come back where you wrote: in the *Messages* tab, or in the thread of your mention. What you send from the form also goes to the *Messages* tab, with a copy of your message, so you can keep writing there. The bot marks every message it receives with :incoming_envelope:, so you know it got there, and when an @mention starts a conversation it also thanks you in a note only you see. If a message can't reach the team, the bot tells you, so you can send it again.
 
 Files you attach, up to 20 MB each, in the *Messages* tab, with an @mention or in the form, which has a field for them, reach the team with your message, and the files the team attaches to its replies reach you the same way. If one can't be copied, for example because it's larger or it's a link to another service, the bot tells you which, so you can share a link instead: in your DM, in the form, or in a note only you see by your @mention.
 
@@ -34,13 +34,13 @@ Every conversation is a thread in the team channel, and later messages from the 
 
 ### Replying as the bot
 
-Writing in a thread is internal discussion: the person doesn't see it. To send a message as the bot, add :outbox_tray: to it. The bot sends it and marks it with :white_check_mark:. Edits made after that are not sent, except in anonymous conversations, where the author's window always shows the current text of each reply.
+Writing in a thread is internal discussion: the person doesn't see it. To send a message as the bot, add :outbox_tray: to it. The bot sends it and marks it with :white_check_mark:, or, if Slack refuses it, tells you why in a note only you see. Edits made after that are not sent, except in anonymous conversations, where the author's window always shows the current text of each reply.
 
 Files attached to the reply, up to 20 MB each, are sent with it, and a reply can be files alone. Any that can't be sent are listed in the thread, for the whole team. Deleting the reply with :wastebasket: deletes its files too.
 
 ### Posting as the bot
 
-To post as the bot, use the button on the bot's *Home* tab, `PUBLISH_COMMAND`, or the message shortcut, which copies the message you use it on. It opens a form to post in a channel, DM people, or both. Public channels work without inviting the bot; private ones need `/invite`. Every post is recorded in the team channel with who made it, and a DM starts a conversation thread. To delete something the bot sent, add :wastebasket: to its record in the team channel.
+To post as the bot, use the button on the bot's *Home* tab, `PUBLISH_COMMAND`, or the message shortcut, which copies the message you use it on. It opens a form to post in a channel, DM people, or both. Public channels work without inviting the bot; private ones need `/invite`. Once sent, the form shows how it went for each channel and person, with a link to the post. Every post is also recorded in the team channel with who made it, and a DM starts a conversation thread. To delete something the bot sent, add :wastebasket: to its record in the team channel; on anything else, :wastebasket: gets a note saying what it deletes.
 
 The form has a field to attach files, up to 10, and the message shortcut also lists the files of the message you use it on, ticked, so you can untick any you don't want posted. A post can be files alone, and the bot posts copies, so the post shows only the bot; the files you attach in the form stay in your own Slack files. Each file can be up to 20 MB, and in a public channel the bot isn't in, it can only post images: other files need the bot invited there first. The form refuses to post files it can tell won't go, saying which and why, so you can remove them or choose another channel. The record in the team channel names the files posted, without copying them there, and says if one still failed while it was being copied. :wastebasket: on the record deletes the files too.
 

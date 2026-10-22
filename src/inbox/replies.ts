@@ -2,7 +2,7 @@ import type { App } from '@slack/bolt';
 import type { WebClient } from '@slack/web-api';
 import type { Anonymous } from '#src/anonymous/index.ts';
 import type { Deps } from '#src/deps.ts';
-import { errorCode } from '#src/slack/errors.ts';
+import { describeError, errorCode } from '#src/slack/errors.ts';
 import { deleteCopies, describeProblems, uploadCopies, type AttachedFile } from '#src/slack/files.ts';
 import { fetchMessage } from '#src/slack/messages.ts';
 import { richTextBlocks } from '#src/slack/richtext.ts';
@@ -56,7 +56,7 @@ export function registerReplies(app: App, { config, store, i18n, notices }: Deps
         sentTs = sent.ts;
       } catch (error) {
         store.deliveries.release(ts);
-        return notify(t.inbox.reply.sendFailed({ error: errorCode(error) }));
+        return notify(t.inbox.reply.sendFailed({ reason: describeError(t, error) }));
       }
     }
     // As the bot itself, which is the team's voice, so uploaded as they are.
@@ -68,28 +68,31 @@ export function registerReplies(app: App, { config, store, i18n, notices }: Deps
     if (!sentTs && copies.fileIds.length === 0) return store.deliveries.release(ts);
     store.deliveries.complete(ts, sentTs ?? null, copies.fileIds);
     store.conversations.touch(conversation.id);
-    await client.reactions.add({ channel: team, timestamp: ts, name: 'white_check_mark' });
+    // It was sent: a mark that fails, as when someone added it by hand first, changes nothing.
+    await client.reactions.add({ channel: team, timestamp: ts, name: 'white_check_mark' }).catch(() => {});
   }
 
   async function deleteDelivery(client: WebClient, ts: string, user: string) {
     if (await anonymous.deleteReply(client, ts, user)) return;
-    const delivery = store.deliveries.get(ts);
-    if (!delivery || (!delivery.targetTs && delivery.fileIds.length === 0)) return;
     const t = await i18n.forUser(user);
     const threadTs = (await fetchMessage(client, team, ts))?.thread_ts ?? ts;
     const notify = (text: string) => notices.ephemeral(client, { user, text, threadTs });
+    const delivery = store.deliveries.get(ts);
+    if (!delivery || (!delivery.targetTs && delivery.fileIds.length === 0)) {
+      return notify(t.inbox.reply.nothingToDelete({ sendEmoji: config.sendEmoji, deleteEmoji: config.deleteEmoji }));
+    }
     if (delivery.deletedAt) return notify(t.inbox.reply.alreadyDeleted);
 
     try {
       if (delivery.targetTs) await client.chat.delete({ channel: delivery.targetChannel, ts: delivery.targetTs });
     } catch (error) {
-      if (errorCode(error) !== 'message_not_found') return notify(t.inbox.reply.deleteFailed({ error: errorCode(error) }));
+      if (errorCode(error) !== 'message_not_found') return notify(t.inbox.reply.deleteFailed({ reason: describeError(t, error) }));
     }
     // Deleting the copies also removes the messages that held only them.
     try {
       await deleteCopies(client, delivery.fileIds);
     } catch (error) {
-      return notify(t.inbox.reply.deleteFailed({ error: errorCode(error) }));
+      return notify(t.inbox.reply.deleteFailed({ reason: describeError(t, error) }));
     }
     store.deliveries.markDeleted(ts);
     await client.reactions.remove({ channel: team, timestamp: ts, name: 'white_check_mark' }).catch(() => {});

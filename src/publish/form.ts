@@ -2,8 +2,11 @@ import type { ModalView, RichTextBlock } from '@slack/types';
 import type { WebClient } from '@slack/web-api';
 import type { Strings } from '#src/i18n/index.ts';
 import { context, modalTitle } from '#src/slack/blocks.ts';
-import { errorCode } from '#src/slack/errors.ts';
+import { describeError, errorCode } from '#src/slack/errors.ts';
 import { MAX_FILE_MB, describeProblems, foreseenProblems, type AttachedFile } from '#src/slack/files.ts';
+import type { Outcome } from './send.ts';
+
+const plain = (text: string) => ({ type: 'plain_text' as const, text });
 
 /**
  * The form to post as the bot: a channel, people to DM, or both, the message, and files to attach. `original` are the
@@ -120,4 +123,31 @@ export function fileErrors(
     if (problems.length > 0) errors[block] = t.publish.form.cantPost({ list });
   }
   return errors;
+}
+
+/** The form once sent: what it is doing, or how it went, with small print under it. */
+export function doneView(t: Strings, text: string, extra: string[] = []): ModalView {
+  return {
+    type: 'modal',
+    title: modalTitle(t.publish.form.title),
+    close: plain(t.common.close),
+    blocks: [{ type: 'section', text: { type: 'mrkdwn', text } }, ...extra.map(context)],
+  };
+}
+
+/** How it went for each target (a channel or a person, as a mention), and, if anything went, how to delete it. */
+export function resultView(
+  t: Strings,
+  results: { target: string; outcome: Outcome }[],
+  record: { teamChannel: string; deleteEmoji: string },
+): ModalView {
+  const lines = results.map(({ target, outcome }) => {
+    if (outcome.status === 'failed') return t.publish.done.failed({ target, reason: describeError(t, outcome.error) });
+    const problems = describeProblems(t, outcome.problems, 'team');
+    if (outcome.status === 'nothing') return t.publish.done.nothing({ target, list: problems });
+    const done = outcome.permalink ? t.publish.done.posted({ target, permalink: outcome.permalink }) : t.publish.done.sent({ target });
+    return outcome.problems.length > 0 ? `${done}\n${t.files.notPosted({ list: problems })}` : done;
+  });
+  const sent = results.some((r) => r.outcome.status === 'sent');
+  return doneView(t, lines.join('\n\n'), sent ? [t.publish.done.record(record)] : []);
 }

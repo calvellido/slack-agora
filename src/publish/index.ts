@@ -1,10 +1,11 @@
 import type { App, BlockAction, ButtonAction, MessageShortcut } from '@slack/bolt';
 import type { Deps } from '#src/deps.ts';
 import { PUBLISH_SHORTCUT } from '#src/manifest/index.ts';
+import { errorCode } from '#src/slack/errors.ts';
 import { filesById, filesInForm } from '#src/slack/files.ts';
 import { isBlank, richTextBlocks, richTextFromPlain } from '#src/slack/richtext.ts';
-import { checkChannel, fileErrors, originalInForm, publishView } from './form.ts';
-import { createSender } from './send.ts';
+import { checkChannel, doneView, fileErrors, originalInForm, publishView, resultView } from './form.ts';
+import { createSender, type Outcome } from './send.ts';
 
 /**
  * Posting as the bot: the publish command, the message shortcut and the button on the team's part of the Home tab open
@@ -90,10 +91,23 @@ export function registerPublish(app: App, deps: Deps): void {
       await ack({ response_action: 'errors', errors });
       return;
     }
-    await ack();
+    // Posting, files above all, can take longer than Slack waits for an answer: the form says how it went after.
+    await ack({ response_action: 'update', view: doneView(t, t.publish.done.sending) });
 
     const post = { message: isBlank(message) ? undefined : message, files: [...original, ...attached] };
-    if (channel) await send.toChannel(client, poster, channel, post);
-    for (const user of people) await send.toPerson(client, poster, user, post);
+    const attempt = async (target: string, sending: () => Promise<Outcome>) => {
+      try {
+        return { target, outcome: await sending() };
+      } catch (error) {
+        app.logger.error(`Posting as the bot failed: ${errorCode(error)}`);
+        return { target, outcome: { status: 'failed', error } as const };
+      }
+    };
+    const results: { target: string; outcome: Outcome }[] = [];
+    if (channel) results.push(await attempt(`<#${channel}>`, () => send.toChannel(client, poster, channel, post)));
+    for (const user of people) results.push(await attempt(`<@${user}>`, () => send.toPerson(client, poster, user, post)));
+    const done = resultView(t, results, { teamChannel, deleteEmoji: config.deleteEmoji });
+    // Whoever posted may have closed the form meanwhile.
+    await client.views.update({ view_id: view.id, view: done }).catch(() => {});
   });
 }

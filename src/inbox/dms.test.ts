@@ -6,7 +6,7 @@ import type { Deps } from '#src/deps.ts';
 import { I18n, stringsIn } from '#src/i18n/index.ts';
 import { describeProblems } from '#src/slack/files.ts';
 import { Notices } from '#src/slack/notices.ts';
-import type { Call } from '#src/slack/testing.ts';
+import { slackError, type Call } from '#src/slack/testing.ts';
 import { Store } from '#src/storage/index.ts';
 import { registerDms } from './dms.ts';
 import type { Relay } from './relay.ts';
@@ -43,6 +43,13 @@ function setup(relay: Relay) {
   const told = () => calls.filter((c) => c.method === 'chat.postMessage').map((c) => c.args.text);
   return { calls, dm, told };
 }
+
+test("a DM that can't reach the team is not marked as received, and the person is told to send it again", async () => {
+  const { calls, dm, told } = setup(async () => Promise.reject(slackError('not_in_channel')));
+  await dm({ user: 'U1', ts: '5.0', text: 'Hola' });
+  assert.deepEqual(told(), [t.inbox.relayFailed]);
+  assert.ok(!calls.some((c) => c.method === 'reactions.add'));
+});
 
 test("a DM's files that didn't reach the team are told after the thanks", async () => {
   const problems = [{ name: 'big.zip', problem: 'tooLarge' as const }];

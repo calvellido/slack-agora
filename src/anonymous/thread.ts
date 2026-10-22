@@ -25,8 +25,6 @@ export interface AnonymousThread {
   ): Promise<void>;
   /** A notice in the thread, such as who ended the conversation. */
   note(client: WebClient, conversation: AnonConversation, text: string): Promise<void>;
-  /** A notice in the thread that only `user` sees. */
-  ephemeral(client: WebClient, conversation: AnonConversation, user: string, text: string): Promise<void>;
   /**
    * Deletes everything the bot posted in the thread, the author's messages included, and every record of the
    * conversation. Team members' own replies stay: only their authors can delete them.
@@ -98,10 +96,6 @@ export function createThread(app: App, { config, store, bot, i18n, notices }: De
 
     async note(client, conversation, text) {
       if (conversation.teamThreadTs) await notices.post(client, { text, threadTs: conversation.teamThreadTs });
-    },
-
-    async ephemeral(client, conversation, user, text) {
-      await notices.ephemeral(client, { user, text, threadTs: conversation.teamThreadTs ?? undefined });
     },
 
     async remove(client, conversation, leaveNote) {

@@ -85,3 +85,12 @@ test('a reply of files only is sent, and files that can\'t go are told to the wh
   assert.equal(notice.args.thread_ts, '1.0');
   assert.equal(notice.args.text, t.files.notSent({ list: describeProblems(t, [{ name: 'big.zip', problem: 'tooLarge' }], 'team') }));
 });
+
+test('the delete emoji on something the bot never sent says what it deletes', async () => {
+  const { calls, react } = setup({ '4.0': { text: 'Just talking' } });
+  await react('4.0', 'wastebasket');
+  const t = stringsIn('en', names);
+  const told = calls.find((c) => c.method === 'chat.postEphemeral')!.args;
+  assert.deepEqual([told.user, told.thread_ts], ['UTEAM', '1.0']);
+  assert.equal(told.text, t.inbox.reply.nothingToDelete({ sendEmoji: 'outbox_tray', deleteEmoji: 'wastebasket' }));
+});

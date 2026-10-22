@@ -1,4 +1,5 @@
 import type { App, BlockAction, ButtonAction } from '@slack/bolt';
+import type { WebClient } from '@slack/web-api';
 import type { Deps } from '#src/deps.ts';
 import { DAY } from '#src/lib/time.ts';
 import type { AnonConversation } from '#src/storage/index.ts';
@@ -12,15 +13,33 @@ import type { AnonymousThread } from './thread.ts';
 export function registerTeamSide(app: App, { config, store, team, i18n, notices }: Deps, thread: AnonymousThread): Anonymous {
   const channel = config.teamChannelId;
 
+  // What a button has to say goes in the channel, next to the thread's first message, where the buttons are.
+  const tell = (client: WebClient, user: string, text: string) => notices.ephemeral(client, { user, text });
+
+  /**
+   * The conversation a button is on, if whoever clicked it may act on it; otherwise they are told why not. The buttons
+   * carry no identifier: the conversation is found by the message they are on.
+   */
+  async function clicked(client: WebClient, user: string, message: { ts: string } | undefined) {
+    const conversation = message ? store.anonymous.byTeamThread(message.ts) : undefined;
+    const t = await i18n.forUser(user);
+    const problem = !(await team.isMember(user))
+      ? t.publish.teamOnly
+      : !conversation?.teamThreadTs
+        ? t.inbox.reply.notAConversation
+        : undefined;
+    if (problem) await tell(client, user, problem);
+    return problem ? undefined : conversation;
+  }
+
   app.action<BlockAction<ButtonAction>>('anon_team_end', async ({ ack, body, client }) => {
     await ack();
     const user = body.user.id;
-    // The buttons carry no identifier: the conversation is found by the message they are on.
-    const conversation = body.message ? store.anonymous.byTeamThread(body.message.ts) : undefined;
-    if (!conversation?.teamThreadTs || !(await team.isMember(user))) return;
+    const conversation = await clicked(client, user, body.message);
+    if (!conversation) return;
     const t = await i18n.forUser(user);
     if (!store.anonymous.close(conversation.id, 'team')) {
-      return thread.ephemeral(client, conversation, user, t.anonymous.team.alreadyClosed);
+      return tell(client, user, t.anonymous.team.alreadyClosed);
     }
     const text = i18n.team.anonymous.team.endedBy({ user });
     await thread.setStatus(client, conversation, { state: 'ended', note: text }, body.message);
@@ -30,12 +49,12 @@ export function registerTeamSide(app: App, { config, store, team, i18n, notices 
   app.action<BlockAction<ButtonAction>>('anon_team_delete', async ({ ack, body, client }) => {
     await ack();
     const user = body.user.id;
-    const conversation = body.message ? store.anonymous.byTeamThread(body.message.ts) : undefined;
-    if (!conversation?.teamThreadTs || !(await team.isMember(user))) return;
+    const conversation = await clicked(client, user, body.message);
+    if (!conversation) return;
     const t = await i18n.forUser(user);
-    if (conversation.owner) return thread.ephemeral(client, conversation, user, t.anonymous.team.notDeletable);
+    if (conversation.owner) return tell(client, user, t.anonymous.team.notDeletable);
     await thread.remove(client, conversation);
-    await notices.ephemeral(client, { user, text: t.anonymous.team.deletedByTeam });
+    await tell(client, user, t.anonymous.team.deletedByTeam);
   });
 
   return {

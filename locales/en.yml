@@ -39,6 +39,18 @@ files:
   notPosted: "📎 These files weren't posted:\n{list}"
   anonymous: "📎 Files aren't sent in anonymous conversations: the person only gets the text."
 
+# Why Slack refused to send or delete something, in words for the team; any other reason shows Slack's code.
+errors:
+  notInChannel: "{bot} isn't in that channel. Invite it with /invite @{bot}"
+  archived: "that channel is archived"
+  channelNotFound: "{bot} can't find that channel, which may have been deleted"
+  restricted: "only some people can post in that channel"
+  deactivated: "that person's account is deactivated"
+  bot: "that's a bot, and bots don't get direct messages"
+  tooLong: "the message is too long"
+  rateLimited: "Slack is limiting how fast {bot} can post. Try again in a minute"
+  missingScope: "{bot} is missing a permission. Paste the new manifest into the app settings and reinstall the app"
+
 # The Slack app's settings, written to the manifest in the team's language.
 manifest:
   description: "Write to the {bot} team, with your name or anonymously"
@@ -64,6 +76,8 @@ manifest:
 
 # Conversations by DM or @mention.
 inbox:
+  # To whoever wrote, by DM or where they mentioned the bot, when their message couldn't be relayed.
+  relayFailed: "⚠️ Your message couldn't reach the {bot} team. Try sending it again in a few minutes."
   # Posted in the team channel.
   thread:
     dmHeader: "💬 Direct message from <@{user}>"
@@ -77,6 +91,9 @@ inbox:
     lateAck: "Sorry for the delay: {bot} was offline for a while. Your message has now reached the team, and they will reply here."
     # Above the copy of what someone wrote in the form.
     written: "📝 You wrote to the {bot} team:"
+  # Only seen by whoever mentioned the bot, where they did, when their message starts a conversation.
+  mention:
+    ack: "Thanks for writing! The {bot} team has received your message and will reply in your message's thread."
   # The form to write with your name, whose message is relayed as a DM.
   write:
     title: "Write to {bot}"
@@ -99,9 +116,10 @@ inbox:
     cannotSendBotMessage: "That message is from {bot}. Write your reply in the thread and add the reaction to your own message."
     emptyReply: "That message has no text to send."
     alreadySent: "This message was already sent."
-    sendFailed: "Couldn't send the message: `{error}`"
+    sendFailed: "Couldn't send the message: {reason}"
     alreadyDeleted: "It was already deleted."
-    deleteFailed: "Couldn't delete it: `{error}`"
+    deleteFailed: "Couldn't delete it: {reason}"
+    nothingToDelete: "There's nothing to delete here: :{deleteEmoji}: deletes what {bot} sent, added to a reply sent with :{sendEmoji}: or to the record of a post."
     deleted: "🗑️ <@{user}> deleted what {bot} had sent."
   # Posted in the team channel after the bot was down.
   backOnline: "✅ {bot} is running again after {duration} offline (since {since}). {recovered, plural, =0 {No direct messages arrived meanwhile.} one {It has relayed # direct message that arrived meanwhile.} other {It has relayed # direct messages that arrived meanwhile.}}"
@@ -129,8 +147,18 @@ publish:
   record:
     dmStarted: "📤 <@{poster}> wrote to <@{user}> as {bot}:"
     posted: "📣 <@{poster}> posted as {bot} in <#{channel}> · <{permalink}|view message>"
-    failed: "⚠️ Couldn't send as {bot} to {target} (requested by <@{poster}>): `{error}`"
+    # When Slack can't give a link to the post.
+    postedNoLink: "📣 <@{poster}> posted as {bot} in <#{channel}>"
+    failed: "⚠️ Couldn't send as {bot} to {target} (requested by <@{poster}>): {reason}"
     nothingPosted: "⚠️ Nothing was sent as {bot} to {target} (requested by <@{poster}>):\n{list}"
+  # The form once sent, for whoever posted: how it went for each channel or person.
+  done:
+    sending: "⏳ Sending…"
+    posted: "✅ Posted in {target} · <{permalink}|view message>"
+    sent: "✅ Sent to {target}"
+    nothing: "⚠️ Nothing was sent to {target}:\n{list}"
+    failed: "⚠️ Couldn't send to {target}: {reason}"
+    record: "To delete it, add :{deleteEmoji}: to its record in <#{teamChannel}>."
 
 home:
   # Under the bot's name, when the deployment has no ABOUT text.

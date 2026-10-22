@@ -43,14 +43,24 @@ export function registerDms(app: App, { config, store, i18n, bot, notices }: Dep
   // DMs handled recently, so one caught up at start and also delivered live isn't relayed twice.
   const handled = new Set<string>();
 
-  /** Relays a DM to its conversation thread and marks it as received. False if it was already handled. */
+  /**
+   * Relays a DM to its conversation thread and marks it as received. False if it was already handled, or if it
+   * couldn't reach the team, which the person is told so they can send it again.
+   */
   async function handleDm(client: WebClient, dm: Dm): Promise<boolean> {
     const key = `${dm.channel}:${dm.ts}`;
     if (handled.has(key)) return false;
     handled.add(key);
     setTimeout(() => handled.delete(key), 10 * 60_000).unref();
 
-    const relayed = await toThread(client, dm);
+    let relayed: Relayed;
+    try {
+      relayed = await toThread(client, dm);
+    } catch (error) {
+      app.logger.error(`Relaying a DM failed: ${errorCode(error)}`);
+      await tell(client, dm.channel, dm.user, (t) => t.inbox.relayFailed);
+      return false;
+    }
     // Late DMs get one apology per person instead (see catchUp).
     if (relayed.started && !dm.lateTs) await tell(client, dm.channel, dm.user, (t) => t.inbox.dm.ack);
     if (relayed.problems.length > 0) {
