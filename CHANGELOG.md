@@ -2,6 +2,12 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## [2.3.0] - 2026-10-22
+
+- `HEARTBEAT_URL`: a monitor's address, such as a Healthchecks.io check's, that the bot calls every `HEARTBEAT_MINUTES` (a day by default) while it is connected to Slack, so the monitor alerts you when the bot, its machine or its connection is down. Nothing needs to reach the machine. See *Getting alerted* in the guide.
+
+No new permissions: set `HEARTBEAT_URL` only if you want the alerts.
+
 ## [2.2.1] - 2026-10-22
 
 - Editing or deleting a DM right after sending it, while its files were still being copied, now reaches the team's copy. So does a deletion right after an edit, which could put the edited text back.
@@ -89,6 +95,7 @@ The first release.
 - `pnpm clean-db` empties the database.
 - A Docker image, for linux/amd64 and linux/arm64.
 
+[2.3.0]: https://github.com/calvellido/slack-agora/releases/tag/v2.3.0
 [2.2.1]: https://github.com/calvellido/slack-agora/releases/tag/v2.2.1
 [2.2.0]: https://github.com/calvellido/slack-agora/releases/tag/v2.2.0
 [2.1.0]: https://github.com/calvellido/slack-agora/releases/tag/v2.1.0
