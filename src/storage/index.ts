@@ -4,15 +4,18 @@ import { Conversations } from './conversations.ts';
 import { openDatabase } from './database.ts';
 import { Deliveries } from './deliveries.ts';
 import { Heartbeat } from './heartbeat.ts';
+import { Relays } from './relays.ts';
 
 export type { AnonConversation, AnonMessage, ClosedBy } from './anonymous.ts';
 export type { Conversation } from './conversations.ts';
 export type { Delivery } from './deliveries.ts';
+export type { RelayedDm } from './relays.ts';
 
 /** Everything the bot keeps, in one SQLite database. `teamChannel` is the current TEAM_CHANNEL_ID. */
 export class Store {
   readonly conversations: Conversations;
   readonly deliveries: Deliveries;
+  readonly relays: Relays;
   readonly anonymous: AnonymousConversations;
   readonly heartbeat: Heartbeat;
   #db: DatabaseSync;
@@ -21,6 +24,7 @@ export class Store {
     this.#db = openDatabase(path);
     this.conversations = new Conversations(this.#db, teamChannel);
     this.deliveries = new Deliveries(this.#db);
+    this.relays = new Relays(this.#db);
     this.anonymous = new AnonymousConversations(this.#db, teamChannel);
     this.heartbeat = new Heartbeat(this.#db);
   }

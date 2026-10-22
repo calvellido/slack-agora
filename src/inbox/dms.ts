@@ -61,6 +61,11 @@ export function registerDms(app: App, { config, store, i18n, bot, notices }: Dep
       await tell(client, dm.channel, dm.user, (t) => t.inbox.relayFailed);
       return false;
     }
+    if (relayed.ts) {
+      const { fileIds, noticeTs } = relayed;
+      const copy = { teamChannel: config.teamChannelId, teamTs: relayed.ts, noticeTs: noticeTs ?? null, fileIds };
+      store.relays.record({ dmChannel: dm.channel, dmTs: dm.ts, ...copy });
+    }
     // Late DMs get one apology per person instead (see catchUp).
     if (relayed.started && !dm.lateTs) await tell(client, dm.channel, dm.user, (t) => t.inbox.dm.ack);
     if (relayed.problems.length > 0) {
@@ -90,6 +95,7 @@ export function registerDms(app: App, { config, store, i18n, bot, notices }: Dep
     await notices.toPerson(client, { channel, text: text(t), username: t.notices.sender });
   }
 
+  // Edits and deletions are followed in changes.ts.
   app.event('message', async ({ event, client }) => {
     if (event.channel_type !== 'im') return;
     if (event.subtype !== undefined && event.subtype !== 'file_share') return;

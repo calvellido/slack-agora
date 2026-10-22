@@ -83,7 +83,9 @@ inbox:
     dmHeader: "💬 Direct message from <@{user}>"
     mentionHeader: "🔔 <@{user}> mentioned {bot} in <#{channel}> · <{permalink}|view message>"
     followUp: "<@{user}> wrote:"
-    replyHint: "To reply as {bot}, write in this thread and add :{sendEmoji}: to your message."
+    replyHint: "To reply as {bot}, write in this thread and add :{sendEmoji}: to your message. Later edits are sent too."
+    # In place of the copy of a DM the person deleted.
+    deletedByPerson: "🗑️ <@{user}> deleted this message."
     lateRelay: "⏱️ Sent {date}, while {bot} was offline."
   # Sent by DM to whoever wrote to the bot.
   dm:
@@ -91,6 +93,12 @@ inbox:
     lateAck: "Sorry for the delay: {bot} was offline for a while. Your message has now reached the team, and they will reply here."
     # Above the copy of what someone wrote in the form.
     written: "📝 You wrote to the {bot} team:"
+    # When someone edits or deletes a DM, and the team's copy follows.
+    editForwarded: "✏️ The {bot} team sees your edit too."
+    deletedForTeam: "🗑️ Deleted for the {bot} team too."
+    # When the team's copy can't follow, as for DMs relayed by an earlier version.
+    edited: "✏️ Edits don't reach the {bot} team, which has your message as you first sent it. To correct or add something, write a new message."
+    deleted: "🗑️ Deleting a message here doesn't delete it for the {bot} team, which already has it. If you want them to delete it too, write and ask them."
   # Only seen by whoever mentioned the bot, where they did, when their message starts a conversation.
   mention:
     ack: "Thanks for writing! The {bot} team has received your message and will reply in your message's thread."
@@ -120,6 +128,11 @@ inbox:
     alreadyDeleted: "It was already deleted."
     deleteFailed: "Couldn't delete it: {reason}"
     nothingToDelete: "There's nothing to delete here: :{deleteEmoji}: deletes what {bot} sent, added to a reply sent with :{sendEmoji}: or to the record of a post."
+    # Editing a reply already sent.
+    editSent: "✏️ Your edit was sent too."
+    editFailed: "Couldn't send the edit: {reason}"
+    editFilesOnly: "✏️ This reply was sent as files only, so text added later isn't sent: write it in a new reply and add :{sendEmoji}:."
+    editEmpty: "✏️ Without text, the edit isn't sent: to remove what was sent, add :{deleteEmoji}: to it."
     deleted: "🗑️ <@{user}> deleted what {bot} had sent."
   # Posted in the team channel after the bot was down.
   backOnline: "✅ {bot} is running again after {duration} offline (since {since}). {recovered, plural, =0 {No direct messages arrived meanwhile.} one {It has relayed # direct message that arrived meanwhile.} other {It has relayed # direct messages that arrived meanwhile.}}"
@@ -187,7 +200,7 @@ home:
       Every conversation with {bot} is a thread in <#{teamChannel}>, anonymous ones too.
     reply: |-
       *:{sendEmoji}: Replying*
-      Write in the thread and add :{sendEmoji}: to your message. {bot} sends it and marks it with :white_check_mark:.
+      Write in the thread and add :{sendEmoji}: to your message. {bot} sends it and marks it with :white_check_mark:. Later edits are sent too.
     delete: |-
       *:{deleteEmoji}: Deleting*
       Add :{deleteEmoji}: to the record in <#{teamChannel}> of what {bot} sent.

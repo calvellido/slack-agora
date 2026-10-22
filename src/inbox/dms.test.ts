@@ -39,9 +39,10 @@ function setup(relay: Relay) {
     notices: new Notices('CTEAM', 'Helpdesk · notices', 'robot_face'),
   } as unknown as Deps;
   registerDms(app, deps, relay);
+  const store = deps.store;
   const dm = (event: Record<string, unknown>) => handlers.message!({ event: { channel_type: 'im', channel: 'D1', ...event }, client });
   const told = () => calls.filter((c) => c.method === 'chat.postMessage').map((c) => c.args.text);
-  return { calls, dm, told };
+  return { calls, store, dm, told };
 }
 
 test("a DM that can't reach the team is not marked as received, and the person is told to send it again", async () => {
@@ -53,8 +54,12 @@ test("a DM that can't reach the team is not marked as received, and the person i
 
 test("a DM's files that didn't reach the team are told after the thanks", async () => {
   const problems = [{ name: 'big.zip', problem: 'tooLarge' as const }];
-  const { calls, dm, told } = setup(async () => ({ started: '1.0', problems }));
+  const { calls, store, dm, told } = setup(async () => ({ started: '1.0', ts: '1.0', noticeTs: '2.0', fileIds: ['FCOPY1'], problems }));
   await dm({ user: 'U1', ts: '5.0', text: 'Hola', subtype: 'file_share' });
   assert.deepEqual(told(), [t.inbox.dm.ack, t.files.notReceived({ list: describeProblems(t, problems, 'person') })]);
   assert.ok(calls.some((c) => c.method === 'reactions.add' && c.args.name === 'incoming_envelope'));
+  // What it posted is kept, so the copy can follow the DM's edits and deletion.
+  const { createdAt, ...copy } = store.relays.get('D1', '5.0')!;
+  assert.ok(createdAt);
+  assert.deepEqual(copy, { dmChannel: 'D1', dmTs: '5.0', teamChannel: 'CTEAM', teamTs: '1.0', noticeTs: '2.0', fileIds: ['FCOPY1'] });
 });

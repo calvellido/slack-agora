@@ -33,6 +33,7 @@ function setup(replies: Record<string, Record<string, unknown>>) {
     chat: {
       postMessage: record('chat.postMessage'),
       postEphemeral: record('chat.postEphemeral'),
+      update: record('chat.update'),
       delete: record('chat.delete'),
     },
     reactions: { add: record('reactions.add'), remove: record('reactions.remove') },
@@ -52,7 +53,17 @@ function setup(replies: Record<string, Record<string, unknown>>) {
   registerReplies(app, deps, { deleteReply: async () => false } as unknown as Anonymous);
   const react = (at: string, reaction: string) =>
     handlers.reaction_added!({ event: { item: { type: 'message', channel: 'CTEAM', ts: at }, reaction, user: 'UTEAM' }, client });
-  return { calls, store, react };
+  const edit = (at: string, before: string, after: string) =>
+    handlers.message!({
+      event: {
+        channel: 'CTEAM',
+        subtype: 'message_changed',
+        message: { ts: at, user: 'UTEAM', thread_ts: '1.0', text: after, edited: { ts: '9.0' } },
+        previous_message: { ts: at, user: 'UTEAM', text: before },
+      },
+      client,
+    });
+  return { calls, store, react, edit };
 }
 
 test("a reply's files are sent with its text, and deleting the reply deletes both", async () => {
@@ -93,4 +104,33 @@ test('the delete emoji on something the bot never sent says what it deletes', as
   const told = calls.find((c) => c.method === 'chat.postEphemeral')!.args;
   assert.deepEqual([told.user, told.thread_ts], ['UTEAM', '1.0']);
   assert.equal(told.text, t.inbox.reply.nothingToDelete({ sendEmoji: 'outbox_tray', deleteEmoji: 'wastebasket' }));
+});
+
+test('editing a reply already sent edits what was sent, and its author is told once', async () => {
+  const { calls, react, edit } = setup({ '2.0': { text: 'Here it is' } });
+  // Before it is sent, an edit is only the team's.
+  await edit('2.0', 'Here it is', 'Here it is!');
+  assert.ok(!calls.some((c) => c.method === 'chat.update' || c.method === 'chat.postEphemeral'));
+
+  await react('2.0', 'outbox_tray');
+  await edit('2.0', 'Here it is', 'Here it is, signed');
+  await edit('2.0', 'Here it is, signed', 'Here it is, signed.');
+  const updates = calls.filter((c) => c.method === 'chat.update').map((c) => [c.args.channel, c.args.text]);
+  assert.deepEqual(updates, [['D1', 'Here it is, signed'], ['D1', 'Here it is, signed.']]);
+  const t = stringsIn('en', names);
+  const told = calls.filter((c) => c.method === 'chat.postEphemeral').map((c) => [c.args.user, c.args.thread_ts, c.args.text]);
+  assert.deepEqual(told, [['UTEAM', '1.0', t.inbox.reply.editSent]]);
+});
+
+test("an edit that can't be sent says why", async () => {
+  const { calls, react, edit } = setup({ '3.0': { text: '', files: [attached('foto.png')] }, '4.0': { text: 'Hi' } });
+  await react('3.0', 'outbox_tray');
+  await edit('3.0', '', 'And a caption');
+  await react('4.0', 'outbox_tray');
+  await edit('4.0', 'Hi', ' ');
+  const t = stringsIn('en', names);
+  assert.deepEqual(calls.filter((c) => c.method === 'chat.postEphemeral').map((c) => c.args.text), [
+    t.inbox.reply.editFilesOnly({ sendEmoji: 'outbox_tray' }),
+    t.inbox.reply.editEmpty({ deleteEmoji: 'wastebasket' }),
+  ]);
 });

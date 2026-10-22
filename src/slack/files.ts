@@ -220,6 +220,31 @@ export async function deleteCopies(client: WebClient, fileIds: readonly string[]
   }
 }
 
+/**
+ * Deletes copies and the messages in `channel` that show them, which would otherwise stay, holding a deleted file,
+ * when they have text of their own, such as the line above relayed files. Slack says where each copy was shared.
+ */
+export async function deleteCopiesAndMessages(client: WebClient, channel: string, fileIds: readonly string[]): Promise<void> {
+  const messages = new Set<string>();
+  for (const file of fileIds) {
+    try {
+      const { file: info } = await client.files.info({ file });
+      const shares = [...(info?.shares?.private?.[channel] ?? []), ...(info?.shares?.public?.[channel] ?? [])];
+      for (const share of shares) if (share.ts) messages.add(share.ts);
+    } catch {
+      // Already deleted: its message, if any, went with it.
+    }
+  }
+  await deleteCopies(client, fileIds);
+  for (const ts of messages) {
+    try {
+      await client.chat.delete({ channel, ts });
+    } catch (error) {
+      if (errorCode(error) !== 'message_not_found') throw error;
+    }
+  }
+}
+
 /** The names of the files of `files` that were copied: those without a problem. */
 export function copiedNames(files: readonly AttachedFile[], problems: Copies['problems']): string[] {
   const failed = problems.map((p) => p.name);

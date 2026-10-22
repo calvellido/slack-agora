@@ -8,6 +8,8 @@ Everything about using and running Agora, in detail. The [README](README.md) has
 
 To write with your name, use the bot's *Messages* tab, @mention it in a channel it is in, or open a form with `WRITE_COMMAND` or the button on the bot's *Home* tab. The whole team reads it, and the replies come back where you wrote: in the *Messages* tab, or in the thread of your mention. What you send from the form also goes to the *Messages* tab, with a copy of your message, so you can keep writing there. The bot marks every message it receives with :incoming_envelope:, so you know it got there, and when an @mention starts a conversation it also thanks you in a note only you see. If a message can't reach the team, the bot tells you, so you can send it again.
 
+Editing or deleting a message in the *Messages* tab does the same for the team: an edit changes the team's copy, and deleting it takes your message and its files out of the team's channel, leaving a note there that you deleted it. The bot tells you each time. @mentions aren't followed this way, so the team keeps what you first wrote: to correct something, write again.
+
 Files you attach, up to 20 MB each, in the *Messages* tab, with an @mention or in the form, which has a field for them, reach the team with your message, and the files the team attaches to its replies reach you the same way. If one can't be copied, for example because it's larger or it's a link to another service, the bot tells you which, so you can share a link instead: in your DM, in the form, or in a note only you see by your @mention.
 
 ### Without your name
@@ -34,7 +36,7 @@ Every conversation is a thread in the team channel, and later messages from the 
 
 ### Replying as the bot
 
-Writing in a thread is internal discussion: the person doesn't see it. To send a message as the bot, add :outbox_tray: to it. The bot sends it and marks it with :white_check_mark:, or, if Slack refuses it, tells you why in a note only you see. Edits made after that are not sent, except in anonymous conversations, where the author's window always shows the current text of each reply.
+Writing in a thread is internal discussion: the person doesn't see it. To send a message as the bot, add :outbox_tray: to it. The bot sends it and marks it with :white_check_mark:, or, if Slack refuses it, tells you why in a note only you see. Edits made after that are sent too, and the person sees the reply as edited. A reply sent as files alone can't be given text later, and a reply can't be left without text: the bot says so, and :wastebasket: deletes what was sent. In anonymous conversations the author's window always shows the current text of each reply.
 
 Files attached to the reply, up to 20 MB each, are sent with it, and a reply can be files alone. Any that can't be sent are listed in the thread, for the whole team. Deleting the reply with :wastebasket: deletes its files too.
 
@@ -76,6 +78,7 @@ Some things are not recovered:
 
 - @mentions made while it was down are lost.
 - A :outbox_tray: added in that time does nothing. If no :white_check_mark: appears, remove it and add it again.
+- Edits and deletions made in that time aren't followed: the other side keeps the message as it was.
 - Commands, buttons and windows show Slack's own error while the bot is down.
 
 ## Privacy
@@ -84,7 +87,7 @@ Some things are not recovered:
 
 DMs and @mentions are not anonymous: the team sees who wrote them.
 
-Files are copied, not shared: the team channel keeps its copy even if the person deletes the original, as with the text the bot relays, and exports of the channel include it. The bot holds each file in memory only while copying it, never on disk. Photos can carry details such as where and with what they were taken, which the bot doesn't remove.
+Files are copied, not shared: the team channel keeps its copy even if the person deletes the original file, as with the text the bot relays, and exports of the channel include it. Deleting the whole DM deletes the team's copies of its text and files, though not from exports already made. The bot holds each file in memory only while copying it, never on disk. Photos can carry details such as where and with what they were taken, which the bot doesn't remove.
 
 ### Anonymous messages
 
@@ -223,4 +226,4 @@ When it starts, the bot checks that the emoji exists. If it doesn't, because the
 
 ## Not yet
 
-- Editing something the bot already sent.
+- Editing a post made with the posting form: delete it and post it again.

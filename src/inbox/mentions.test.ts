@@ -44,7 +44,7 @@ function setup(relay: Relay) {
 }
 
 test('a mention is marked as received and, when it starts a conversation, thanked where only its author sees', async () => {
-  const { calls, store, mention } = setup(async () => ({ started: '1.0', problems: [] }));
+  const { calls, store, mention } = setup(async () => ({ started: '1.0', ts: '1.0', fileIds: [], problems: [] }));
   await mention({});
   assert.ok(calls.some((c) => c.method === 'reactions.add' && c.args.channel === 'CGENERAL' && c.args.name === 'incoming_envelope'));
   const thanks = calls.find((c) => c.method === 'chat.postEphemeral')!.args;
@@ -54,7 +54,7 @@ test('a mention is marked as received and, when it starts a conversation, thanke
 });
 
 test('a mention that continues a conversation is only marked, and one that fails is told to its author', async () => {
-  const { calls, mention } = setup(async () => ({ problems: [] }));
+  const { calls, mention } = setup(async () => ({ ts: '2.0', fileIds: [], problems: [] }));
   await mention({ ts: '6.0', thread_ts: '5.0' });
   assert.deepEqual(calls.map((c) => c.method), ['reactions.add']);
 
@@ -66,7 +66,7 @@ test('a mention that continues a conversation is only marked, and one that fails
 
 test("a mention's files that didn't reach the team are told to its author with the thanks, where only they see", async () => {
   const problems = [{ name: 'big.zip', problem: 'tooLarge' as const }];
-  const { calls, mention } = setup(async () => ({ started: '1.0', problems }));
+  const { calls, mention } = setup(async () => ({ started: '1.0', ts: '1.0', fileIds: [], problems }));
   await mention({ ts: '6.0', thread_ts: '5.0' });
   const told = calls.find((c) => c.method === 'chat.postEphemeral')!.args;
   assert.deepEqual([told.channel, told.user, told.thread_ts], ['CGENERAL', 'U1', '5.0']);

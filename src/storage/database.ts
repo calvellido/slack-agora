@@ -29,6 +29,17 @@ const SCHEMA = `
     file_ids TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS relays (
+    dm_channel TEXT NOT NULL,
+    dm_ts TEXT NOT NULL,
+    team_channel TEXT NOT NULL,
+    team_ts TEXT NOT NULL,
+    notice_ts TEXT,
+    file_ids TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (dm_channel, dm_ts)
+  );
+
   CREATE TABLE IF NOT EXISTS anon_conversations (
     id INTEGER PRIMARY KEY,
     code TEXT NOT NULL UNIQUE,

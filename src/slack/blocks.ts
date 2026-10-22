@@ -16,15 +16,15 @@ export function spacer(): SectionBlock {
   return { type: 'section', text: { type: 'mrkdwn', text: ' ' } };
 }
 
+/** A copy of someone's message: its rich text, or else its plain text. */
+export function messageBody(message: RichTextBlock[], fallback = ''): KnownBlock[] {
+  if (message.length > 0) return message;
+  return fallback ? [{ type: 'section', text: { type: 'mrkdwn', text: fallback.slice(0, 3000) } }] : [];
+}
+
 /** A header line followed by a copy of someone's message. */
 export function quoted(header: string, message: RichTextBlock[], fallback = ''): KnownBlock[] {
-  const body: KnownBlock[] =
-    message.length > 0
-      ? message
-      : fallback
-        ? [{ type: 'section', text: { type: 'mrkdwn', text: fallback.slice(0, 3000) } }]
-        : [];
-  return [context(header), ...body];
+  return [context(header), ...messageBody(message, fallback)];
 }
 
 /** A date each viewer sees in their own timezone and language. */

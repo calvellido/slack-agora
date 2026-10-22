@@ -1,3 +1,4 @@
+import type { ContextBlock, KnownBlock } from '@slack/types';
 import type { WebClient } from '@slack/web-api';
 import type { Deps } from '#src/deps.ts';
 import { context, quoted, slackDate } from '#src/slack/blocks.ts';
@@ -24,10 +25,14 @@ export interface Incoming {
   lateTs?: string;
 }
 
-/** What the relay did: the thread it started, if it started one, and the files it couldn't copy. */
-export interface Relayed {
+/**
+ * What the relay did: the thread it started, if it started one, the message it posted, the notice showing the images,
+ * the copies of the files, and the files it couldn't copy.
+ */
+export interface Relayed extends Copies {
   started?: string;
-  problems: Copies['problems'];
+  ts?: string;
+  noticeTs?: string;
 }
 
 /**
@@ -52,18 +57,18 @@ export function createRelay({ config, store, i18n, notices }: Deps): Relay {
   /**
    * Images go in a notice of their own. Other files can only be uploaded as the bot itself, so their message says it
    * is an automatic relay, with the notices' emoji, and each copy's title says whose it is. Whatever couldn't be copied
-   * is told to the team, and returned.
+   * is told to the team.
    */
-  async function copyFiles(client: WebClient, threadTs: string, message: Incoming): Promise<Copies['problems']> {
+  async function copyFiles(client: WebClient, threadTs: string, message: Incoming): Promise<Copies & { noticeTs?: string }> {
     const images = message.files.filter(isImage);
     const others = message.files.filter((f) => !isImage(f));
-    const problems: Copies['problems'] = [];
+    const copies: Copies & { noticeTs?: string } = { fileIds: [], problems: [] };
     if (images.length > 0) {
       const line = t.files.attached({ user: message.user });
       const shown = await showImages(client, images, (blocks) =>
         notices.post(client, { text: line, threadTs, blocks: [context(line), ...blocks] }),
       );
-      problems.push(...shown.problems);
+      Object.assign(copies, { noticeTs: shown.ts, fileIds: shown.fileIds, problems: shown.problems });
     }
     if (others.length > 0) {
       const person = await displayName(client, message.user);
@@ -72,12 +77,14 @@ export function createRelay({ config, store, i18n, notices }: Deps): Relay {
         title: (file: AttachedFile) => t.files.relayedTitle({ name: fileName(file), person }),
       };
       const uploaded = await uploadCopies(client, others, { channel: config.teamChannelId, threadTs }, options);
-      problems.push(...uploaded.problems);
+      copies.fileIds.push(...uploaded.fileIds);
+      copies.problems.push(...uploaded.problems);
     }
-    if (problems.length > 0) {
-      await notices.post(client, { text: t.files.notRelayed({ list: describeProblems(t, problems, 'team') }), threadTs });
+    if (copies.problems.length > 0) {
+      const list = describeProblems(t, copies.problems, 'team');
+      await notices.post(client, { text: t.files.notRelayed({ list }), threadTs });
     }
-    return problems;
+    return copies;
   }
 
   return async (client, existing, header, message) => {
@@ -89,10 +96,12 @@ export function createRelay({ config, store, i18n, notices }: Deps): Relay {
 
     // Relayed by the bot on its own, so under the notices sender; the message keeps its full layout.
     let threadTs: string | undefined;
+    let ts: string | undefined;
     let started: string | undefined;
     if (existing) {
       const followUp = body(t.inbox.thread.followUp({ user: message.user }));
-      if (await notices.post(client, { ...followUp, threadTs: existing.teamThreadTs })) {
+      ts = await notices.post(client, { ...followUp, threadTs: existing.teamThreadTs });
+      if (ts) {
         store.conversations.touch(existing.id);
         threadTs = existing.teamThreadTs;
       }
@@ -100,11 +109,21 @@ export function createRelay({ config, store, i18n, notices }: Deps): Relay {
     if (!threadTs) {
       const { text, blocks } = body(await header());
       blocks.push(context(t.inbox.thread.replyHint({ sendEmoji: config.sendEmoji })));
-      threadTs = started = await notices.post(client, { text, blocks });
+      threadTs = ts = started = await notices.post(client, { text, blocks });
     }
-    const problems = threadTs && message.files.length > 0 ? await copyFiles(client, threadTs, message) : [];
-    return { started, problems };
+    const copies = threadTs && message.files.length > 0 ? await copyFiles(client, threadTs, message) : undefined;
+    return { started, ts, fileIds: [], problems: [], ...copies };
   };
+}
+
+/**
+ * The blocks of a relayed message with its copy of the message replaced by `body`, keeping the header above it and
+ * the small print below it, which are the context blocks. The text that goes with them starts with the header.
+ */
+export function withBody(blocks: readonly unknown[], body: KnownBlock[], bodyText: string): { blocks: KnownBlock[]; text: string } {
+  const [header, ...after] = (blocks as KnownBlock[]).filter((b) => b.type === 'context') as ContextBlock[];
+  const headerText = header?.elements.map((e) => ('text' in e ? e.text : '')).join(' ') ?? '';
+  return { blocks: [...(header ? [header] : []), ...body, ...after], text: `${headerText} ${bodyText}`.trim() };
 }
 
 /** How a person's name shows in Slack, for the titles of their files; their ID if Slack can't say. */

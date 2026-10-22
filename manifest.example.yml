@@ -55,6 +55,7 @@ settings:
     bot_events:
       - app_home_opened
       - app_mention
+      - message.groups
       - message.im
       - reaction_added
   interactivity:

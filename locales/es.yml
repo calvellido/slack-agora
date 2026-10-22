@@ -64,12 +64,17 @@ inbox:
     dmHeader: "💬 Mensaje directo de <@{user}>"
     mentionHeader: "🔔 <@{user}> mencionó a {bot} en <#{channel}> · <{permalink}|ver mensaje>"
     followUp: "<@{user}> escribió:"
-    replyHint: "Para responder como {bot}, escribe en este hilo y añade :{sendEmoji}: a tu mensaje."
+    replyHint: "Para responder como {bot}, escribe en este hilo y añade :{sendEmoji}: a tu mensaje. Los cambios que hagas después también se envían."
+    deletedByPerson: "🗑️ <@{user}> eliminó este mensaje."
     lateRelay: "⏱️ Enviado {date}, mientras {bot} estaba sin conexión."
   dm:
     ack: "¡Gracias por escribir! El equipo de {bot} ha recibido tu mensaje y te responderá por aquí."
     lateAck: "Perdona el retraso: {bot} estuvo sin conexión un rato. Tu mensaje ya ha llegado al equipo, que te responderá por aquí."
     written: "📝 Escribiste al equipo de {bot}:"
+    editForwarded: "✏️ El equipo de {bot} también ve tu cambio."
+    deletedForTeam: "🗑️ También se ha eliminado para el equipo de {bot}."
+    edited: "✏️ Los cambios no llegan al equipo de {bot}, que tiene tu mensaje tal como lo enviaste. Para corregir o añadir algo, escribe un mensaje nuevo."
+    deleted: "🗑️ Eliminar un mensaje aquí no lo elimina para el equipo de {bot}, que ya lo ha recibido. Si quieres que también lo elimine, escríbele para pedírselo."
   mention:
     ack: "¡Gracias por escribir! El equipo de {bot} ha recibido tu mensaje y te responderá en el hilo de tu mensaje."
   write:
@@ -95,6 +100,10 @@ inbox:
     alreadyDeleted: "Ya estaba eliminado."
     deleteFailed: "No se pudo eliminar: {reason}"
     nothingToDelete: "Aquí no hay nada que eliminar: :{deleteEmoji}: elimina lo que envió {bot}, añadido a una respuesta enviada con :{sendEmoji}: o al registro de una publicación."
+    editSent: "✏️ Tu cambio también se ha enviado."
+    editFailed: "No se pudo enviar el cambio: {reason}"
+    editFilesOnly: "✏️ Esta respuesta se envió solo con archivos, así que el texto que añadas no se envía: escríbelo en una respuesta nueva y añade :{sendEmoji}:."
+    editEmpty: "✏️ Sin texto, el cambio no se envía: para quitar lo enviado, añádele :{deleteEmoji}:."
     deleted: "🗑️ <@{user}> eliminó lo que {bot} había enviado."
   backOnline: "✅ {bot} vuelve a estar en marcha tras {duration} sin conexión (desde {since}). {recovered, plural, =0 {No llegó ningún mensaje directo mientras tanto.} one {Ha reenviado # mensaje directo que llegó mientras tanto.} other {Ha reenviado # mensajes directos que llegaron mientras tanto.}}"
 
@@ -153,7 +162,7 @@ home:
       Cada conversación con {bot} es un hilo en <#{teamChannel}>, también las anónimas.
     reply: |-
       *:{sendEmoji}: Responder*
-      Escribe en el hilo y añade :{sendEmoji}: a tu mensaje. {bot} lo envía y lo marca con :white_check_mark:.
+      Escribe en el hilo y añade :{sendEmoji}: a tu mensaje. {bot} lo envía y lo marca con :white_check_mark:. Los cambios que hagas después también se envían.
     delete: |-
       *:{deleteEmoji}: Borrar*
       Añade :{deleteEmoji}: al registro en <#{teamChannel}> de lo que {bot} envió.

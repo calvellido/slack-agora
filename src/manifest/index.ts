@@ -32,7 +32,13 @@ export const BOT_SCOPES = [
   'users:read', // the bot's own profile, and each person's language
 ];
 
-const BOT_EVENTS = ['app_home_opened', 'app_mention', 'message.im', 'reaction_added'];
+const BOT_EVENTS = [
+  'app_home_opened',
+  'app_mention',
+  'message.groups', // edits in the team channel, to send the edits of replies already sent
+  'message.im',
+  'reaction_added',
+];
 
 /** Slack rejects a shorter long description. */
 const LONG_DESCRIPTION_MIN = 174;

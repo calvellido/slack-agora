@@ -1,6 +1,7 @@
 import type { App } from '@slack/bolt';
 import type { Anonymous } from '#src/anonymous/index.ts';
 import type { Deps } from '#src/deps.ts';
+import { registerChanges } from './changes.ts';
 import { registerDms, type Dms } from './dms.ts';
 import { registerMentions } from './mentions.ts';
 import { createRelay } from './relay.ts';
@@ -18,6 +19,7 @@ export function registerInbox(app: App, deps: Deps, anonymous: Anonymous): Dms {
   registerMentions(app, deps, relay);
   registerReplies(app, deps, anonymous);
   const dms = registerDms(app, deps, relay);
+  registerChanges(app, deps);
   registerWrite(app, deps, dms);
   return dms;
 }

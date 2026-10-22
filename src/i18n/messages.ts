@@ -71,12 +71,17 @@ export interface Strings {
       mentionHeader: (params: { user: string; channel: string; permalink: string }) => string;
       followUp: (params: { user: string }) => string;
       replyHint: (params: { sendEmoji: string }) => string;
+      deletedByPerson: (params: { user: string }) => string;
       lateRelay: (params: { date: string }) => string;
     };
     dm: {
       ack: string;
       lateAck: string;
       written: string;
+      editForwarded: string;
+      deletedForTeam: string;
+      edited: string;
+      deleted: string;
     };
     mention: {
       ack: string;
@@ -105,6 +110,10 @@ export interface Strings {
       alreadyDeleted: string;
       deleteFailed: (params: { reason: string }) => string;
       nothingToDelete: (params: { deleteEmoji: string; sendEmoji: string }) => string;
+      editSent: string;
+      editFailed: (params: { reason: string }) => string;
+      editFilesOnly: (params: { sendEmoji: string }) => string;
+      editEmpty: (params: { deleteEmoji: string }) => string;
       deleted: (params: { user: string }) => string;
     };
     backOnline: (params: { duration: string; since: string; recovered: number }) => string;

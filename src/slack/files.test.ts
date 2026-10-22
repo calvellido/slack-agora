@@ -2,7 +2,7 @@ import type { WebClient } from '@slack/web-api';
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
 import { stringsIn } from '#src/i18n/index.ts';
-import { describeProblems, showImages, uploadCopies, type AttachedFile } from './files.ts';
+import { deleteCopiesAndMessages, describeProblems, showImages, uploadCopies, type AttachedFile } from './files.ts';
 import { attached, fakeFileApi, serveFiles, slackError, type Call } from './testing.ts';
 
 let server: ReturnType<typeof serveFiles>;
@@ -84,4 +84,23 @@ test('problems are listed for the team with what to do, and for the person witho
     `• ${t.files.tooLarge({ name: 'a&lt;b&gt;.pdf', max: 20 })}\n• ${t.files.noPermission({ name: 'c.pdf' })}`,
   );
   assert.equal(describeProblems(t, problems, 'person').split('\n')[1], `• ${t.files.failed({ name: 'c.pdf' })}`);
+});
+
+test('deleting copies also deletes the messages that show them, which would otherwise stay with a deleted file', async () => {
+  const calls: Call[] = [];
+  const client = {
+    files: {
+      info: async ({ file }: { file: string }) =>
+        file === 'FGONE' ? Promise.reject(slackError('file_not_found')) : { file: { shares: { private: { CTEAM: [{ ts: '3.0' }] } } } },
+      delete: async (args: Record<string, unknown>) => (calls.push({ method: 'files.delete', args }), { ok: true }),
+    },
+    chat: { delete: async (args: Record<string, unknown>) => (calls.push({ method: 'chat.delete', args }), { ok: true }) },
+  } as unknown as WebClient;
+  await deleteCopiesAndMessages(client, 'CTEAM', ['FCOPY1', 'FCOPY2', 'FGONE']);
+  assert.deepEqual(calls.map((c) => [c.method, c.args.file ?? c.args.ts]), [
+    ['files.delete', 'FCOPY1'],
+    ['files.delete', 'FCOPY2'],
+    ['files.delete', 'FGONE'],
+    ['chat.delete', '3.0'],
+  ]);
 });

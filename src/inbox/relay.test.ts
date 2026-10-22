@@ -49,7 +49,14 @@ test("a message's images go in a notice, its other files after it, and what coul
   const { client, calls, relay } = setup();
   const files = [attached('foto.jpg'), attached('acta.pdf'), attached('video.mp4', { size: 50 * 1024 * 1024 })];
   const relayed = await relay(client, undefined, () => 'Direct message from <@U1>', { user: 'U1', text: 'Hola', blocks: undefined, files });
-  assert.deepEqual(relayed, { started: '1.0', problems: [{ name: 'video.mp4', problem: 'tooLarge' }] });
+  // The notice with the image is message 2.0, and the copies are the image's and the PDF's.
+  assert.deepEqual(relayed, {
+    started: '1.0',
+    ts: '1.0',
+    noticeTs: '2.0',
+    fileIds: ['FCOPY1', 'FCOPY2'],
+    problems: [{ name: 'video.mp4', problem: 'tooLarge' }],
+  });
 
   const t = stringsIn('en', names);
   const images = calls.filter((c) => c.method === 'chat.postMessage')[1];

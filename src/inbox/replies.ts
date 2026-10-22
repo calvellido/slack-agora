@@ -2,6 +2,7 @@ import type { App } from '@slack/bolt';
 import type { WebClient } from '@slack/web-api';
 import type { Anonymous } from '#src/anonymous/index.ts';
 import type { Deps } from '#src/deps.ts';
+import { DAY } from '#src/lib/time.ts';
 import { describeError, errorCode } from '#src/slack/errors.ts';
 import { deleteCopies, describeProblems, uploadCopies, type AttachedFile } from '#src/slack/files.ts';
 import { fetchMessage } from '#src/slack/messages.ts';
@@ -10,7 +11,7 @@ import { richTextBlocks } from '#src/slack/richtext.ts';
 /**
  * The team's reactions in the team channel: the send emoji on a thread reply sends it as the bot, with copies of its
  * files (anonymous threads are handed to anonymous mode), and the delete emoji on the record of something the bot sent
- * deletes it, files included.
+ * deletes it, files included. Editing a reply already sent edits what was sent too.
  */
 export function registerReplies(app: App, { config, store, i18n, notices }: Deps, anonymous: Anonymous): void {
   const team = config.teamChannelId;
@@ -20,6 +21,41 @@ export function registerReplies(app: App, { config, store, i18n, notices }: Deps
     if (item.type !== 'message' || item.channel !== team) return;
     if (event.reaction === config.sendEmoji) await sendReply(client, item.ts, event.user);
     else if (event.reaction === config.deleteEmoji) await deleteDelivery(client, item.ts, event.user);
+  });
+
+  // Anonymous replies need nothing: the person reads them from the channel, edits included.
+  const toldAboutEdit = new Set<string>();
+  app.event('message', async ({ event, client }) => {
+    if (event.channel !== team || event.subtype !== 'message_changed') return;
+    const after = event.message as { ts?: string; user?: string; text?: string; blocks?: unknown[]; thread_ts?: string; edited?: unknown };
+    const before = event.previous_message as { text?: string };
+    if (!after.ts || !after.user || !after.edited || after.text === before.text) return;
+    const delivery = store.deliveries.get(after.ts);
+    if (!delivery || delivery.deletedAt || (!delivery.targetTs && delivery.fileIds.length === 0)) return;
+    const { ts, user } = after;
+    const t = await i18n.forUser(user);
+    const notify = (text: string) => notices.ephemeral(client, { user, text, threadTs: after.thread_ts });
+
+    // Copies of files can't be given text, and a message can't be left without any.
+    if (!delivery.targetTs) return notify(t.inbox.reply.editFilesOnly({ sendEmoji: config.sendEmoji }));
+    const text = after.text ?? '';
+    if (!text.trim()) return notify(t.inbox.reply.editEmpty({ deleteEmoji: config.deleteEmoji }));
+    try {
+      const blocks = richTextBlocks(after.blocks);
+      await client.chat.update({
+        channel: delivery.targetChannel,
+        ts: delivery.targetTs,
+        text,
+        blocks: blocks.length > 0 ? blocks : undefined,
+      });
+    } catch (error) {
+      return notify(t.inbox.reply.editFailed({ reason: describeError(t, error) }));
+    }
+    // Once per reply: the thread's hint already says edits are sent.
+    if (toldAboutEdit.has(ts)) return;
+    toldAboutEdit.add(ts);
+    setTimeout(() => toldAboutEdit.delete(ts), DAY).unref();
+    await notify(t.inbox.reply.editSent);
   });
 
   async function sendReply(client: WebClient, ts: string, user: string) {

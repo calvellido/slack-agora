@@ -102,7 +102,7 @@ test("files that didn't reach the team are returned, and the person's copy names
     notices: new Notices('CTEAM', 'Helpdesk · notices', 'robot_face'),
   } as unknown as Deps;
   const problems = [{ name: 'acta.pdf', problem: 'failed' as const }];
-  const dms = registerDms(app, deps, async () => ({ started: '1.0', problems }));
+  const dms = registerDms(app, deps, async () => ({ started: '1.0', ts: '1.0', fileIds: [], problems }));
 
   assert.deepEqual(await dms.write(client, 'U1', { files: [attached('foto.jpg'), attached('acta.pdf')] }), problems);
   const t = stringsIn('en', names);
