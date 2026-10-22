@@ -104,6 +104,8 @@ home:
   # Under the bot's name, when the deployment has no ABOUT text.
   intro: "Write to the {bot} team, with your name or anonymously."
   contactTitle: "Write to the team"
+  # Only when the deployment lists them: above the photos and names of the people in the team channel.
+  members: "The team members are:"
   named: |-
     💬 *With your name*
     Write from {bot}'s *Messages* tab or with this button. The team sees who you are and replies there, by direct message.

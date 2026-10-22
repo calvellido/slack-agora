@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { stringsIn } from '#src/i18n/index.ts';
+import { spacer } from '#src/slack/blocks.ts';
 import { aboutBlocks, homeView } from './view.ts';
 
 const t = stringsIn('en', { bot: 'Helpdesk', publishCommand: '/post', anonymousCommand: '/anon' });
@@ -81,4 +82,31 @@ test('the bottom of the Home tab says where to read the code and which version i
   // With neither, the tab ends before the space, the line and the note.
   const without = homeView(t, { bot: { name: 'Helpdesk' } });
   assert.equal(without.blocks.length, homeView(t, { bot: { name: 'Helpdesk' }, version: '1.2.3' }).blocks.length - 3);
+});
+
+test('the people in the team channel can be listed after the about text, before its small text', () => {
+  const ana = { id: 'U1', name: 'Ana', avatar: 'https://example.com/ana.png' };
+  const label = { type: 'section', text: { type: 'mrkdwn', text: t.home.members } };
+  const row = {
+    type: 'context',
+    elements: [
+      { type: 'image', image_url: 'https://example.com/ana.png', alt_text: 'Ana' },
+      { type: 'mrkdwn', text: '<@U1>' },
+      { type: 'mrkdwn', text: '<@U2>' },
+    ],
+  };
+  const bot = { name: 'Helpdesk' };
+  const members = [ana, { id: 'U2', name: 'Bea' }];
+  const intro = (about: string, extra: number) =>
+    homeView(t, { bot, about, members }).blocks.slice(0, aboutBlocks(about).length + extra);
+  const [title, text, small] = aboutBlocks('# Us\nWe help.\n-# Small print');
+  assert.deepEqual(intro('# Us\nWe help.\n-# Small print', 3), [title, text, label, row, spacer(), small]);
+  assert.deepEqual(intro('# Us\nWe help.', 2), [title, text, label, row]);
+
+  // Five people a row, as Slack allows ten elements in one.
+  const seven = Array.from({ length: 7 }, (_, n) => ({ ...ana, id: `U${n}` }));
+  const rows = homeView(t, { bot, members: seven }).blocks.filter((b) => b.type === 'context' && shows(b, '<@U'));
+  assert.deepEqual(rows.map((r) => (r as { elements: unknown[] }).elements.length), [10, 4]);
+  const without = homeView(t, { bot });
+  assert.equal(homeView(t, { bot, members: [] }).blocks.length, without.blocks.length);
 });

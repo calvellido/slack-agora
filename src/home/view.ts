@@ -1,5 +1,6 @@
-import type { HeaderBlock, HomeView, ImageBlock, KnownBlock, SectionBlock } from '@slack/types';
+import type { ContextBlock, HeaderBlock, HomeView, ImageBlock, KnownBlock, SectionBlock } from '@slack/types';
 import type { Strings } from '#src/i18n/index.ts';
+import type { Person } from '#src/slack/team-directory.ts';
 import { readableUrl } from '#src/lib/url.ts';
 import { context, spacer } from '#src/slack/blocks.ts';
 
@@ -14,6 +15,8 @@ export interface HomeOptions {
   banner?: string;
   /** The command to write with your name, if the deployment has one. */
   writeCommand?: string;
+  /** The people in the team channel, if the deployment lists them, for the intro. */
+  members?: Person[];
   /** Where the bot's code can be read, and the version that is running, for the note at the bottom. */
   sourceUrl?: string;
   version?: string;
@@ -51,14 +54,35 @@ export function aboutBlocks(text: string): KnownBlock[] {
   });
 }
 
+/** Each person's photo and name, as a row of small text; a row fits five, as Slack allows ten elements. */
+function peopleRows(people: Person[]): ContextBlock[] {
+  const rows: ContextBlock[] = [];
+  for (let i = 0; i < people.length; i += 5) {
+    const elements = people.slice(i, i + 5).flatMap(({ id, name, avatar }) => [
+      ...(avatar ? [{ type: 'image' as const, image_url: avatar, alt_text: name }] : []),
+      mrkdwn(`<@${id}>`),
+    ]);
+    rows.push({ type: 'context', elements });
+  }
+  return rows;
+}
+
 function publishWays({ publishCommand, publishShortcut }: { publishCommand: boolean; publishShortcut: boolean }) {
   if (publishCommand && publishShortcut) return 'both';
   return publishCommand ? 'command' : publishShortcut ? 'shortcut' : 'none';
 }
 
 export function homeView(t: Strings, options: HomeOptions): HomeView {
-  const { bot, about, banner, writeCommand, sourceUrl, version, team } = options;
+  const { bot, about, banner, writeCommand, members, sourceUrl, version, team } = options;
   const intro = aboutBlocks(about ?? t.home.intro);
+  // The team's people go after the about text, before any small text that closes it.
+  if (members?.length) {
+    let at = intro.length;
+    while (at > 0 && intro[at - 1]!.type === 'context') at--;
+    // With a space under it when small text follows; otherwise the space before the line below is enough.
+    const after = at < intro.length ? [spacer()] : [];
+    intro.splice(at, 0, { type: 'section', text: mrkdwn(t.home.members) }, ...peopleRows(members), ...after);
+  }
   // A heading at the start of the about text takes the place of the bot's name.
   if (intro[0]?.type !== 'header') intro.unshift(header(bot.name));
   // Slack draws an image block at the image's own size, so the 72-pixel avatar stays small.
@@ -74,11 +98,13 @@ export function homeView(t: Strings, options: HomeOptions): HomeView {
     { type: 'actions', elements: [{ type: 'button', action_id: 'write_open', text: plain(t.home.namedButton) }] },
     ...(writeCommand ? [context(t.home.namedHint({ command: writeCommand }))] : []),
     context(t.home.deliveryHint),
+    // Two blank lines, so the two ways read as separate options.
+    spacer(),
     spacer(),
     { type: 'section', text: mrkdwn(t.home.anonymous) },
     {
       type: 'actions',
-      elements: [{ type: 'button', action_id: 'anon_inbox', style: 'primary', text: plain(t.home.anonymousButton) }],
+      elements: [{ type: 'button', action_id: 'anon_inbox', text: plain(t.home.anonymousButton) }],
     },
     context(t.home.anonymousHint),
   ];
@@ -90,11 +116,18 @@ export function homeView(t: Strings, options: HomeOptions): HomeView {
       header(t.home.team.title),
       context(t.home.team.onlyTeam({ teamChannel })),
       spacer(),
+      // Two rows of two, each its own block with a space between, since Slack packs the rows of one block tightly.
       {
         type: 'section',
         fields: [
           mrkdwn(t.home.team.conversations({ teamChannel })),
           mrkdwn(t.home.team.reply({ sendEmoji: team.sendEmoji })),
+        ],
+      },
+      spacer(),
+      {
+        type: 'section',
+        fields: [
           mrkdwn(t.home.team.delete({ teamChannel, deleteEmoji: team.deleteEmoji })),
           mrkdwn(t.home.team.publish({ ways: publishWays(team) })),
         ],

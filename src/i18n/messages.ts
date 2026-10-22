@@ -99,6 +99,7 @@ export interface Strings {
   home: {
     intro: string;
     contactTitle: string;
+    members: string;
     named: string;
     namedButton: string;
     namedHint: (params: { command: string }) => string;

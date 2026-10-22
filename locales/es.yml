@@ -29,7 +29,7 @@ manifest:
     hint: "[texto del mensaje]"
   anonymousCommand:
     description: "Escribir al equipo de {bot} sin tu nombre"
-  source: "Esta aplicación de Slack de {bot} es de código abierto, puedes revisarla en {address}. Las contribuciones son bienvenidas."
+  source: "Esta aplicación de Slack de {bot} es de código abierto, puedes revisarla en {address}. Cualquier sugerencia o aportación es bienvenida."
 
 inbox:
   thread:
@@ -87,6 +87,7 @@ publish:
 home:
   intro: "Escribe al equipo de {bot}, con tu nombre o de forma anónima."
   contactTitle: "Escribe al equipo"
+  members: "Los miembros del equipo son:"
   named: |-
     💬 *Con tu nombre*
     Escribe desde la pestaña *Mensajes* de {bot} o con este botón. El equipo ve quién eres y te responde allí, por mensaje directo.
@@ -114,7 +115,7 @@ home:
       *📣 Publicar*
       Publica en un canal o escribe a personas como {bot} con el botón de abajo{ways, select, both {, `{publishCommand}` o el atajo del menú *⋯* de un mensaje} command { o `{publishCommand}`} shortcut { o el atajo del menú *⋯* de un mensaje} other {}}.
     publishButton: "Publicar como {bot}"
-  source: "Esta aplicación de Slack está ejecutando una instancia de Agora, un proyecto de código abierto. Cualquiera puede leer su código en <{url}|{label}>, y ver cómo funciona. Si encuentras algo que mejorar, las contribuciones son bienvenidas."
+  source: "Esta aplicación de Slack está ejecutando una instancia de Agora, un proyecto de código abierto. Cualquiera puede leer su código en <{url}|{label}>, y ver cómo funciona. Si encuentras algo que mejorar, cualquier sugerencia o aportación es bienvenida."
   version: "Versión {version}"
 
 anonymous:

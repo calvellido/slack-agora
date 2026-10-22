@@ -41,6 +41,8 @@ export interface Config extends AppSettings {
   noticeEmoji: string;
   /** A wide image across the top of the Home tab, at a public address. */
   homeBanner?: string;
+  /** Whether the Home tab lists the people in the team channel, who read what people write. */
+  homeTeamMembers: boolean;
   logLevel: LogLevel;
   anonSecret: string;
   anonIdleDays: number;
@@ -121,6 +123,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   };
   const logLevel = (env.LOG_LEVEL ?? 'info') as LogLevel;
   if (!Object.values(LogLevel).includes(logLevel)) throw new Error(`Invalid LOG_LEVEL ${logLevel}`);
+  const flag = (name: string, fallback: boolean): boolean => {
+    const value = env[name]?.trim().toLowerCase() || String(fallback);
+    if (value !== 'true' && value !== 'false') throw new Error(`${name} must be true or false`);
+    return value === 'true';
+  };
   const homeBanner = env.HOME_BANNER_URL?.trim() || undefined;
   if (homeBanner && !/^https:\/\/\S+$/.test(homeBanner)) throw new Error('HOME_BANNER_URL must be an https:// address');
   const anonSecret = required('ANON_SECRET');
@@ -137,6 +144,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     deleteEmoji: env.DELETE_EMOJI ?? 'wastebasket',
     noticeEmoji: env.NOTICE_EMOJI?.trim().replace(/^:|:$/g, '') || 'robot_face',
     homeBanner,
+    homeTeamMembers: flag('HOME_TEAM_MEMBERS', false),
     logLevel,
     anonSecret,
     anonIdleDays: positive('ANON_IDLE_DAYS', 30),

@@ -181,6 +181,8 @@ Changing `TEAM_CHANNEL_ID`, say from a test channel to the real one, is safe wit
 
 The *Home* tab opens with the bot's avatar, its name and the `ABOUT` text. `ABOUT` can also have a large heading and small grey text, as [.env.example](.env.example) explains.
 
+With `HOME_TEAM_MEMBERS=true`, the *Home* tab lists the people in the team channel, with their photos, after the `ABOUT` text, before any small grey text at its end, so whoever writes knows who will read it. The list follows the channel's members, without bots, a few minutes after anyone joins or leaves.
+
 For a banner across the top instead of the avatar, put a wide image at a public https address, such as a GitHub repository, and set `HOME_BANNER_URL`. Slack fetches the image itself, so it can't come from the bot's machine. If Slack can't get it, the bot shows the tab without it and logs a warning.
 
 At the bottom, the *Home* tab says the bot is open source, links to its code and invites contributions, and the *About* tab ends with the same. Under that, the *Home* tab shows the version that is running. The link is Agora's repository. If you run a changed version, point `SOURCE_URL` to yours, so people can read the code that actually runs, or set it empty to leave the note out.

@@ -28,7 +28,7 @@ src/
 
   slack/             Slack plumbing shared by the features.
     identity.ts        The bot's own name, avatar and IDs, read from Slack at start.
-    team-directory.ts  Who is in the team channel, which is who may act as the bot.
+    team-directory.ts  Who is in the team channel: who may act as the bot, and who the Home tab can list.
     messages.ts        Fetching a message or thread, and posting in a thread that may no longer exist.
     blocks.ts          Small Block Kit pieces: context lines, quoted messages, dates, modal titles.
     richtext.ts        Rich text from and to what people type, and plain-text fallbacks.
