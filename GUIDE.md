@@ -183,7 +183,11 @@ The *Home* tab opens with the bot's avatar, its name and the `ABOUT` text. `ABOU
 
 For a banner across the top instead of the avatar, put a wide image at a public https address, such as a GitHub repository, and set `HOME_BANNER_URL`. Slack fetches the image itself, so it can't come from the bot's machine. If Slack can't get it, the bot shows the tab without it and logs a warning.
 
-At the bottom, the *Home* tab says the bot is open source, links to its code and invites contributions, and the *About* tab ends with the same. The link is Agora's repository. If you run a changed version, point `SOURCE_URL` to yours, so people can read the code that actually runs, or set it empty to leave the note out.
+At the bottom, the *Home* tab says the bot is open source, links to its code and invites contributions, and the *About* tab ends with the same. Under that, the *Home* tab shows the version that is running. The link is Agora's repository. If you run a changed version, point `SOURCE_URL` to yours, so people can read the code that actually runs, or set it empty to leave the note out.
+
+### The About tab
+
+The app's *About* tab shows `APP_DESCRIPTION`, a short line, and `APP_LONG_DESCRIPTION`, a longer text of at least 174 characters, both in `TEAM_LANGUAGE`, since Slack has no way to give each language its own. They're for anyone who looks the app up, while the *Home* tab is for the people who use it. Without `APP_LONG_DESCRIPTION`, the *About* tab has the `ABOUT` text in `TEAM_LANGUAGE`. Slack shows that tab as plain text, without links, so links in it keep their address, after their text.
 
 The app's icon is uploaded in the app settings, in *Basic Information > Display Information*. [assets/](assets/) has the Agora logo for it, and a banner with the logo in the middle.
 

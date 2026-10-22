@@ -1,5 +1,6 @@
 import type { App } from '@slack/bolt';
 import type { Deps } from '#src/deps.ts';
+import { VERSION } from '#src/lib/version.ts';
 import { errorCode } from '#src/slack/errors.ts';
 import { homeView, type HomeOptions } from './view.ts';
 
@@ -15,6 +16,7 @@ export function registerHome(app: App, { config, team, bot, i18n }: Deps): void 
       banner: config.homeBanner,
       writeCommand: config.writeCommand,
       sourceUrl: config.sourceUrl,
+      version: VERSION,
       team: (await team.isMember(event.user))
         ? {
             channel: config.teamChannelId,

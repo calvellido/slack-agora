@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { parse } from 'yaml';
 import { loadAppSettings } from '#src/config.ts';
+import { stringsIn } from '#src/i18n/index.ts';
 import {
   ANON_SHORTCUT,
   BOT_SCOPES,
@@ -38,12 +39,13 @@ test('the manifest takes names and commands from the settings, in the team langu
   });
   assert.equal(manifest.display_information.name, 'Helpdesk');
   assert.equal(manifest.features.bot_user.display_name, 'Helpdesk');
-  assert.equal(manifest.display_information.description, 'Escribe al equipo de Helpdesk, con tu nombre o de forma anónima');
+  const es = stringsIn('es', { bot: 'Helpdesk', publishCommand: '/hd-post', anonymousCommand: '/hd-anon' });
+  assert.equal(manifest.display_information.description, es.manifest.description);
   assert.deepEqual(manifest.features.slash_commands.map((c) => c.command), ['/hd', '/hd-anon', '/hd-post']);
   assert.deepEqual(manifest.features.shortcuts.map((s) => s.name), [
-    'Escribir a Helpdesk',
-    'Mensaje anónimo a Helpdesk',
-    'Publicar como Helpdesk',
+    es.manifest.writeShortcut.name,
+    es.manifest.anonymousShortcut.name,
+    es.manifest.publishShortcut.name,
   ]);
 });
 
@@ -81,7 +83,7 @@ test('the about text becomes the long description, without formatting, when Slac
   assert.equal(withAbout.manifest.display_information.long_description, long.replaceAll('*', '').trim());
   assert.deepEqual(withAbout.warnings, []);
 
-  const short = build({ ABOUT: 'We are the team.' });
+  const short = build({ ABOUT: 'We are the team.', SOURCE_URL: '' });
   assert.equal(short.manifest.display_information.long_description, undefined);
   assert.equal(short.warnings.length, 1);
 
@@ -93,13 +95,23 @@ test('the about text becomes the long description, without formatting, when Slac
 
 test('the long description ends saying where to read the code, Agora\'s repository unless SOURCE_URL says otherwise', () => {
   const about = 'We are the people team, and we read everything you write to us. '.repeat(3).trim();
-  const upstream = build({ ABOUT: about }).manifest.display_information.long_description!;
-  assert.ok(upstream.startsWith(`${about}\n\nAgora is open source`));
-  assert.match(upstream, /at https:\/\/github\.com\/calvellido\/slack-agora, and see how it works/);
-  const fork = build({ ABOUT: about, SOURCE_URL: 'https://example.com/fork' }).manifest.display_information.long_description!;
-  assert.match(fork, /at https:\/\/example\.com\/fork,/);
+  const en = stringsIn('en', { bot: 'Agora', publishCommand: '/agora-post', anonymousCommand: '/agora-anon' });
+  const note = (address: string) => `${about}\n\n${en.manifest.source({ address })}`;
+  assert.equal(build({ ABOUT: about }).manifest.display_information.long_description, note('github.com/calvellido/slack-agora'));
+  const fork = build({ ABOUT: about, SOURCE_URL: 'https://example.com/fork/' });
+  assert.equal(fork.manifest.display_information.long_description, note('example.com/fork'));
   assert.equal(build({ ABOUT: about, SOURCE_URL: '' }).manifest.display_information.long_description, about);
+
+  const linked = build({ ABOUT: `${about} Read <https://example.com/news/|our news> or <https://example.com/faq>.`, SOURCE_URL: '' });
+  assert.equal(linked.manifest.display_information.long_description, `${about} Read our news (example.com/news) or example.com/faq.`);
   assert.throws(() => loadAppSettings({ SOURCE_URL: 'github.com/x' }), /SOURCE_URL/);
+});
+
+test("the About tab can have its own text instead of the Home tab's", () => {
+  const own = `The people team, for everyone in the company.\\nWe answer within a week. ${'More. '.repeat(25)}`.trim();
+  const { manifest } = build({ ABOUT: 'Hello! Write to us here.', APP_LONG_DESCRIPTION: own, SOURCE_URL: '' });
+  assert.equal(manifest.display_information.long_description, own.replace('\\n', '\n'));
+  assert.throws(() => loadAppSettings({ APP_LONG_DESCRIPTION: 'x'.repeat(4001) }), /APP_LONG_DESCRIPTION/);
 });
 
 test('settings Slack would reject fail early', () => {

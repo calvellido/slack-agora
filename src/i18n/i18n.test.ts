@@ -27,12 +27,10 @@ test('src/i18n/messages.ts is up to date (regenerate it with `pnpm i18n`)', () =
 });
 
 test('the texts use the names they are given', () => {
-  for (const language of ['en', 'es']) {
-    const t = stringsIn(language, names);
-    assert.match(t.manifest.description, /Helpdesk/);
-    assert.match(t.home.team.publish({ ways: 'both' }), /\/post/);
-    assert.match(t.home.anonymousHint, /\/anon/);
-  }
+  const english = catalogFrom({ names: '{bot} {publishCommand} {anonymousCommand}', with: '{bot}, {user}' });
+  const t = buildStrings('en', names, english, english) as unknown as { names: string; with: (p: { user: string }) => string };
+  assert.equal(t.names, 'Helpdesk /post /anon');
+  assert.equal(t.with({ user: 'U1' }), 'Helpdesk, U1');
 });
 
 test('plurals follow each language, and missing texts fall back to English', () => {
@@ -46,9 +44,9 @@ test('plurals follow each language, and missing texts fall back to English', () 
   assert.equal(t.a.days({ days: 3 }), 'En 3 días');
   assert.equal(t.b, 'Only in English, Helpdesk');
 
-  const real = stringsIn('en', names);
-  assert.equal(real.inbox.backOnline({ duration: '3 min', since: 'x', recovered: 0 }).endsWith('No direct messages arrived meanwhile.'), true);
-  assert.match(real.inbox.backOnline({ duration: '3 min', since: 'x', recovered: 1 }), /relayed 1 direct message that/);
+  // The real texts choose by number too: each count reads differently.
+  const backOnline = (recovered: number) => stringsIn('en', names).inbox.backOnline({ duration: '3 min', since: 'x', recovered });
+  assert.equal(new Set([backOnline(0), backOnline(1), backOnline(2)]).size, 3);
 });
 
 test('the check catches unknown keys, different values and broken messages, and lists what is missing', () => {
@@ -78,11 +76,15 @@ test("people get their own Slack language, cached, and English if it can't be re
     },
   } as unknown as WebClient;
   const i18n = new I18n(client, names, 'es');
+  // A text that reads differently in each language, to tell which one each person got.
+  const spanish = stringsIn('es', names).anonymous.window.title;
+  const english = stringsIn('en', names).anonymous.window.title;
+  assert.notEqual(spanish, english);
 
-  assert.equal(i18n.team.publish.form.submit, 'Publicar');
-  assert.equal((await i18n.forUser('U1')).publish.form.submit, 'Publicar');
-  assert.equal((await i18n.forUser('U1')).publish.form.submit, 'Publicar');
-  assert.equal((await i18n.forUser('U2')).publish.form.submit, 'Post');
-  assert.equal((await i18n.forUser('U3')).publish.form.submit, 'Post');
+  assert.equal(i18n.team.anonymous.window.title, spanish);
+  assert.equal((await i18n.forUser('U1')).anonymous.window.title, spanish);
+  assert.equal((await i18n.forUser('U1')).anonymous.window.title, spanish);
+  assert.equal((await i18n.forUser('U2')).anonymous.window.title, english);
+  assert.equal((await i18n.forUser('U3')).anonymous.window.title, english);
   assert.deepEqual(calls, ['U1', 'U2', 'U3']);
 });

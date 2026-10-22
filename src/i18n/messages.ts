@@ -35,7 +35,7 @@ export interface Strings {
     anonymousCommand: {
       description: string;
     };
-    source: (params: { url: string }) => string;
+    source: (params: { address: string }) => string;
   };
   inbox: {
     thread: {
@@ -116,6 +116,7 @@ export interface Strings {
       publishButton: string;
     };
     source: (params: { url: string; label: string }) => string;
+    version: (params: { version: string }) => string;
   };
   anonymous: {
     unavailable: string;

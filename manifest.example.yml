@@ -25,7 +25,7 @@ features:
     - name: Post as Agora
       type: message
       callback_id: publish_as_bot
-      description: "Team only: post this message as Agora in a channel or by direct message"
+      description: "Agora team only: post this message as Agora in a channel or by direct message"
   slash_commands:
     - command: /agora-write
       description: Write to the Agora team with your name
@@ -35,7 +35,7 @@ features:
       description: Write to the Agora team without your name
       should_escape: false
     - command: /agora-post
-      description: "Team only: post as Agora in a channel or by direct message"
+      description: "Agora team only: post as Agora in a channel or by direct message"
       usage_hint: "[message]"
       should_escape: false
 oauth_config:

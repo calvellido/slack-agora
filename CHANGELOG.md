@@ -2,6 +2,13 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## [Unreleased]
+
+- The bottom of the *Home* tab shows the version that is running.
+- `APP_LONG_DESCRIPTION` gives the *About* tab a text of its own, apart from the *Home* tab's `ABOUT`.
+- Links in `ABOUT` keep their address on the *About* tab, in readable form, since Slack shows that tab without links.
+- The *About* tab's note is shorter, and writes the code's address in readable form, since Slack shows that tab's text without links. To update it, generate the manifest again and paste it into the app settings.
+
 ## [1.2.0] - 2026-10-22
 
 - The bottom of the *Home* tab and the end of the *About* tab say the bot is open source, link to its code and invite contributions. `SOURCE_URL` changes the link, for a fork, or removes the note.

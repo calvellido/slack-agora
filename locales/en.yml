@@ -29,14 +29,14 @@ manifest:
     description: "Write to the {bot} team without your name"
   publishShortcut:
     name: "Post as {bot}"
-    description: "Team only: post this message as {bot} in a channel or by direct message"
+    description: "{bot} team only: post this message as {bot} in a channel or by direct message"
   publishCommand:
-    description: "Team only: post as {bot} in a channel or by direct message"
+    description: "{bot} team only: post as {bot} in a channel or by direct message"
     hint: "[message]"
   anonymousCommand:
     description: "Write to the {bot} team without your name"
-  # At the end of the About tab's text, in plain text.
-  source: "{bot} is open source: anyone can read its code, at {url}, and see how it works. Contributions are welcome."
+  # At the end of the About tab's text, which Slack shows without links.
+  source: "This {bot} Slack application is open source, you can check its code at {address}. Contributions are welcome."
 
 # Conversations by DM or @mention.
 inbox:
@@ -57,10 +57,10 @@ inbox:
   # The form to write with your name, whose message is relayed as a DM.
   write:
     title: "Write to {bot}"
-    intro: "The {bot} team will see your name. They reply by direct message, in {bot}'s *Messages* tab, where you can keep writing."
+    intro: "The {bot} team will see your name. They reply by direct message, in {bot}'s *Messages* tab, where you can continue the conversation."
     message: "Message"
     submit: "Send"
-    anonymousHint: "To write without your name, use `{anonymousCommand}` or *Anonymous messages* on {bot}'s *Home* tab."
+    anonymousHint: "To write anonymously, use `{anonymousCommand}` or *Anonymous messages* on {bot}'s *Home* tab."
     sent: "✅ Sent. The team will reply in {bot}'s *Messages* tab, where you have a copy of your message."
     empty: "The message is empty."
     sendFailed: "Couldn't send it. Try again in a few minutes."
@@ -119,7 +119,7 @@ home:
   # Only shown to team members.
   team:
     title: "For the {bot} team"
-    onlyTeam: "👀 Only members of <#{teamChannel}> see this part."
+    onlyTeam: "👀 Only members of <#{teamChannel}> see this section."
     conversations: |-
       *🧵 Conversations*
       Every conversation with {bot} is a thread in <#{teamChannel}>, anonymous ones too.
@@ -135,7 +135,9 @@ home:
       Post in a channel or write to people as {bot} with the button below{ways, select, both {, `{publishCommand}`, or the shortcut in a message's *⋯* menu} command { or `{publishCommand}`} shortcut { or the shortcut in a message's *⋯* menu} other {}}.
     publishButton: "Post as {bot}"
   # At the bottom, for everyone.
-  source: "🔓 {bot} is open source: anyone can read its code, at <{url}|{label}>, and see how it works. If you find something to improve, contributions are welcome there."
+  source: "{bot} is an instance of Agora, an open source project. Anyone can read its code at <{url}|{label}>, and see how it works. If you find something to improve, contributions are welcome."
+  # The version that is running, under that.
+  version: "Version {version}"
 
 anonymous:
   unavailable: "This conversation has ended."
@@ -143,7 +145,7 @@ anonymous:
   # The "Anonymous messages" window: the viewer's own conversations.
   window:
     title: "Anonymous messages"
-    intro: "Write to the {bot} team without your name. The team gets your messages anonymously, and its replies show up here, in this window. Nothing stays in your Slack messages."
+    intro: "Write to the {bot} team without your name. The team gets your messages anonymously, and its replies show up only here, in this window. Nothing stays in your Slack messages."
     new: "New conversation"
     empty: "You don't have any anonymous conversations."
     conversations: "*Your conversations*"

@@ -9,6 +9,8 @@ export interface AppSettings {
   /** The app's name in Slack. The running bot reads its name from Slack instead, which normally is this one. */
   appName: string;
   appDescription?: string;
+  /** The text of the app's About tab, in the team's language; without it, the ABOUT text in that language. */
+  appLongDescription?: string;
   appColor: string;
   /** Bot scopes to request on top of the ones the code needs. */
   extraScopes: string[];
@@ -66,6 +68,10 @@ export function loadAppSettings(env: NodeJS.ProcessEnv = process.env): AppSettin
   if (appName.length > 35) throw new Error('APP_NAME must be at most 35 characters');
   const appDescription = env.APP_DESCRIPTION?.trim() || undefined;
   if (appDescription && appDescription.length > 140) throw new Error('APP_DESCRIPTION must be at most 140 characters');
+  const appLongDescription = env.APP_LONG_DESCRIPTION?.trim().replaceAll('\\n', '\n') || undefined;
+  if (appLongDescription && appLongDescription.length > 4000) {
+    throw new Error('APP_LONG_DESCRIPTION must be at most 4000 characters');
+  }
   const appColor = env.APP_COLOR?.trim() || '#212121';
   if (!/^#([\da-f]{3}|[\da-f]{6})$/i.test(appColor)) throw new Error('APP_COLOR must be a color such as #212121');
   const teamLanguage = (env.TEAM_LANGUAGE?.trim().toLowerCase() || DEFAULT_LANGUAGE) as Language;
@@ -84,6 +90,7 @@ export function loadAppSettings(env: NodeJS.ProcessEnv = process.env): AppSettin
   return {
     appName,
     appDescription,
+    appLongDescription,
     appColor,
     extraScopes: (env.EXTRA_BOT_SCOPES ?? '').split(/[\s,]+/).filter(Boolean),
     teamLanguage,

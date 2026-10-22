@@ -20,16 +20,16 @@ manifest:
     hint: "[texto del mensaje]"
   anonymousShortcut:
     name: "Mensaje anónimo a {bot}"
-    description: "Escribe al equipo de {bot} sin tu nombre"
+    description: "Escribe al equipo de {bot} de forma anónima"
   publishShortcut:
     name: "Publicar como {bot}"
-    description: "Solo para el equipo: publica este mensaje como {bot} en un canal o por mensaje directo"
+    description: "Solo para el equipo de {bot}: publica este mensaje como {bot} en un canal o por mensaje directo"
   publishCommand:
-    description: "Solo para el equipo: publicar como {bot} en un canal o por mensaje directo"
+    description: "Solo para el equipo de {bot}: publicar como {bot} en un canal o por mensaje directo"
     hint: "[texto del mensaje]"
   anonymousCommand:
     description: "Escribir al equipo de {bot} sin tu nombre"
-  source: "{bot} es de código abierto: cualquiera puede leer su código, en {url}, y ver cómo funciona. Las contribuciones son bienvenidas."
+  source: "Esta aplicación de Slack de {bot} es de código abierto, puedes revisarla en {address}. Las contribuciones son bienvenidas."
 
 inbox:
   thread:
@@ -45,10 +45,10 @@ inbox:
     written: "📝 Escribiste al equipo de {bot}:"
   write:
     title: "Escribir a {bot}"
-    intro: "El equipo de {bot} verá tu nombre. Te responderá por mensaje directo, en la pestaña *Mensajes* de {bot}, donde puedes seguir escribiendo."
+    intro: "El equipo de {bot} verá tu nombre. Te responderá por mensaje directo, en la pestaña *Mensajes* de {bot}, donde puedes continuar la conversación."
     message: "Mensaje"
     submit: "Enviar"
-    anonymousHint: "Para escribir sin tu nombre, usa `{anonymousCommand}` o *Mensajes anónimos* en la pestaña *Inicio* de {bot}."
+    anonymousHint: "Para escribir de manera anónima, usa `{anonymousCommand}` o *Mensajes anónimos* en la pestaña *Inicio* de {bot}."
     sent: "✅ Enviado. El equipo te responderá en la pestaña *Mensajes* de {bot}, donde tienes una copia de tu mensaje."
     empty: "El mensaje está vacío."
     sendFailed: "No se ha podido enviar. Inténtalo de nuevo en unos minutos."
@@ -100,7 +100,7 @@ home:
   anonymousHint: "Tus conversaciones anónimas nunca aparecen en esta pestaña, solo en esa ventana. También puedes abrirla con `{anonymousCommand}` desde cualquier canal."
   team:
     title: "Para el equipo de {bot}"
-    onlyTeam: "👀 Solo los miembros de <#{teamChannel}> ven esta parte."
+    onlyTeam: "👀 Solo los miembros de <#{teamChannel}> ven esta sección."
     conversations: |-
       *🧵 Conversaciones*
       Cada conversación con {bot} es un hilo en <#{teamChannel}>, también las anónimas.
@@ -114,14 +114,15 @@ home:
       *📣 Publicar*
       Publica en un canal o escribe a personas como {bot} con el botón de abajo{ways, select, both {, `{publishCommand}` o el atajo del menú *⋯* de un mensaje} command { o `{publishCommand}`} shortcut { o el atajo del menú *⋯* de un mensaje} other {}}.
     publishButton: "Publicar como {bot}"
-  source: "🔓 {bot} es de código abierto: cualquiera puede leer su código, en <{url}|{label}>, y ver cómo funciona. Si encuentras algo que mejorar, allí las contribuciones son bienvenidas."
+  source: "{bot} es una instancia de Agora, un proyecto de código abierto. Cualquiera puede leer su código en <{url}|{label}>, y ver cómo funciona. Si encuentras algo que mejorar, las contribuciones son bienvenidas."
+  version: "Versión {version}"
 
 anonymous:
   unavailable: "Esta conversación ya ha terminado."
   sendFailed: "No se ha podido enviar. Inténtalo de nuevo en unos minutos."
   window:
     title: "Mensajes anónimos"
-    intro: "Escribe al equipo de {bot} sin tu nombre. El equipo recibe tus mensajes como anónimos, y sus respuestas aparecen aquí, en esta ventana. No quedan en tus mensajes de Slack."
+    intro: "Escribe al equipo de {bot} sin tu nombre. El equipo recibe tus mensajes como anónimos, y sus respuestas aparecen sólo aquí, en esta ventana. Nada se queda en tus mensajes de Slack."
     new: "Nueva conversación"
     empty: "No tienes conversaciones anónimas."
     conversations: "*Tus conversaciones*"

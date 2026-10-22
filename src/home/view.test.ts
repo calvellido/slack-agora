@@ -4,6 +4,9 @@ import { stringsIn } from '#src/i18n/index.ts';
 import { aboutBlocks, homeView } from './view.ts';
 
 const t = stringsIn('en', { bot: 'Helpdesk', publishCommand: '/post', anonymousCommand: '/anon' });
+/** Whether a view shows a text. The texts come from the locale files, so rewording them doesn't break the tests. */
+const shows = (value: unknown, text: string) => JSON.stringify(value).includes(JSON.stringify(text).slice(1, -1));
+const count = (view: { blocks: { type: string }[] }, type: string) => view.blocks.filter((b) => b.type === type).length;
 const team = {
   channel: 'C1',
   sendEmoji: 'outbox_tray',
@@ -13,18 +16,20 @@ const team = {
 };
 
 test('everyone gets the same Home tab, and team members also get how to act as the bot', () => {
-  const everyone = JSON.stringify(homeView(t, { bot: { name: 'Helpdesk' } }));
-  assert.match(everyone, /"action_id":"anon_inbox"/);
-  assert.match(everyone, /"action_id":"write_open"/);
-  assert.doesNotMatch(everyone, /You can also use/);
-  assert.match(JSON.stringify(homeView(t, { bot: { name: 'Helpdesk' }, writeCommand: '/hd' })), /You can also use `\/hd`/);
-  assert.match(everyone, /Write to the Helpdesk team/);
-  assert.doesNotMatch(everyone, /publish_open|C1/);
+  const everyone = homeView(t, { bot: { name: 'Helpdesk' } });
+  assert.match(JSON.stringify(everyone), /"action_id":"anon_inbox"/);
+  assert.match(JSON.stringify(everyone), /"action_id":"write_open"/);
+  assert.ok(shows(everyone, t.home.intro));
+  assert.doesNotMatch(JSON.stringify(everyone), /publish_open|C1/);
+  // The hint about the command to write with your name, only when there is one.
+  const withCommand = homeView(t, { bot: { name: 'Helpdesk' }, writeCommand: '/hd' });
+  assert.ok(shows(withCommand, t.home.namedHint({ command: '/hd' })));
+  assert.equal(count(withCommand, 'context'), count(everyone, 'context') + 1);
 
-  const member = JSON.stringify(homeView(t, { bot: { name: 'Helpdesk' }, team }));
-  assert.match(member, /"action_id":"publish_open"/);
-  assert.match(member, /:outbox_tray: Replying/);
-  assert.match(member, /<#C1>/);
+  const member = homeView(t, { bot: { name: 'Helpdesk' }, team });
+  assert.match(JSON.stringify(member), /"action_id":"publish_open"/);
+  assert.ok(shows(member, t.home.team.reply({ sendEmoji: 'outbox_tray' })));
+  assert.ok(shows(member, t.home.team.conversations({ teamChannel: 'C1' })));
 });
 
 test('the avatar goes above the about text, which replaces the intro', () => {
@@ -57,26 +62,23 @@ test('a banner goes across the top, in place of the avatar', () => {
 });
 
 test("the team's part only mentions the ways to post the deployment has", () => {
-  const publishing = (ways: Partial<typeof team>) => {
-    const view = JSON.stringify(homeView(t, { bot: { name: 'Helpdesk' }, team: { ...team, ...ways } }));
-    return view.match(/as Helpdesk with the button below([^"]*)/)![1];
-  };
-  assert.equal(publishing({}), ", `/post`, or the shortcut in a message's *⋯* menu.");
-  assert.equal(publishing({ publishShortcut: false }), ' or `/post`.');
-  assert.equal(publishing({ publishCommand: false }), " or the shortcut in a message's *⋯* menu.");
-  assert.equal(publishing({ publishCommand: false, publishShortcut: false }), '.');
+  const view = (ways: Partial<typeof team>) => homeView(t, { bot: { name: 'Helpdesk' }, team: { ...team, ...ways } });
+  assert.ok(shows(view({}), t.home.team.publish({ ways: 'both' })));
+  assert.ok(shows(view({ publishShortcut: false }), t.home.team.publish({ ways: 'command' })));
+  assert.ok(shows(view({ publishCommand: false }), t.home.team.publish({ ways: 'shortcut' })));
+  assert.ok(shows(view({ publishCommand: false, publishShortcut: false }), t.home.team.publish({ ways: 'none' })));
 });
 
-test('the bottom of the Home tab says where to read the code, when there is somewhere', () => {
-  const view = homeView(t, { bot: { name: 'Helpdesk' }, sourceUrl: 'https://github.com/example/helpdesk/' });
-  assert.deepEqual(view.blocks.at(-1), {
-    type: 'context',
-    elements: [
-      {
-        type: 'mrkdwn',
-        text: '🔓 Helpdesk is open source: anyone can read its code, at <https://github.com/example/helpdesk/|github.com/example/helpdesk>, and see how it works. If you find something to improve, contributions are welcome there.',
-      },
-    ],
-  });
-  assert.doesNotMatch(JSON.stringify(homeView(t, { bot: { name: 'Helpdesk' } })), /open source/);
+test('the bottom of the Home tab says where to read the code and which version is running', () => {
+  const url = 'https://github.com/example/helpdesk/';
+  const source = t.home.source({ url, label: 'github.com/example/helpdesk' });
+  const version = t.home.version({ version: '1.2.3' });
+  const footer = (options: { sourceUrl?: string; version?: string }) =>
+    homeView(t, { bot: { name: 'Helpdesk' }, ...options }).blocks.at(-1);
+  const note = (text: string) => ({ type: 'context', elements: [{ type: 'mrkdwn', text }] });
+  assert.deepEqual(footer({ sourceUrl: url, version: '1.2.3' }), note(`${source}\n${version}`));
+  assert.deepEqual(footer({ version: '1.2.3' }), note(version));
+  // With neither, the tab ends before the space, the line and the note.
+  const without = homeView(t, { bot: { name: 'Helpdesk' } });
+  assert.equal(without.blocks.length, homeView(t, { bot: { name: 'Helpdesk' }, version: '1.2.3' }).blocks.length - 3);
 });

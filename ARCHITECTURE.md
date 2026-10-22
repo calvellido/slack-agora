@@ -23,6 +23,8 @@ src/
   lib/               Generic helpers, nothing Slack-specific.
     serialized.ts      Runs tasks with the same key one after another.
     time.ts            DAY, and durations such as "2 h 14 min".
+    url.ts             Addresses as people read them, without https://.
+    version.ts         The version that is running, from package.json.
 
   slack/             Slack plumbing shared by the features.
     identity.ts        The bot's own name, avatar and IDs, read from Slack at start.
@@ -143,7 +145,7 @@ English is the reference. `pnpm i18n` reads `locales/en.yml` and generates `src/
 
 `I18n` reads each person's Slack locale (`users.info`, cached for an hour) and falls back to English. What only one person sees uses `i18n.forUser(id)`; what the bot posts in the team channel uses `i18n.team`, in `TEAM_LANGUAGE`.
 
-To add a language, copy `locales/en.yml` to `locales/<code>.yml`, with the language's code as Slack reports it (`fr` for `fr-FR`), translate what you can, and run `pnpm i18n`. To add a text, add it to `locales/en.yml`, run `pnpm i18n`, and translate it in the other files.
+To add a language, copy `locales/en.yml` to `locales/<code>.yml`, with the language's code as Slack reports it (`fr` for `fr-FR`), translate what you can, and run `pnpm i18n`. To add a text, add it to `locales/en.yml`, run `pnpm i18n`, and translate it in the other files. To reword one, edit it and run `pnpm generate`, which also updates `manifest.example.yml` if it is one of the manifest's texts. The tests build what they expect from the same keys, so they don't depend on the wording.
 
 ## The Slack app's manifest
 

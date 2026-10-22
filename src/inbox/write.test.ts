@@ -3,7 +3,7 @@ import type { WebClient } from '@slack/web-api';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Deps } from '#src/deps.ts';
-import { I18n } from '#src/i18n/index.ts';
+import { I18n, stringsIn } from '#src/i18n/index.ts';
 import { Notices } from '#src/slack/notices.ts';
 import { richTextFromPlain } from '#src/slack/richtext.ts';
 import { Store } from '#src/storage/index.ts';
@@ -36,12 +36,13 @@ test('a written message is relayed as a DM, with a copy in the DM, and the next 
 
   await dms.write(client, 'U1', richTextFromPlain('Hello team'));
   assert.deepEqual(posts.map((p) => [p.channel, p.thread_ts]), [['CTEAM', undefined], ['D1', undefined]]);
-  assert.match(posts[0]!.text, /Direct message from <@U1>.*Hello team/);
-  assert.match(posts[1]!.text, /You wrote to the Helpdesk team: Hello team/);
-  assert.match(JSON.stringify(posts[1]), /will reply here/);
+  const t = stringsIn('en', names);
+  assert.equal(posts[0]!.text, `${t.inbox.thread.dmHeader({ user: 'U1' })} Hello team`);
+  assert.equal(posts[1]!.text, `${t.inbox.dm.written} Hello team`);
+  assert.ok(JSON.stringify(posts[1]).includes(JSON.stringify(t.inbox.dm.ack).slice(1, -1)));
   assert.equal(deps.store.conversations.latestDm('D1', 0)?.teamThreadTs, '1.0');
 
   await dms.write(client, 'U1', richTextFromPlain('One more thing'));
   assert.deepEqual(posts.slice(2).map((p) => [p.channel, p.thread_ts]), [['CTEAM', '1.0'], ['D1', undefined]]);
-  assert.doesNotMatch(JSON.stringify(posts[3]), /will reply here/);
+  assert.ok(!JSON.stringify(posts[3]).includes(JSON.stringify(t.inbox.dm.ack).slice(1, -1)));
 });

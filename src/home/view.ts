@@ -1,5 +1,6 @@
 import type { HeaderBlock, HomeView, ImageBlock, KnownBlock, SectionBlock } from '@slack/types';
 import type { Strings } from '#src/i18n/index.ts';
+import { readableUrl } from '#src/lib/url.ts';
 import { context, spacer } from '#src/slack/blocks.ts';
 
 // The Home tab, in the language of `t`. Everyone gets the same one, and team members also get how to act as the bot,
@@ -13,8 +14,9 @@ export interface HomeOptions {
   banner?: string;
   /** The command to write with your name, if the deployment has one. */
   writeCommand?: string;
-  /** Where the bot's code can be read, for the note at the bottom. */
+  /** Where the bot's code can be read, and the version that is running, for the note at the bottom. */
   sourceUrl?: string;
+  version?: string;
   /** Only for team members, with the ways to post as the bot besides the Home tab's button. */
   team?: { channel: string; sendEmoji: string; deleteEmoji: string; publishCommand: boolean; publishShortcut: boolean };
 }
@@ -54,7 +56,8 @@ function publishWays({ publishCommand, publishShortcut }: { publishCommand: bool
   return publishCommand ? 'command' : publishShortcut ? 'shortcut' : 'none';
 }
 
-export function homeView(t: Strings, { bot, about, banner, writeCommand, sourceUrl, team }: HomeOptions): HomeView {
+export function homeView(t: Strings, options: HomeOptions): HomeView {
+  const { bot, about, banner, writeCommand, sourceUrl, version, team } = options;
   const intro = aboutBlocks(about ?? t.home.intro);
   // A heading at the start of the about text takes the place of the bot's name.
   if (intro[0]?.type !== 'header') intro.unshift(header(bot.name));
@@ -102,9 +105,10 @@ export function homeView(t: Strings, { bot, about, banner, writeCommand, sourceU
       },
     );
   }
-  if (sourceUrl) {
-    const label = sourceUrl.replace(/^https:\/\//, '').replace(/\/$/, '');
-    blocks.push(spacer(), { type: 'divider' }, context(t.home.source({ url: sourceUrl, label })));
-  }
+  const footer = [
+    sourceUrl ? t.home.source({ url: sourceUrl, label: readableUrl(sourceUrl) }) : '',
+    version ? t.home.version({ version }) : '',
+  ].filter(Boolean);
+  if (footer.length > 0) blocks.push(spacer(), { type: 'divider' }, context(footer.join('\n')));
   return { type: 'home', blocks };
 }
