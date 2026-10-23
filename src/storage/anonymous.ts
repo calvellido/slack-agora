@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { row } from './database.ts';
+import { emptyLog, row } from './database.ts';
 
 export type ClosedBy = 'person' | 'team' | 'expired';
 
@@ -93,6 +93,7 @@ export class AnonymousConversations {
   /** Removes a reservation whose thread in the team channel could not be posted. */
   drop(id: number): void {
     this.#db.prepare('DELETE FROM anon_conversations WHERE id = ? AND team_thread_ts IS NULL').run(id);
+    emptyLog(this.#db);
   }
 
   byId(id: number): AnonConversation | undefined {
@@ -146,6 +147,11 @@ export class AnonymousConversations {
 
   /** Forgets who wrote a conversation, and which of its messages in the team channel were theirs. */
   purge(id: number): void {
+    this.#forget(id);
+    emptyLog(this.#db);
+  }
+
+  #forget(id: number): void {
     this.#db.prepare('UPDATE anon_conversations SET owner = NULL WHERE id = ?').run(id);
     this.#db.prepare('DELETE FROM anon_messages WHERE conversation_id = ?').run(id);
   }
@@ -168,8 +174,9 @@ export class AnonymousConversations {
       .prepare(`${SELECT} WHERE closed_at < ? AND owner IS NOT NULL`)
       .all(before)
       .map((r) => row<AnonConversation>(r)!);
-    for (const { id } of closed) this.purge(id);
+    for (const { id } of closed) this.#forget(id);
     this.#db.prepare('DELETE FROM anon_conversations WHERE team_thread_ts IS NULL AND created_at < ?').run(before);
+    emptyLog(this.#db);
     return closed.map((c) => ({ ...c, owner: null }));
   }
 
@@ -177,6 +184,7 @@ export class AnonymousConversations {
   remove(id: number): void {
     this.#db.prepare('DELETE FROM anon_messages WHERE conversation_id = ?').run(id);
     this.#db.prepare('DELETE FROM anon_conversations WHERE id = ?').run(id);
+    emptyLog(this.#db);
   }
 
   /** False if this team channel message was already recorded (a reply already sent). */

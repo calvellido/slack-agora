@@ -59,3 +59,38 @@ test('a database from before relays recorded the notice naming files gets the co
   assert.equal(new Relays(db).get('D1', '5.0')?.problemsTs, null);
   db.close();
 });
+
+test("a forgotten author's hash is overwritten, in the file and in its log", (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'agora-'));
+  t.after(() => rmSync(dir, { recursive: true }));
+  const path = join(dir, 'test.db');
+  const db = openDatabase(path);
+  const anonymous = new AnonymousConversations(db, 'C1');
+  const conversation = anonymous.reserve('owner-hash-to-forget', () => 'HANDLE');
+  anonymous.setThread(conversation.id, '1.0');
+  anonymous.addMessage('1.0', conversation.id, 'person', null);
+
+  anonymous.purge(conversation.id);
+  for (const file of [path, `${path}-wal`]) {
+    assert.doesNotMatch(readFileSync(file, 'latin1'), /owner-hash-to-forget/);
+  }
+  // The conversation itself stays, without its author.
+  assert.equal(anonymous.byHandle('HANDLE')?.owner, null);
+  db.close();
+});
+
+test('a database from before deleted content was overwritten is cleaned on start', (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'agora-'));
+  t.after(() => rmSync(dir, { recursive: true }));
+  const path = join(dir, 'old.db');
+  const old = new DatabaseSync(path);
+  // A reservation dropped by an earlier version: deleting its row left its bytes in the file.
+  old.exec(`CREATE TABLE anon_conversations (id INTEGER PRIMARY KEY, owner TEXT);
+            INSERT INTO anon_conversations VALUES (1, 'owner-hash-a'), (2, 'owner-hash-forgotten-before'), (3, 'owner-hash-c');
+            DELETE FROM anon_conversations WHERE id = 2;`);
+  old.close();
+  assert.match(readFileSync(path, 'latin1'), /owner-hash-forgotten-before/);
+
+  openDatabase(path).close();
+  assert.doesNotMatch(readFileSync(path, 'latin1'), /owner-hash-forgotten-before/);
+});

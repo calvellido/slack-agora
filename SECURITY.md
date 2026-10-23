@@ -17,7 +17,7 @@ Mainly, the link between an anonymous message and its author. The messages thems
 | The team, or anyone who knows the author | Reading the details, the writing style and the timing | Whatever the content itself gives away |
 | Anyone in the author's Slack account | Opening *Anonymous messages* | That person's conversations that haven't ended |
 
-The scrambled code protects nothing once someone has the secret: there are only a few hundred Slack IDs to try. That is why the secret must never sit next to the database or its backups. Once a conversation is forgotten, the link is gone from the database, but not from older backups.
+The scrambled code protects nothing once someone has the secret: there are only a few hundred Slack IDs to try. That is why the secret must never sit next to the database or its backups. Once a conversation is forgotten, the bot overwrites the link in the database file and empties its log, where SQLite would otherwise keep an earlier copy for a while, so it is gone from the database. It is not gone from older backups, nor from old copies of blocks the server's disk itself may keep.
 
 Some things don't work for an attacker. Without the secret, the codes can't be guessed (it has 256 bits). The network traffic is encrypted, and the server has no open port besides SSH, because the bot only connects out. The logs hold only error codes, as long as `LOG_LEVEL=debug` is never used in a real workspace.
 
@@ -25,6 +25,7 @@ Some things don't work for an attacker. Without the secret, the codes can't be g
 
 - Give access to the server and to the app's collaborators to one or two trusted people, with SSH keys, and regenerate both tokens when one of them leaves.
 - Keep `ANON_SECRET` out of the backups, encrypt the backups, and delete old ones.
+- Encrypt the server's disk, so the old blocks it may keep after the bot overwrites something can't be read.
 - Deploy only reviewed code from the repository.
 - Keep `ANON_IDLE_DAYS` short, so the bot forgets authors sooner.
 - If you write anonymously, leave out details only you would know, end conversations you no longer need, and don't use a shared or unlocked computer.

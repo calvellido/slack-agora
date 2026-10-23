@@ -108,7 +108,7 @@ With anonymous messages:
 - The team sees the text and when it was sent, and nothing else. Nothing visible links two conversations from the same person, or someone's window to its thread.
 - The windows are not messages, so nothing the author writes or reads is in their Slack history or in DM exports. An export of the team channel has the anonymous texts, without their authors.
 - People nearby only see the conversations while the window is open.
-- Whoever runs the server could find out who wrote an open conversation, and so could anyone who gets both the database and `ANON_SECRET`. To show people their replies, the bot keeps a scrambled code of each author's Slack ID, made with that secret, until the conversation ends and the bot forgets them. So keep the secret apart from backups of the database, and choose carefully who has access to the server.
+- Whoever runs the server could find out who wrote an open conversation, and so could anyone who gets both the database and `ANON_SECRET`. To show people their replies, the bot keeps a scrambled code of each author's Slack ID, made with that secret, until the conversation ends and the bot forgets them, which also overwrites the code in the database file. So keep the secret apart from backups of the database, and choose carefully who has access to the server.
 - Deleted messages disappear from the team channel and from later exports, although on Enterprise plans the workspace owner can set a legal hold, which keeps deleted messages.
 - What people write can identify them, through details, writing style or timing. The form warns about it.
 

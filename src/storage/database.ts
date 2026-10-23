@@ -79,8 +79,9 @@ const SCHEMA = `
 export function openDatabase(path: string): DatabaseSync {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
   const db = new DatabaseSync(path);
-  // Wait for another connection's write instead of failing, as when `pnpm clean-db` runs beside the bot.
-  db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;');
+  // Wait for another connection's write instead of failing, as when `pnpm clean-db` runs beside the bot. What is deleted
+  // or replaced is overwritten with zeros, so a forgotten author's hash can't be read back from the file.
+  db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA secure_delete = ON;');
   db.exec(SCHEMA);
   // Databases from before conversations recorded their team channel, before deliveries recorded their files, and
   // before relays recorded the notice about files that couldn't be copied.
@@ -92,7 +93,19 @@ export function openDatabase(path: string): DatabaseSync {
   addColumn('anon_conversations', 'team_channel');
   addColumn('deliveries', 'file_ids');
   addColumn('relays', 'problems_ts');
+  // Rewritten with only what it holds now, on every start: what earlier versions deleted without overwriting it, or a
+  // crash left behind, is gone from the file. The database is small, so this takes moments.
+  db.exec('VACUUM');
+  emptyLog(db);
   return db;
+}
+
+/**
+ * Copies the write-ahead log into the database file and empties it. The log keeps earlier versions of what changed
+ * until then, so this follows forgetting an author, for their hash not to stay in it.
+ */
+export function emptyLog(db: DatabaseSync): void {
+  db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
 }
 
 function tables(db: DatabaseSync): string[] {
@@ -112,7 +125,8 @@ export function rowCounts(db: DatabaseSync): Map<string, number> {
 export function emptyDatabase(db: DatabaseSync): void {
   db.exec('PRAGMA secure_delete = ON; BEGIN; PRAGMA defer_foreign_keys = ON;');
   for (const name of tables(db)) db.exec(`DELETE FROM "${name}"`);
-  db.exec('COMMIT; VACUUM; PRAGMA wal_checkpoint(TRUNCATE);');
+  db.exec('COMMIT; VACUUM;');
+  emptyLog(db);
 }
 
 /** node:sqlite returns null-prototype objects; hand out plain ones. */

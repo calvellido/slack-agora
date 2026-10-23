@@ -133,7 +133,7 @@ Modals, the forms and windows apps open, are not messages: Slack keeps them out 
 
 ## Rules that keep anonymity
 
-- The author's Slack ID is never stored, only `anonOwner(userId)`, an HMAC keyed with `ANON_SECRET`. It is cleared (`purge`) as soon as the conversation is forgotten.
+- The author's Slack ID is never stored, only `anonOwner(userId)`, an HMAC keyed with `ANON_SECRET`. It is cleared (`purge`) as soon as the conversation is forgotten, and overwritten on disk: the database overwrites what it deletes (`secure_delete`), empties its write-ahead log after forgetting an author, and rewrites its file on every start.
 - Anonymous conversations live in modals, never on the Home tab. Slack shows the last published Home tab when the bot is opened, before the bot can replace it, so anything on it can be seen over someone's shoulder. The Home tab is the same for everyone, apart from the part only team members get.
 - Nothing visible links the author's window to the thread. The window refers to conversations by a random handle that never goes into the team channel; the team's buttons carry no value and find the conversation by the message they are on.
 - No DMs to the author. A notification would stay in their history, and its time would match the reply in the team channel.
