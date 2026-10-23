@@ -149,7 +149,7 @@ Then:
 3. In *Basic Information > App-Level Tokens*, generate a token with the `connections:write` scope (`xapp-...`).
 4. In *OAuth & Permissions*, copy the Bot User OAuth Token (`xoxb-...`).
 5. Create the team's private channel, run `/invite @<bot>` in it, and copy its ID from the channel details, at the bottom of *About*.
-6. Generate the anonymity secret with `openssl rand -base64 32`, and keep a copy somewhere other than the server.
+6. Generate the anonymity secret with `openssl rand -base64 32`, and keep a copy somewhere other than the server. It is best kept out of `.env` too, in the system's keychain, as [Keeping ANON_SECRET apart](#keeping-anon_secret-apart) explains, which can also generate it there without anyone seeing it, if you choose to keep no copy ([A copy of ANON_SECRET, or none](#a-copy-of-anon_secret-or-none)).
 7. Fill in the rest of `.env` and start the bot with `pnpm start`.
 
 ### Running it with Docker
@@ -194,11 +194,54 @@ WantedBy=multi-user.target
 
 Then start it with `sudo systemctl enable --now agora`, and read its log with `journalctl -u agora`.
 
+### Keeping ANON_SECRET apart
+
+Whoever has both the database and `ANON_SECRET` can tell who wrote each anonymous conversation the bot hasn't forgotten, and read the encrypted ones, so the two should never be stored together. In `.env`, the secret sits next to the database, and goes wherever the folder is copied, synced or backed up.
+
+While the bot runs, it needs the secret in memory, so nothing protects it from whoever controls the running machine. What keeping it apart protects are copies: a backup of `data/`, the folder synced to a cloud drive, a lost or stolen laptop.
+
+The simplest way is the system's keychain. Leave `ANON_SECRET` empty in `.env`, and set `ANON_SECRET_COMMAND` to the command that prints it, which the bot runs when it starts. If the command fails, the bot doesn't start, and says why, without showing what the command printed.
+
+On Linux, with the desktop's keyring (GNOME Keyring or KWallet):
+
+1. Install its command-line tool, for example with `sudo apt install libsecret-tools`.
+2. Store the secret: `secret-tool store --label="Agora ANON_SECRET" service agora key anon_secret`, and paste it when asked. Or generate it straight into the keyring, without anyone seeing it: `openssl rand -base64 32 | secret-tool store --label="Agora ANON_SECRET" service agora key anon_secret`.
+3. In `.env`, leave `ANON_SECRET=` empty and set `ANON_SECRET_COMMAND=secret-tool lookup service agora key anon_secret`.
+
+On macOS, with the Keychain:
+
+1. Store the secret: `security add-generic-password -a "$USER" -s agora-anon-secret -w`, and paste it when asked. Or generate it straight into the Keychain, without anyone seeing it: `security add-generic-password -a "$USER" -s agora-anon-secret -w "$(openssl rand -base64 32)"`. It shows for a moment in that command's arguments, which only your own user can see.
+2. In `.env`, leave `ANON_SECRET=` empty and set `ANON_SECRET_COMMAND=security find-generic-password -a "$USER" -s agora-anon-secret -w`.
+3. The first time the bot starts, macOS asks whether to let it read that item: choose *Always Allow*.
+
+A password manager with a command-line tool works the same way, such as 1Password's `op read "op://<vault>/<item>/<field>"`.
+
+The keychain is encrypted with your login password and unlocked while you are logged in, so the bot can read it when you start it from your session. A service that starts with the machine, before anyone logs in, can't: run the bot from your session instead, as a user service (`systemctl --user` on Linux, a LaunchAgent on macOS) or from a terminal. Inside Docker, the command can't reach the host's keychain either, so with Docker the secret stays in `.env`, or in a file only the container reads.
+
+### A copy of ANON_SECRET, or none
+
+Nobody needs to know `ANON_SECRET`: the bot only needs the same one every time it starts. If it changes or is lost, every author loses their open anonymous conversations, and the text of every encrypted conversation can't be read any more, for good. Conversations with a name, posts and everything else don't depend on it. So whether to keep a copy outside the machine is a choice between recovering from a lost machine and leaving nothing anyone could leak:
+
+- Keep one copy, sealed, outside the machine, which nobody looks at unless the machine is lost: an entry in the team's password manager, or a printed copy in a sealed envelope. Read it once from the keychain, with the same command as `ANON_SECRET_COMMAND`, and store it away. If the machine breaks, is lost or has its system reinstalled, the database from a backup and that copy bring everything back. The copy must never be kept with the database's backups, as the two together are the risk.
+- Or keep none, generating it straight into the keychain as above, so that nobody ever knows it and nobody can be pressed to hand it over. A stolen backup of the database is then of no use for anonymous conversations. But losing the machine, or its keychain, loses them: the open ones disappear from their authors' windows, and the encrypted ones can't be read, while conversations with a name come back from the backup.
+
+Keeping a copy suits a team that keeps anonymous conversations for a while, as `ANON_READABLE_DAYS` does by default for a year. Keeping none suits one that values leaving nothing behind over continuity, as anonymous conversations are short-lived by design.
+
+### Running it on a laptop
+
+A laptop works, since the bot only connects out, but some care keeps the database and the secret from leaving it together:
+
+- Use a laptop the team controls, never one the company manages. Device management, backup and security tools run with administrator rights, and can read the database, the secret and the running bot.
+- Encrypt its disk (LUKS on Linux, usually chosen when installing; FileVault on macOS, in *System Settings > Privacy & Security*), and lock its screen when you leave it.
+- Keep the bot's folder out of synced folders, such as Dropbox, Google Drive or OneDrive, and, on macOS, out of *Desktop* and *Documents* when iCloud syncs them.
+- Backups (Time Machine, Déjà Dup) should be encrypted, or leave the bot's folder out, and never include `.env` with the secret in it.
+- A laptop sleeps when idle or when its lid closes, and the bot goes offline with it. On Linux, `systemd-inhibit --what=sleep:handle-lid-switch pnpm start` keeps it awake while the bot runs, lid closed too. On macOS, `caffeinate -s pnpm start` keeps it awake while on power, but closing the lid still puts it to sleep, unless it is connected to a display. When it wakes, the bot catches up on the DMs it missed.
+
 ### Updating
 
 Each release's section in [CHANGELOG.md](CHANGELOG.md), which is also its release notes, says what changed and what to do. When the app's manifest changes, for example with a new command or permission, generate it again and paste it, as in [Changing the app later](#changing-the-app-later).
 
-- With Docker, `docker compose pull && docker compose up -d`. The `1` tag in `compose.yaml` gets every 1.x release; a new major version can need changes, which its notes explain.
+- With Docker, `docker compose pull && docker compose up -d`. The `3` tag in `compose.yaml` gets every 3.x release; a new major version can need changes, which its notes explain, and a `compose.yaml` with its own tag. If yours still says `:1` or `:2`, download it again, or change its tag to `:3`.
 - With Node, `git fetch --tags`, `git checkout` the new version's tag, `pnpm install --prod`, and restart the bot.
 
 ### Settings and data

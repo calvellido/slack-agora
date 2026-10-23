@@ -24,7 +24,9 @@ Some things don't work for an attacker. Without the secret, the codes can't be g
 ## Keeping the risk low
 
 - Give access to the server and to the app's collaborators to one or two trusted people, with SSH keys, and regenerate both tokens when one of them leaves.
+- Keep `ANON_SECRET` out of `.env`, in the system's keychain, with `ANON_SECRET_COMMAND` ([Keeping ANON_SECRET apart](GUIDE.md#keeping-anon_secret-apart)). Either keep one sealed copy elsewhere, never with the backups, or none at all, generating it straight into the keychain, so nobody knows it, at the cost of losing anonymous conversations with the machine ([A copy of ANON_SECRET, or none](GUIDE.md#a-copy-of-anon_secret-or-none)).
 - Keep `ANON_SECRET` out of the backups, encrypt the backups, and delete those older than `ANON_READABLE_DAYS`, which still hold the keys of conversations the bot has since destroyed.
+- Run the bot on a machine the team controls, never one the company manages: device management, backup and security tools run with administrator rights, and can read the database, the secret and the running bot. On a laptop, follow [Running it on a laptop](GUIDE.md#running-it-on-a-laptop).
 - Encrypt the server's disk, so the old blocks it may keep after the bot overwrites something can't be read.
 - Deploy only reviewed code from the repository.
 - Keep `ANON_IDLE_DAYS` short, so the bot forgets authors sooner, and `ANON_READABLE_DAYS` as short as the team can work with, so it destroys conversations' keys sooner.

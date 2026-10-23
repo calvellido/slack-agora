@@ -17,7 +17,8 @@ Imports come in three groups: packages; then `#src/…` for another part of the 
 ```text
 src/
   main.ts            Entry point: settings, database, Slack connection, features, start, background work.
-  config.ts          Reads .env: AppSettings (what names the deployment, shared with the manifest) and Config.
+  config.ts          Reads .env: AppSettings (what names the deployment, shared with the manifest) and Config,
+                     running ANON_SECRET_COMMAND when the secret comes from the keychain.
   deps.ts            Deps: the shared services every feature receives.
   monitor.ts         Calls HEARTBEAT_URL while connected to Slack, for a monitor to alert when the calls stop.
 

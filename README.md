@@ -37,7 +37,7 @@ curl -Lo .env https://github.com/calvellido/slack-agora/releases/latest/download
 
 1. Fill in the app's part of `.env`: its name, the commands, the team's language and the text for the *Home* tab. Then generate the Slack app's manifest: `docker compose run --rm -T agora manifest > manifest.yml`.
 2. [Create a Slack app](https://api.slack.com/apps) *from a manifest* with that file, and install it.
-3. Fill in the rest of `.env`: the app's two tokens, the ID of the team's private channel, with the bot invited to it, and a secret for anonymous messages. The [guide](GUIDE.md#installing) says where to find each one.
+3. Fill in the rest of `.env`: the app's two tokens, the ID of the team's private channel, with the bot invited to it, and a secret for anonymous messages, which is best kept in your system's keychain instead ([Keeping ANON_SECRET apart](GUIDE.md#keeping-anon_secret-apart)). The [guide](GUIDE.md#installing) says where to find each one.
 4. Start the bot: `docker compose up -d`.
 
 ## Documentation

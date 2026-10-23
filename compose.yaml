@@ -2,7 +2,7 @@
 # the rest of the commands.
 services:
   agora:
-    image: ghcr.io/calvellido/slack-agora:1
+    image: ghcr.io/calvellido/slack-agora:3
     restart: unless-stopped
     volumes:
       - ./.env:/app/.env:ro

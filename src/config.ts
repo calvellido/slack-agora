@@ -1,4 +1,5 @@
 import { LogLevel } from '@slack/bolt';
+import { execSync } from 'node:child_process';
 import { DEFAULT_LANGUAGE, isLanguage, type Language } from './i18n/index.ts';
 
 /**
@@ -128,7 +129,39 @@ export function databasePath(env: NodeJS.ProcessEnv = process.env): string {
   return env.DB_PATH ?? 'data/agora.db';
 }
 
-export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
+/** Runs a command and returns what it prints, as for ANON_SECRET_COMMAND. */
+export type RunCommand = (command: string) => string;
+
+/** Through the shell, as it is written in .env; long enough to click through the system asking whether to allow it. */
+const runCommand: RunCommand = (command) =>
+  execSync(command, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60_000 });
+
+/**
+ * ANON_SECRET, or else what ANON_SECRET_COMMAND prints, so the secret can stay in the system's keychain instead of in
+ * .env, next to the database (see GUIDE.md). Not both, which would leave it in .env all the same. A failing command's
+ * output is never shown, as it could be the secret; only its exit code and what it said on stderr.
+ */
+function anonSecretFrom(env: NodeJS.ProcessEnv, run: RunCommand): string {
+  const secret = env.ANON_SECRET?.trim();
+  const command = env.ANON_SECRET_COMMAND?.trim();
+  if (secret && command) throw new Error('Set ANON_SECRET or ANON_SECRET_COMMAND, not both');
+  if (secret) return secret;
+  if (!command) throw new Error('Missing ANON_SECRET, or ANON_SECRET_COMMAND to read it from the keychain (see .env.example)');
+  let printed: string;
+  try {
+    printed = run(command);
+  } catch (error) {
+    const { status, signal, stderr } = error as { status?: number | null; signal?: string | null; stderr?: string };
+    const why = signal ? `stopped by ${signal}` : `exit code ${status ?? '?'}`;
+    const said = String(stderr ?? '').trim().split('\n')[0]?.slice(0, 200);
+    throw new Error(`ANON_SECRET_COMMAND failed (${why})${said ? `: ${said}` : ''}`);
+  }
+  const read = printed.trim();
+  if (!read) throw new Error('ANON_SECRET_COMMAND printed nothing: is the secret stored where it looks for it?');
+  return read;
+}
+
+export function loadConfig(env: NodeJS.ProcessEnv = process.env, run: RunCommand = runCommand): Config {
   const required = (name: string): string => {
     const value = env[name]?.trim();
     if (!value) throw new Error(`Missing environment variable ${name} (see .env.example)`);
@@ -145,7 +178,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   if (homeBanner && !/^https:\/\/\S+$/.test(homeBanner)) throw new Error('HOME_BANNER_URL must be an https:// address');
   const heartbeatUrl = env.HEARTBEAT_URL?.trim() || undefined;
   if (heartbeatUrl && !/^https:\/\/\S+$/.test(heartbeatUrl)) throw new Error('HEARTBEAT_URL must be an https:// address');
-  const anonSecret = required('ANON_SECRET');
+  const anonSecret = anonSecretFrom(env, run);
   // A conversation's text must outlive its author's view of it, or their window would show it gone.
   const readableDays = positive('ANON_READABLE_DAYS', 365);
   if (readableDays < positive('ANON_CLOSED_VISIBLE_DAYS', 7)) {
