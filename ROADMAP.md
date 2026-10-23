@@ -70,6 +70,12 @@ What it takes: on start, reading the history of the channels the bot is in, sinc
 
 ## Data
 
+### Anonymous messages encrypted in Slack
+
+On plans where the workspace owner can export private channels, such as Business+ and Enterprise, the owner can read the text of anonymous messages in the team channel, though not who wrote them. Encrypting that text in Slack would leave an export with nothing readable.
+
+What it takes: posting the person's messages encrypted in the thread, with a button that opens a window where the bot shows the conversation decrypted, as the author's window does. The team would reply from that window too, since text typed in the thread is a plaintext Slack message an export can keep, even if the bot deleted it right after. Each conversation would get its own key, stored on the server encrypted with a new secret, and destroying it would make the conversation unreadable everywhere, including in exports made earlier. The team's internal discussion would stay in the thread, in plaintext, so quoting a message there would undo the protection. It would be a setting, so a deployment can keep today's behaviour. Open questions: when to destroy a conversation's key (when the bot forgets its author, or only when the team deletes it), whether to post earlier conversations again, encrypted, and what the team's window shows. Estimated: L.
+
 ### A retention period for conversations with a name
 
 The team channel keeps what people wrote forever. A setting such as "delete what the bot relayed after 12 months without activity" would help teams that have to keep personal data only as long as they need it.
