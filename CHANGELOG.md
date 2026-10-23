@@ -2,6 +2,13 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## [3.1.0] - 2026-10-23
+
+- `ANON_SECRET_COMMAND`: the command that prints `ANON_SECRET`, which the bot runs when it starts, so the secret can stay in the system's keychain instead of in `.env`, next to the database. The guide explains it for Linux and macOS, in *Keeping ANON_SECRET apart*, with advice for running the bot on a laptop, and the choice between keeping one sealed copy of the secret or none, generating it straight into the keychain so that nobody knows it.
+- `compose.yaml` uses the image's `3` tag. It still said `1`, so Docker deployments that downloaded it got 1.x releases only.
+
+If you run Agora with Docker, download `compose.yaml` again, or change its image's tag to `:3`, then `docker compose pull && docker compose up -d`. No new permissions: updating the bot is enough.
+
 ## [3.0.0] - 2026-10-23
 
 - Anonymous conversations are encrypted. Their text, and the team's replies, are kept on the bot's server, encrypted with a key of their own for each conversation, and the team channel only shows placeholders, so an export of it has nothing to read. The team reads and replies with *Open*, on the thread's first message or the person's later ones, in a window like the author's, where anyone in the team can edit or delete a reply. An edited or deleted reply says who edited or deleted it, in its placeholder and in the team's window, without notifying anyone, and the person sees it marked as edited, or in its place as deleted, without its text. A year after a conversation ends (`ANON_READABLE_DAYS=365`), the bot destroys its key, and its text with it.
@@ -111,6 +118,7 @@ The first release.
 - `pnpm clean-db` empties the database.
 - A Docker image, for linux/amd64 and linux/arm64.
 
+[3.1.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.1.0
 [3.0.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.0.0
 [2.3.1]: https://github.com/calvellido/slack-agora/releases/tag/v2.3.1
 [2.3.0]: https://github.com/calvellido/slack-agora/releases/tag/v2.3.0
