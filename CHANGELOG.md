@@ -2,6 +2,12 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## [2.3.1] - 2026-10-23
+
+- When the bot forgets an anonymous author, their scrambled code is now overwritten in the database file, and in its write-ahead log, where SQLite kept an earlier copy of it for a while. A copy of the file taken after that can't give it back. On every start, the bot also rewrites the file, dropping what earlier versions deleted without overwriting.
+
+No new permissions: updating the bot is enough. Earlier backups still hold the codes they were made with, so keep deleting old ones.
+
 ## [2.3.0] - 2026-10-22
 
 - `HEARTBEAT_URL`: a monitor's address, such as a Healthchecks.io check's, that the bot calls every `HEARTBEAT_MINUTES` (a day by default) while it is connected to Slack, so the monitor alerts you when the bot, its machine or its connection is down. Nothing needs to reach the machine. See *Getting alerted* in the guide.
@@ -95,6 +101,7 @@ The first release.
 - `pnpm clean-db` empties the database.
 - A Docker image, for linux/amd64 and linux/arm64.
 
+[2.3.1]: https://github.com/calvellido/slack-agora/releases/tag/v2.3.1
 [2.3.0]: https://github.com/calvellido/slack-agora/releases/tag/v2.3.0
 [2.2.1]: https://github.com/calvellido/slack-agora/releases/tag/v2.2.1
 [2.2.0]: https://github.com/calvellido/slack-agora/releases/tag/v2.2.0
