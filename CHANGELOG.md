@@ -2,6 +2,16 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## [3.0.0] - 2026-10-23
+
+- Anonymous conversations are encrypted. Their text, and the team's replies, are kept on the bot's server, encrypted with a key of their own for each conversation, and the team channel only shows placeholders, so an export of it has nothing to read. The team reads and replies with *Open*, on the thread's first message or the person's later ones, in a window like the author's, where anyone in the team can edit or delete a reply. An edited or deleted reply says who edited or deleted it, in its placeholder and in the team's window, without notifying anyone, and the person sees it marked as edited, or in its place as deleted, without its text. A year after a conversation ends (`ANON_READABLE_DAYS=365`), the bot destroys its key, and its text with it.
+- The person can edit or delete each of their own messages from their window while the conversation is open, for example to take out a detail that could give them away. The thread says so in place, and the team's window marks the edited ones and keeps the deleted ones in their place, without their text. This works in conversations that aren't encrypted too.
+- In an encrypted conversation, the send emoji no longer sends a message from the thread, since the thread isn't encrypted: on any message there, it points to *Open* instead, and the delete emoji says it only withdraws replies.
+- Deleting an encrypted conversation, by the person when they end it or by the team once the bot has forgotten them, also deletes the team's replies, which are the bot's messages; only what team members wrote in the thread themselves stays.
+- Both windows show 30 messages at a time, with buttons to read earlier ones, and keep what is typed in the reply box when they show a change.
+
+This version changes how the team answers anonymous conversations, hence the major version. Conversations from before it keep their text in the thread, and are answered there as before. To keep the old way for new ones too, set `ANON_ENCRYPTED=false`. No new permissions or settings are needed: the keys are protected with `ANON_SECRET`. But the text of encrypted conversations now lives only in the database, so losing the database, or losing or changing `ANON_SECRET`, loses them: back up the database, apart from the secret. Backups also hold the keys of conversations the bot later destroys, so delete those older than `ANON_READABLE_DAYS`. `ANON_READABLE_DAYS` must be at least `ANON_CLOSED_VISIBLE_DAYS`.
+
 ## [2.3.1] - 2026-10-23
 
 - When the bot forgets an anonymous author, their scrambled code is now overwritten in the database file, and in its write-ahead log, where SQLite kept an earlier copy of it for a while. A copy of the file taken after that can't give it back. On every start, the bot also rewrites the file, dropping what earlier versions deleted without overwriting.
@@ -101,6 +111,7 @@ The first release.
 - `pnpm clean-db` empties the database.
 - A Docker image, for linux/amd64 and linux/arm64.
 
+[3.0.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.0.0
 [2.3.1]: https://github.com/calvellido/slack-agora/releases/tag/v2.3.1
 [2.3.0]: https://github.com/calvellido/slack-agora/releases/tag/v2.3.0
 [2.2.1]: https://github.com/calvellido/slack-agora/releases/tag/v2.2.1
