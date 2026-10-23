@@ -7,7 +7,7 @@ test('the people in the team channel are its members by name, without bots or de
   const users: Record<string, object> = {
     U1: { profile: { display_name: 'Marta', image_72: 'https://example.com/marta.png' } },
     U2: { real_name: 'Ana López', profile: { display_name: '' } },
-    UBOT: { is_bot: true, profile: { display_name: 'EXE' } },
+    UBOT: { is_bot: true, profile: { display_name: 'Helpdesk' } },
     U3: { deleted: true, real_name: 'Gone' },
     USLACKBOT: { real_name: 'Slackbot' },
   };

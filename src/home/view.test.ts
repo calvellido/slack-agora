@@ -14,6 +14,7 @@ const team = {
   deleteEmoji: 'wastebasket',
   publishCommand: true,
   publishShortcut: true,
+  anonEncrypted: true,
 };
 
 test('everyone gets the same Home tab, and team members also get how to act as the bot', () => {
@@ -29,7 +30,7 @@ test('everyone gets the same Home tab, and team members also get how to act as t
 
   const member = homeView(t, { bot: { name: 'Helpdesk' }, team });
   assert.match(JSON.stringify(member), /"action_id":"publish_open"/);
-  assert.ok(shows(member, t.home.team.reply({ sendEmoji: 'outbox_tray' })));
+  assert.ok(shows(member, t.home.team.reply({ sendEmoji: 'outbox_tray', anonymous: 'encrypted' })));
   assert.ok(shows(member, t.home.team.conversations({ teamChannel: 'C1' })));
 });
 

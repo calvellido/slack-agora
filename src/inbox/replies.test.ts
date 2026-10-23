@@ -146,3 +146,18 @@ test('an edit made while the reply is still being sent waits for it, and is sent
   await sending;
   assert.deepEqual(calls.filter((c) => c.method === 'chat.update').map((c) => c.args.text), ['Here it is, signed']);
 });
+
+test('in an encrypted anonymous thread, the send emoji on any message points to the window, and the delete emoji says what it does there', async () => {
+  const { calls, store, react } = setup({ '5.0': { thread_ts: '5.0', bot_id: 'BBOT', text: '🕶️' }, '6.0': { thread_ts: '5.0', bot_id: 'BBOT', text: '🕶️' } });
+  const c = store.anonymous.reserve('owner-a', () => 'AAAA', 'kept-key');
+  store.anonymous.setThread(c.id, '5.0');
+  await react('6.0', 'outbox_tray');
+  await react('5.0', 'outbox_tray');
+  await react('6.0', 'wastebasket');
+  const t = stringsIn('en', names);
+  assert.deepEqual(calls.filter((c) => c.method === 'chat.postEphemeral').map((c) => c.args.text), [
+    t.anonymous.team.replyFromWindow,
+    t.anonymous.team.replyFromWindow,
+    t.anonymous.team.nothingToDelete({ deleteEmoji: 'wastebasket' }),
+  ]);
+});

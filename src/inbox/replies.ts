@@ -30,7 +30,8 @@ export function registerReplies(app: App, { config, store, i18n, notices }: Deps
     else if (event.reaction === config.deleteEmoji) await inTurn(item.ts, () => deleteDelivery(client, item.ts, event.user));
   });
 
-  // Anonymous replies need nothing: the person reads them from the channel, edits included.
+  // Anonymous replies need nothing: the person's window shows them as they stand, from the channel or, encrypted, from
+  // the team's window, edits included.
   const firstEdit = onceFor(DAY);
   app.event('message', async ({ event, client }) => {
     if (event.channel !== team || event.subtype !== 'message_changed') return;
@@ -70,6 +71,8 @@ export function registerReplies(app: App, { config, store, i18n, notices }: Deps
     const threadTs = message?.thread_ts;
     const notify = (text: string) => notices.ephemeral(client, { user, text, threadTs });
 
+    // In an encrypted anonymous conversation, any message: its text would stay in the thread as written.
+    if (message && store.anonymous.byTeamThread(threadTs ?? ts)?.encrypted) return notify(t.anonymous.team.replyFromWindow);
     if (!message || !threadTs || threadTs === ts) return notify(t.inbox.reply.notInThread);
     if (message.bot_id) return notify(t.inbox.reply.cannotSendBotMessage);
     const anon = store.anonymous.byTeamThread(threadTs);
@@ -120,6 +123,10 @@ export function registerReplies(app: App, { config, store, i18n, notices }: Deps
     const notify = (text: string) => notices.ephemeral(client, { user, text, threadTs });
     const delivery = store.deliveries.get(ts);
     if (!delivery || (!delivery.targetTs && delivery.fileIds.length === 0)) {
+      // In an encrypted anonymous thread, the emoji only withdraws a reply, which anonymous mode handled above.
+      if (store.anonymous.byTeamThread(threadTs)?.encrypted) {
+        return notify(t.anonymous.team.nothingToDelete({ deleteEmoji: config.deleteEmoji }));
+      }
       return notify(t.inbox.reply.nothingToDelete({ sendEmoji: config.sendEmoji, deleteEmoji: config.deleteEmoji }));
     }
     if (delivery.deletedAt) return notify(t.inbox.reply.alreadyDeleted);

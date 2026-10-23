@@ -2,8 +2,8 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-// The SQLite database and its schema. Only Slack IDs, timestamps and keyed hashes are stored: message contents stay
-// in Slack.
+// The SQLite database and its schema. It stores Slack IDs, timestamps and keyed hashes, and the text of anonymous
+// conversations, encrypted (see anonymous/content.ts). Every other message's text stays in Slack.
 
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS conversations (
@@ -51,7 +51,9 @@ const SCHEMA = `
     last_activity_at INTEGER NOT NULL,
     seen_at INTEGER NOT NULL,
     closed_at INTEGER,
-    closed_by TEXT CHECK (closed_by IN ('person', 'team', 'expired'))
+    closed_by TEXT CHECK (closed_by IN ('person', 'team', 'expired')),
+    encrypted INTEGER NOT NULL DEFAULT 0,
+    content_key TEXT
   );
   CREATE INDEX IF NOT EXISTS anon_conversations_owner ON anon_conversations (owner);
 
@@ -61,7 +63,11 @@ const SCHEMA = `
     author TEXT NOT NULL CHECK (author IN ('person', 'team')),
     sent_by TEXT,
     created_at INTEGER NOT NULL,
-    deleted_at INTEGER
+    deleted_at INTEGER,
+    content TEXT,
+    edited_at INTEGER,
+    edited_by TEXT,
+    deleted_by TEXT
   );
   CREATE INDEX IF NOT EXISTS anon_messages_conversation ON anon_messages (conversation_id);
 
@@ -83,16 +89,22 @@ export function openDatabase(path: string): DatabaseSync {
   // or replaced is overwritten with zeros, so a forgotten author's hash can't be read back from the file.
   db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA secure_delete = ON;');
   db.exec(SCHEMA);
-  // Databases from before conversations recorded their team channel, before deliveries recorded their files, and
-  // before relays recorded the notice about files that couldn't be copied.
-  const addColumn = (table: string, column: string) => {
+  // Databases from before conversations recorded their team channel, before deliveries recorded their files, before
+  // relays recorded the notice about files that couldn't be copied, and before anonymous messages were encrypted.
+  const addColumn = (table: string, column: string, type = 'TEXT') => {
     const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
-    if (!columns.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} TEXT`);
+    if (!columns.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
   };
   addColumn('conversations', 'team_channel');
   addColumn('anon_conversations', 'team_channel');
   addColumn('deliveries', 'file_ids');
   addColumn('relays', 'problems_ts');
+  addColumn('anon_conversations', 'encrypted', 'INTEGER NOT NULL DEFAULT 0');
+  addColumn('anon_conversations', 'content_key');
+  addColumn('anon_messages', 'content');
+  addColumn('anon_messages', 'edited_at', 'INTEGER');
+  addColumn('anon_messages', 'edited_by');
+  addColumn('anon_messages', 'deleted_by');
   // Rewritten with only what it holds now, on every start: what earlier versions deleted without overwriting it, or a
   // crash left behind, is gone from the file. The database is small, so this takes moments.
   db.exec('VACUUM');

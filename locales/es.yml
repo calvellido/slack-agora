@@ -4,6 +4,7 @@
 
 common:
   cancel: "Cancelar"
+  save: "Guardar"
   close: "Cerrar"
   back: "Volver"
 
@@ -166,7 +167,7 @@ home:
       Cada conversación con {bot} es un hilo en <#{teamChannel}>, también las anónimas.
     reply: |-
       *:{sendEmoji}: Responder*
-      Escribe en el hilo y añade :{sendEmoji}: a tu mensaje. {bot} lo envía y lo marca con :white_check_mark:. Los cambios que hagas después también se envían.
+      Escribe en el hilo y añade :{sendEmoji}: a tu mensaje. {bot} lo envía y lo marca con :white_check_mark:. Los cambios que hagas después también se envían.{anonymous, select, encrypted { Las conversaciones anónimas se leen y se responden con *Abrir*, en su primer mensaje.} other {}}
     delete: |-
       *:{deleteEmoji}: Borrar*
       Añade :{deleteEmoji}: al registro en <#{teamChannel}> de lo que {bot} envió.
@@ -182,7 +183,7 @@ anonymous:
   sendFailed: "No se ha podido enviar. Inténtalo de nuevo en unos minutos."
   window:
     title: "Mensajes anónimos"
-    intro: "Escribe al equipo de {bot} sin tu nombre. El equipo recibe tus mensajes como anónimos, y sus respuestas aparecen sólo aquí, en esta ventana. Nada se queda en tus mensajes de Slack."
+    intro: "Escribe al equipo de {bot} sin tu nombre. El equipo recibe tus mensajes como anónimos, y sus respuestas aparecen solo aquí, en esta ventana. Nada se queda en tus mensajes de Slack."
     new: "Nueva conversación"
     empty: "No tienes conversaciones anónimas."
     conversations: "*Tus conversaciones*"
@@ -197,7 +198,18 @@ anonymous:
     expired: "🔒 Terminada por inactividad. Desaparecerá de aquí en {days, plural, one {# día} other {# días}}."
     you: "🕶️ *Tú*"
     new: "🆕"
-    hidden: "{count, plural, one {# mensaje anterior} other {# mensajes anteriores}} sin mostrar."
+    editedReply: "editada"
+    editedMessage: "editado"
+    deletedReply: "Respuesta eliminada"
+    deletedMessage: "Mensaje eliminado"
+    editMessage: "Editar"
+    deleteMessage: "Eliminar"
+    editTitle: "Editar mensaje"
+    deleteTitle: "Eliminar mensaje"
+    deleteMessageConfirm: "El equipo ya no lo verá, aunque puede que ya lo haya leído."
+    changeFailed: "No se ha podido cambiar. Inténtalo de nuevo en unos minutos."
+    earlier: "{count, plural, one {# mensaje anterior} other {# mensajes anteriores}}"
+    later: "Mensajes más recientes"
     unavailable: "_Este mensaje ya no está disponible._"
     reply: "Tu respuesta"
     send: "Enviar"
@@ -211,7 +223,7 @@ anonymous:
     intro: "Al terminarla, nadie podrá escribir más en ella y {bot} olvidará que es tuya, así que no podrás volver a verla."
     deleteLabel: "Tus mensajes"
     deleteOption: "Borrar también mis mensajes del canal del equipo"
-    deleteHint: "El equipo dejará de ver lo que escribiste. Sus respuestas seguirán en el canal, salvo que cada persona del equipo borre las suyas."
+    deleteHint: "{encrypted, select, yes {El equipo dejará de ver lo que escribiste, y también sus respuestas.} other {El equipo dejará de ver lo que escribiste. Sus respuestas seguirán en el canal, salvo que cada persona del equipo borre las suyas.}}"
     submit: "Terminar"
     done: "Has terminado la conversación. {bot} ya no guarda nada que te relacione con ella."
     doneDeleted: "Has terminado la conversación y {bot} está borrando tus mensajes del canal del equipo. Ya no guarda nada que te relacione con ella."
@@ -224,7 +236,8 @@ anonymous:
       • Lo que cuentes y tu forma de escribir pueden identificarte: piensa qué detalles incluyes.
       • El equipo no puede saber si dos conversaciones anónimas son de la misma persona.
       • {bot} no te avisa cuando hay respuesta, porque un aviso dejaría rastro en tus mensajes. Vuelve aquí para verla.
-      • {bot} no guarda tu nombre con el mensaje, solo una huella cifrada para enseñarte las respuestas. Se borra al terminar la conversación, y entonces también puedes borrar tus mensajes del canal del equipo.
+      • {bot} no guarda tu nombre con el mensaje, solo una huella codificada para enseñarte las respuestas. Se borra en cuanto la conversación termina y ya no puedes verla, y si la terminas tú, también puedes borrar tus mensajes del canal del equipo.
+    encrypted: "• {bot} guarda lo que escribes cifrado, fuera de los mensajes de Slack, así que no está en las exportaciones del espacio de trabajo. Lo elimina {days, plural, one {# día} other {# días}} después de que termine la conversación."
     sent: |-
       ✅ Enviado. El equipo lo recibirá sin tu nombre.
 
@@ -235,6 +248,18 @@ anonymous:
     header: "🕶️ *Mensaje anónimo*"
     followUp: "🕶️ La persona escribió:"
     openStatus: "Para responder, escribe en el hilo y añade :{sendEmoji}: a tu mensaje. La persona lo verá en *Mensajes anónimos* de {bot}, también si lo editas después."
+    openStatusEncrypted: "Léelo y responde con *Abrir*, no en el hilo: lo que se escribe en el hilo no va cifrado, así que no cites en él los mensajes de la persona."
+    locked: "🔒 Su texto va cifrado."
+    openButton: "Abrir"
+    followUpLocked: "🕶️ La persona ha vuelto a escribir."
+    replied: "🔒 <@{user}> respondió."
+    personDeleted: "🗑️ La persona eliminó este mensaje."
+    personEdited: "✏️ La persona editó este mensaje."
+    repliedEdited: "🔒 Respuesta de <@{user}> · editada por <@{editor}>"
+    repliedDeleted: "🗑️ Respuesta de <@{user}> · eliminada por <@{deleter}>"
+    nothingToDelete: "Aquí, :{deleteEmoji}: retira una respuesta, sobre su marcador. Los mensajes de la persona solo puede eliminarlos ella, o se van con toda la conversación."
+    replyFromWindow: "Esta conversación anónima se responde con *Abrir*, en su primer mensaje: su texto va cifrado, y los mensajes del hilo no."
+    textExpired: "Su texto se eliminó {days, plural, one {# día} other {# días}} después de terminar."
     endButton: "Terminar conversación"
     endConfirmTitle: "¿Terminar la conversación?"
     endConfirm: "La persona ya no podrá escribir en ella, y la verá como terminada durante {days, plural, one {# día} other {# días}}."
@@ -246,11 +271,24 @@ anonymous:
     deletableStatus: "La persona ya no puede ver esta conversación. {bot} puede borrar del canal todo lo que publicó en ella."
     deleteButton: "Borrar conversación"
     deleteConfirmTitle: "¿Borrar la conversación?"
-    deleteConfirm: "{bot} borrará lo que publicó en este hilo, también los mensajes de la persona. Las respuestas del equipo solo puede borrarlas quien las escribió."
+    deleteConfirm: "{encrypted, select, yes {{bot} borrará lo que publicó en este hilo: los mensajes de la persona y las respuestas del equipo. Solo queda lo que cada persona del equipo escribió en el hilo por su cuenta.} other {{bot} borrará lo que publicó en este hilo, también los mensajes de la persona. Las respuestas del equipo solo puede borrarlas quien las escribió.}}"
     deleteConfirmButton: "Borrar"
-    deletedByTeam: "Borrado. Las respuestas del equipo que queden en el hilo solo puede borrarlas quien las escribió."
-    deletedByPerson: "🗑️ La persona borró sus mensajes de esta conversación. Las respuestas del equipo solo puede borrarlas quien las escribió."
+    deletedByTeam: "{encrypted, select, yes {Borrado, también las respuestas del equipo. Solo queda lo que cada persona del equipo escribió en el hilo por su cuenta.} other {Borrado. Las respuestas del equipo que queden en el hilo solo puede borrarlas quien las escribió.}}"
+    deletedByPerson: "{encrypted, select, yes {🗑️ La persona borró esta conversación, también las respuestas del equipo. Solo queda lo que cada persona del equipo escribió en el hilo por su cuenta.} other {🗑️ La persona borró sus mensajes de esta conversación. Las respuestas del equipo solo puede borrarlas quien las escribió.}}"
     notDeletable: "La persona todavía puede ver esta conversación, así que aún no se puede borrar."
     replyClosed: "Esta conversación anónima ha terminado."
     alreadyClosed: "Esta conversación ya había terminado."
     replyDeleted: "🗑️ <@{user}> retiró la respuesta. La persona ya no la verá, aunque puede que ya la haya leído."
+  teamWindow:
+    intro: "La persona lo lee en su ventana de *Mensajes anónimos*. Lo que escribas aquí va cifrado; lo que escribas en el hilo, no."
+    ended: "🔒 Esta conversación ha terminado, así que ya no se puede responder."
+    person: "🕶️ *La persona*"
+    edit: "Editar"
+    delete: "Eliminar"
+    editedBy: "editada por <@{user}>"
+    deletedBy: "eliminada por <@{user}>"
+    deletedByPerson: "Mensaje eliminado por la persona"
+    editTitle: "Editar respuesta"
+    deleteTitle: "Eliminar respuesta"
+    deleteConfirm: "La persona ya no la verá, aunque puede que ya la haya leído."
+    expired: "🔒 Su texto ya no está disponible: {bot} lo elimina {days, plural, one {# día} other {# días}} después de que termine una conversación."

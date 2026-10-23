@@ -21,8 +21,8 @@ if (counts.length === 0) {
 console.log(`${path} holds ${counts.map(([table, count]) => `${table}: ${count}`).join(', ')}.`);
 console.log(
   "Emptying it can't be undone. Threads already in the team channel stay, but they are no longer conversations: " +
-    "replies from them aren't sent, people's next messages start new threads, and anonymous conversations disappear " +
-    "from their authors' windows.",
+    "replies from them aren't sent, people's next messages start new threads, anonymous conversations disappear " +
+    "from their authors' windows, and the text of encrypted ones is lost for good, as it is only kept here.",
 );
 if (!process.argv.includes('--yes')) {
   if (!process.stdin.isTTY) {

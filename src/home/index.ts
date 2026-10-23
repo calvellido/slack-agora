@@ -36,6 +36,7 @@ export function registerHome(app: App, { config, team, bot, i18n }: Deps): void 
             deleteEmoji: config.deleteEmoji,
             publishCommand: Boolean(config.publishCommand),
             publishShortcut: config.publishShortcut,
+            anonEncrypted: config.anonEncrypted,
           }
         : undefined,
     };

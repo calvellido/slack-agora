@@ -13,7 +13,7 @@ test('switching the team channel starts fresh conversations', async () => {
     const path = join(dir, 'agora.db');
     const first = new Store(path, 'C1');
     first.conversations.create({ ...dm, teamThreadTs: '1.0' }, 1_000);
-    const anon = first.anonymous.reserve('owner-a', () => 'AAAA', 1_000);
+    const anon = first.anonymous.reserve('owner-a', () => 'AAAA', null, 1_000);
     first.anonymous.setThread(anon.id, '2.0');
     first.close();
 

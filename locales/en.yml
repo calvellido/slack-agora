@@ -7,6 +7,7 @@
 
 common:
   cancel: "Cancel"
+  save: "Save"
   close: "Close"
   back: "Back"
 
@@ -206,7 +207,7 @@ home:
       Every conversation with {bot} is a thread in <#{teamChannel}>, anonymous ones too.
     reply: |-
       *:{sendEmoji}: Replying*
-      Write in the thread and add :{sendEmoji}: to your message. {bot} sends it and marks it with :white_check_mark:. Later edits are sent too.
+      Write in the thread and add :{sendEmoji}: to your message. {bot} sends it and marks it with :white_check_mark:. Later edits are sent too.{anonymous, select, encrypted { Anonymous conversations are read and answered with *Open*, on their first message.} other {}}
     delete: |-
       *:{deleteEmoji}: Deleting*
       Add :{deleteEmoji}: to the record in <#{teamChannel}> of what {bot} sent.
@@ -242,7 +243,22 @@ anonymous:
     expired: "🔒 Ended after inactivity. It will disappear from here in {days, plural, one {# day} other {# days}}."
     you: "🕶️ *You*"
     new: "🆕"
-    hidden: "{count, plural, one {# earlier message} other {# earlier messages}} not shown."
+    # Beside the time of a reply the team edited after sending it, or of a message the person edited.
+    editedReply: "edited"
+    editedMessage: "edited"
+    # In place of a message deleted after it was sent, without its text.
+    deletedReply: "Reply deleted"
+    deletedMessage: "Message deleted"
+    # The menu beside each of the person's own messages while the conversation is open.
+    editMessage: "Edit"
+    deleteMessage: "Delete"
+    editTitle: "Edit message"
+    deleteTitle: "Delete message"
+    deleteMessageConfirm: "The team won't see it any more, though it may have read it already."
+    changeFailed: "Couldn't change it. Try again in a few minutes."
+    # Above the messages a window shows, when there are more than fit.
+    earlier: "{count, plural, one {# earlier message} other {# earlier messages}}"
+    later: "Later messages"
     unavailable: "_This message is no longer available._"
     reply: "Your reply"
     send: "Send"
@@ -257,7 +273,8 @@ anonymous:
     intro: "Once it ends, nobody can write in it any more and {bot} forgets it's yours, so you won't be able to see it again."
     deleteLabel: "Your messages"
     deleteOption: "Also delete my messages from the team's channel"
-    deleteHint: "The team will no longer see what you wrote. Its replies stay in the channel unless each team member deletes their own."
+    # In an encrypted conversation the team's replies are the bot's too, so they go with the rest.
+    deleteHint: "{encrypted, select, yes {The team will no longer see what you wrote, nor its replies to you.} other {The team will no longer see what you wrote. Its replies stay in the channel unless each team member deletes their own.}}"
     submit: "End"
     done: "You ended the conversation. {bot} no longer keeps anything linking you to it."
     doneDeleted: "You ended the conversation and {bot} is deleting your messages from the team's channel. It no longer keeps anything linking you to it."
@@ -271,7 +288,9 @@ anonymous:
       • What you say and how you write can identify you: think about which details you include.
       • The team can't tell whether two anonymous conversations come from the same person.
       • {bot} doesn't notify you of replies, because a notification would leave a trace in your messages. Come back here to see them.
-      • {bot} doesn't store your name with the message, only an encrypted fingerprint to show you the replies. It's deleted when the conversation ends, and you can then also delete your messages from the team's channel.
+      • {bot} doesn't store your name with the message, only a scrambled fingerprint to show you the replies. It's deleted once the conversation ends and you can no longer see it, and when you end it you can also delete your messages from the team's channel.
+    # One more point of the same list, in the form, when conversations are encrypted.
+    encrypted: "• {bot} keeps what you write encrypted, outside Slack's messages, so it isn't in the workspace's exports. It deletes it {days, plural, one {# day} other {# days}} after the conversation ends."
     sent: |-
       ✅ Sent. The team will get it without your name.
 
@@ -283,6 +302,24 @@ anonymous:
     header: "🕶️ *Anonymous message*"
     followUp: "🕶️ The person wrote:"
     openStatus: "To reply, write in the thread and add :{sendEmoji}: to your message. The person will see it in {bot}'s *Anonymous messages*, including later edits."
+    # An encrypted conversation: its thread only holds placeholders, and the team reads and replies from a window.
+    openStatusEncrypted: "Read it and reply with *Open*, not in the thread: what you write in the thread isn't encrypted, so don't quote the person's messages there."
+    locked: "🔒 Its text is encrypted."
+    openButton: "Open"
+    followUpLocked: "🕶️ The person wrote again."
+    replied: "🔒 <@{user}> replied."
+    # In place of, or under, one of the person's messages they deleted or edited from their window.
+    personDeleted: "🗑️ The person deleted this message."
+    personEdited: "✏️ The person edited this message."
+    # In place of a reply's placeholder, once someone in the team edited it, or deleted it.
+    repliedEdited: "🔒 <@{user}> replied · edited by <@{editor}>"
+    repliedDeleted: "🗑️ <@{user}> replied · deleted by <@{deleter}>"
+    # The delete emoji on one of the person's messages in an encrypted thread.
+    nothingToDelete: "Here, :{deleteEmoji}: withdraws a reply, on its placeholder. The person's messages are theirs to delete, or go with the whole conversation."
+    # The send emoji on a message in the thread of an encrypted conversation.
+    replyFromWindow: "This anonymous conversation is answered with *Open*, on its first message: its text is encrypted, and messages in the thread aren't."
+    # After the status, once the conversation's key is destroyed.
+    textExpired: "Its text was deleted {days, plural, one {# day} other {# days}} after it ended."
     endButton: "End conversation"
     endConfirmTitle: "End the conversation?"
     endConfirm: "The person won't be able to write in it any more, and will see it as ended for {days, plural, one {# day} other {# days}}."
@@ -294,11 +331,27 @@ anonymous:
     deletableStatus: "The person can no longer see this conversation. {bot} can delete everything it posted in it from the channel."
     deleteButton: "Delete conversation"
     deleteConfirmTitle: "Delete the conversation?"
-    deleteConfirm: "{bot} will delete what it posted in this thread, including the person's messages. The team's replies can only be deleted by whoever wrote them."
+    deleteConfirm: "{encrypted, select, yes {{bot} will delete what it posted in this thread: the person's messages and the team's replies. Only what team members wrote in the thread themselves stays.} other {{bot} will delete what it posted in this thread, including the person's messages. The team's replies can only be deleted by whoever wrote them.}}"
     deleteConfirmButton: "Delete"
-    deletedByTeam: "Deleted. The team's replies left in the thread can only be deleted by whoever wrote them."
-    deletedByPerson: "🗑️ The person deleted their messages from this conversation. The team's replies can only be deleted by whoever wrote them."
+    deletedByTeam: "{encrypted, select, yes {Deleted, the team's replies included. Only what team members wrote in the thread themselves stays.} other {Deleted. The team's replies left in the thread can only be deleted by whoever wrote them.}}"
+    deletedByPerson: "{encrypted, select, yes {🗑️ The person deleted this conversation, the team's replies included. Only what team members wrote in the thread themselves stays.} other {🗑️ The person deleted their messages from this conversation. The team's replies can only be deleted by whoever wrote them.}}"
     notDeletable: "The person can still see this conversation, so it can't be deleted yet."
     replyClosed: "This anonymous conversation has ended."
     alreadyClosed: "This conversation had already ended."
+    # When a reply in a thread that isn't encrypted is withdrawn: the team member's message itself can't change.
     replyDeleted: "🗑️ <@{user}> withdrew the reply. The person won't see it any more, though they may have read it already."
+  # The team's window on an encrypted conversation, opened from its thread.
+  teamWindow:
+    intro: "The person reads this in their *Anonymous messages* window. What you write here is encrypted; what you write in the thread isn't."
+    ended: "🔒 This conversation has ended, so it can't be replied to."
+    person: "🕶️ *The person*"
+    edit: "Edit"
+    delete: "Delete"
+    editedBy: "edited by <@{user}>"
+    # In place of a deleted message, as the team's window shows it.
+    deletedBy: "deleted by <@{user}>"
+    deletedByPerson: "Message deleted by the person"
+    editTitle: "Edit reply"
+    deleteTitle: "Delete reply"
+    deleteConfirm: "The person won't see it any more, though they may have read it already."
+    expired: "🔒 Its text is no longer available: {bot} deletes it {days, plural, one {# day} other {# days}} after a conversation ends."

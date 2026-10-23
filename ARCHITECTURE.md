@@ -6,7 +6,7 @@ How Agora is built. If you just want to use or run it, see the [README](README.m
 
 Agora is one long-running Node process. It connects to Slack with [Bolt](https://docs.slack.dev/tools/bolt-js) in _Socket Mode_: the process opens a WebSocket to Slack and receives every event (DMs, mentions, reactions, commands, button clicks, form submissions) through it, then acts through Slack's Web API. Nothing connects to the machine it runs on, so it needs no public URL, but it must stay running: events sent while it isn't connected can be lost (see "After downtime" below).
 
-It keeps a small SQLite database (`node:sqlite`, no dependency) with Slack IDs, timestamps and keyed hashes only. Message contents stay in Slack: anything the bot shows again, such as an anonymous conversation, is read back from the team channel.
+It keeps a small SQLite database (`node:sqlite`, no dependency) with Slack IDs, timestamps and keyed hashes, and the text of anonymous conversations, encrypted. Every other message's text stays in Slack, and anything the bot shows again is read back from it.
 
 TypeScript runs directly with Node's type stripping: there is no build step, and imports name `.ts` files.
 
@@ -45,7 +45,7 @@ src/
     conversations.ts   Conversations by DM or @mention, and their thread in the team channel.
     deliveries.ts      What the bot sent on the team's behalf, so it can be deleted later.
     relays.ts          What relaying each DM posted in the team channel, so the copy can follow its edits.
-    anonymous.ts       Anonymous conversations and which of their messages came from whom.
+    anonymous.ts       Anonymous conversations, their keys, and their messages: from whom, and their encrypted text.
     heartbeat.ts       When the bot was last running.
     cli.ts             `pnpm clean-db`.
 
@@ -76,10 +76,11 @@ src/
 
   anonymous/         Anonymous mode.
     window.ts          The author's side: the "Anonymous messages" window and everything done from it.
-    team.ts            The team's side: thread buttons, replies, withdrawn replies, the hourly cleanup.
-    thread.ts          What the bot posts in the team channel for an anonymous conversation.
+    team.ts            The team's side: thread buttons, its window to read, reply, edit and delete, the hourly cleanup.
+    thread.ts          What the bot posts in the team channel for an anonymous conversation, and reading it back.
     views.ts           The Block Kit views of both sides.
     keys.ts            The keyed hash that links a conversation to its author, and the private handle.
+    content.ts         Encrypting anonymous conversations' text, with a key of its own for each conversation.
 
   manifest/          The Slack app's manifest.
     index.ts           Builds it from AppSettings and what the code needs (scopes, events, callback IDs).
@@ -94,21 +95,21 @@ A DM to the bot (`inbox/dms.ts`). The `message` event arrives; `relay` posts it 
 
 Files (`slack/files.ts`). Slack doesn't share a file from one conversation into another, so whatever carries files copies them: the bot downloads each one (up to 20 MB, in memory) and uploads a copy. `relay` shows images in a notice in the thread, as an image block pointing at an unshared copy, which Slack shares with the message, and uploads other files into the thread after a notice line. A reply sent with the send emoji uploads its files into the person's DM after its text, and records the copies in `deliveries` so the delete emoji removes them too. Posts made with the posting form, with files attached in it or brought by the message shortcut, upload them after the text, or, in a public channel the bot isn't in, show the images in the message itself. What couldn't be copied is listed for the team in the thread or the record, and for the person where they wrote: in their DM, in the form and their copy of the message, or in a note only they see by their mention.
 
-An anonymous message (`anonymous/`). The author submits the form in their window (`window.ts`); `thread.ts` posts it in the team channel as *Anonymous message* and records the conversation, with the author's keyed hash as its owner. A team reply with the send emoji goes through `inbox/replies.ts` to `anonymous/team.ts`, which only records it: the author's window reads it back from the thread when opened.
+An anonymous message (`anonymous/`). The author submits the form in their window (`window.ts`); `thread.ts` records the conversation, with the author's keyed hash as its owner and a new key of its own (`content.ts`), keeps the message encrypted, and posts a placeholder in the team channel as *Anonymous message*, with an *Open* button. The team opens the conversation in a window (`team.ts`), where it reads and replies; each reply is kept encrypted too, and posted in the thread as a placeholder. Both windows read the conversation from the database (`thread.read`). The person can edit or delete their own messages from their window, and the team its replies from its own: the text changes in the database, or goes from it, and the thread says so in place (`showChange`, `editReply`, `withdrawReply`). Both windows keep a deleted message in its place, without its text. Changes to a thread's messages go one after another (`serialized`), so a status change and an edit don't undo each other. Both windows show 30 messages at a time, with buttons for earlier ones. An hourly cleanup destroys the keys of conversations ended `ANON_READABLE_DAYS` ago. A conversation from before encryption, or with `ANON_ENCRYPTED=false`, has its text in the thread instead: a team reply with the send emoji goes through `inbox/replies.ts` to `team.ts`, which only records it, and the author's window reads it back from the thread.
 
 After downtime (`inbox/downtime.ts`). On start, the bot compares the last heartbeat with now, lists its DM conversations, relays every DM since then that lacks its :incoming_envelope:, apologises to each sender, and posts a note in the team channel if it was away more than 5 minutes.
 
 ## Data model
 
-Slack keeps the messages, but not the links between them: nothing in Slack says that a thread in the team channel belongs to a given DM. The database keeps those links, and a little state, never message contents.
+Slack keeps the messages, but not the links between them: nothing in Slack says that a thread in the team channel belongs to a given DM. The database keeps those links, a little state, and the encrypted text of anonymous conversations, which is what keeps it out of Slack messages and exports.
 
 | Table | Holds | Needed so that |
 | --- | --- | --- |
 | `conversations` | DM and mention conversations: who, where replies go, their thread in the team channel | A reply sent from a thread reaches the right person, and their next message continues the same thread |
 | `deliveries` | What the bot sent as the team: the record in the team channel, the message it sent, and the copies of its files | The delete emoji can remove it later, adding the send emoji twice doesn't send twice, and edits reach what was sent |
 | `relays` | What the bot posted in the team channel for each DM: the copy of its text, the notices with its images and naming the files that couldn't be copied, and the copies of its files | Editing or deleting the DM does the same to the team's copy |
-| `anon_conversations` | Anonymous conversations: private handle, thread, owner hash (cleared once purged), state | The author's window finds their conversations, and conversations end and are forgotten on schedule |
-| `anon_messages` | Which messages of an anonymous thread came from the author or the team (deleted once purged) | The window shows only those, never the team's internal discussion in the same thread |
+| `anon_conversations` | Anonymous conversations: private handle, thread, owner hash (cleared once purged), state, whether encrypted, and its key, itself encrypted (destroyed `ANON_READABLE_DAYS` after it ends) | The author's window finds their conversations, conversations end and are forgotten on schedule, and their text stays readable only while the key exists |
+| `anon_messages` | Which messages of an anonymous thread came from the author or the team, which team member sent each reply and who last edited or deleted it, and, if encrypted, their text (nulled when a message is deleted; the rows go once purged, or, if encrypted, once the key is destroyed) | The windows show only those, never the team's internal discussion in the same thread |
 | `meta` | The last heartbeat | After downtime, the bot knows which DMs it missed and how long it was away |
 
 `relays` keeps its rows for as long as a DM may be deleted, which is any time. They hold only the Slack IDs of messages the team channel already shows with their author, so they reveal nothing the channel doesn't, and `pnpm clean-db` empties them with the rest.
@@ -127,18 +128,19 @@ Slack doesn't let apps upload files under another name, so relayed files that ar
 
 ## Why anonymous messages don't use the Messages tab
 
-The Messages tab is a DM between the person and the bot, and a DM is stored under the person's name. On Business+ and Enterprise plans the workspace owner can export DMs, and the export would show that person writing the same text that appears anonymously in the team channel. Receiving only the replies by DM would give them away just the same, since each reply appears word for word in their DM and in the team thread.
+The Messages tab is a DM between the person and the bot, and a DM is stored under the person's name. On Business+ and Enterprise plans the workspace owner can export DMs, and the export would show that person writing the same text the team gets anonymously. Receiving only the replies by DM would give them away just the same, since each reply would appear word for word in their DM and in the team's window, or, unencrypted, in the team thread.
 
-Modals, the forms and windows apps open, are not messages: Slack keeps them out of people's history and out of exports. So the author writes through a form and reads the replies in a window, which the bot rebuilds from the team channel every time it opens. For the same reason the bot never notifies authors by DM, and their conversations never appear on the Home tab, which Slack keeps and shows whenever the bot is opened.
+Modals, the forms and windows apps open, are not messages: Slack keeps them out of people's history and out of exports. So the author writes through a form and reads the replies in a window, which the bot rebuilds every time it opens: from the database, decrypted, or, for a conversation that isn't encrypted, from the team channel. For the same reason the bot never notifies authors by DM, and their conversations never appear on the Home tab, which Slack keeps and shows whenever the bot is opened.
 
 ## Rules that keep anonymity
 
 - The author's Slack ID is never stored, only `anonOwner(userId)`, an HMAC keyed with `ANON_SECRET`. It is cleared (`purge`) as soon as the conversation is forgotten, and overwritten on disk: the database overwrites what it deletes (`secure_delete`), empties its write-ahead log after forgetting an author, and rewrites its file on every start.
 - Anonymous conversations live in modals, never on the Home tab. Slack shows the last published Home tab when the bot is opened, before the bot can replace it, so anything on it can be seen over someone's shoulder. The Home tab is the same for everyone, apart from the part only team members get.
-- Nothing visible links the author's window to the thread. The window refers to conversations by a random handle that never goes into the team channel; the team's buttons carry no value and find the conversation by the message they are on.
+- Nothing visible links the author's window to the thread. The window refers to conversations by a random handle that never goes into the team channel; the team's buttons carry no value and find the conversation by the message they are on. The menus to edit or delete a message carry its timestamp, which neither side sees.
 - No DMs to the author. A notification would stay in their history, and its time would match the reply in the team channel.
 - No message contents or user IDs in logs. `app.error` logs Slack error codes only.
 - No files in anonymous conversations, either way: a file belongs to whoever uploads it, and can carry details about them.
+- The text of encrypted conversations never goes into a Slack message: the thread holds placeholders, and only the windows show the text. Each conversation's key is kept encrypted with a key derived from `ANON_SECRET`, and destroying it is what deletes the text from the database. Backups made before still hold the key, so they must be kept apart from the secret, and deleted once older than `ANON_READABLE_DAYS`.
 
 Break one of these and anonymous mode stops being anonymous.
 

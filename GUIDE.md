@@ -16,6 +16,8 @@ Files you attach, up to 20 MB each, in the *Messages* tab, with an @mention or i
 
 To write without your name, open *Anonymous messages*, from the button on the bot's *Home* tab or with `ANONYMOUS_COMMAND`. That window is where you write, read the team's replies (new ones are marked 🆕) and write again. Nothing stays in your Slack messages, and your anonymous conversations never show on the *Home* tab, only in that window. You can have up to 3 of them open at once.
 
+While a conversation is open, the menu beside each of your messages edits or deletes it, for example to take out a detail that could give you away. The team sees that you edited or deleted a message, though not what it said before, and may already have read it. A reply the team withdraws stays in its place too, as *Reply deleted*, without its text.
+
 Anonymous conversations are text only: files can't be attached to them, and the files the team attaches to its replies aren't sent, so nothing attached can give anyone away.
 
 ### Ending an anonymous conversation
@@ -36,7 +38,7 @@ Every conversation is a thread in the team channel, and later messages from the 
 
 ### Replying as the bot
 
-Writing in a thread is internal discussion: the person doesn't see it. To send a message as the bot, add :outbox_tray: to it. The bot sends it and marks it with :white_check_mark:, or, if Slack refuses it, tells you why in a note only you see. Edits made after that are sent too, and the person sees the reply as edited. A reply sent as files alone can't be given text later, and a reply can't be left without text: the bot says so, and :wastebasket: deletes what was sent. In anonymous conversations the author's window always shows the current text of each reply.
+Writing in a thread is internal discussion: the person doesn't see it. To send a message as the bot, add :outbox_tray: to it. The bot sends it and marks it with :white_check_mark:, or, if Slack refuses it, tells you why in a note only you see. Edits made after that are sent too, and the person sees the reply as edited. A reply sent as files alone can't be given text later, and a reply can't be left without text: the bot says so, and :wastebasket: deletes what was sent. Encrypted anonymous conversations are answered from their window instead (see below); in those that aren't, the author's window always shows the current text of each reply.
 
 Files attached to the reply, up to 20 MB each, are sent with it, and a reply can be files alone. Any that can't be sent are listed in the thread, for the whole team. Deleting the reply with :wastebasket: deletes its files too.
 
@@ -56,7 +58,11 @@ When someone types `/`, Slack lists the app's commands next to its global shortc
 
 ### Anonymous conversations
 
-Anonymous conversations arrive as *Anonymous message*, with no name or code, and *End conversation* on the thread ends one. Once the bot no longer knows who wrote it, a delete button on the thread removes everything the bot posted there. Your own replies stay until each of you deletes theirs.
+Anonymous conversations arrive as *Anonymous message*, with no name or code. Their text is encrypted, so the thread only says a message arrived: *Open*, on its first message or on the person's later ones, shows the conversation in a window, where you also reply. The window shows 30 messages at a time, with buttons to read earlier or later ones. Anyone in the team can edit or delete a reply there, from the menu beside it, and :wastebasket: on a reply's placeholder in the thread withdraws it too. A deleted reply stays in its place, saying who deleted it, in the thread and in the window, and the person sees it as deleted, without its text or any names. An edited reply says who edited it last, in the thread and in the window, and the person sees it marked as edited, without names. The person can edit or delete their own messages too, while the conversation is open: the thread says so in place, without notifying anyone, and the window marks the edited ones, so check it before replying to an older message. What you write in the thread itself is internal discussion, as in other conversations, but it isn't encrypted, so don't quote the person's messages there.
+
+*End conversation* on the thread ends one. Once the bot no longer knows who wrote it, a delete button on the thread removes everything the bot posted there, the person's messages and the team's replies. A year after a conversation ends (`ANON_READABLE_DAYS`), the bot destroys its key, and its text is gone from the database for good; backups made before still hold it, for whoever also has `ANON_SECRET`.
+
+With `ANON_ENCRYPTED=false`, and in conversations from before 3.0.0, the text is in the thread instead, and you reply there with :outbox_tray:, as in other conversations. Your own replies then stay until each of you deletes theirs.
 
 ### Who can act as the bot
 
@@ -106,15 +112,18 @@ Files are copied, not shared: the team channel keeps its copy even if the person
 With anonymous messages:
 
 - The team sees the text and when it was sent, and nothing else. Nothing visible links two conversations from the same person, or someone's window to its thread.
-- The windows are not messages, so nothing the author writes or reads is in their Slack history or in DM exports. An export of the team channel has the anonymous texts, without their authors.
+- The windows are not messages, so nothing the author writes or reads is in their Slack history or in DM exports.
+- Their text, and the team's replies, aren't in Slack messages either: the bot keeps them on its server, encrypted, with a key of its own for each conversation. An export of the team channel only shows that anonymous messages arrived and when, and the team's discussion in the threads. With `ANON_ENCRYPTED=false`, it has the anonymous texts, without their authors.
+- A year after a conversation ends, the bot destroys its key, which deletes its text from the database for good. Backups made before still hold the key and the text, readable with `ANON_SECRET`, so delete backups older than `ANON_READABLE_DAYS`.
+- The text lives only in the bot's database: if the database or `ANON_SECRET` is lost, so are the conversations, which is one more reason to back up the database, apart from the secret.
 - People nearby only see the conversations while the window is open.
-- Whoever runs the server could find out who wrote an open conversation, and so could anyone who gets both the database and `ANON_SECRET`. To show people their replies, the bot keeps a scrambled code of each author's Slack ID, made with that secret, until the conversation ends and the bot forgets them, which also overwrites the code in the database file. So keep the secret apart from backups of the database, and choose carefully who has access to the server.
+- Whoever runs the server could find out who wrote a conversation the bot hasn't forgotten yet, and read conversations whose key isn't destroyed yet, and so could anyone who gets both the database and `ANON_SECRET`. To show people their replies, the bot keeps a scrambled code of each author's Slack ID, made with that secret, until the conversation ends and the bot forgets them, which also overwrites the code in the database file. So keep the secret apart from backups of the database, and choose carefully who has access to the server.
 - Deleted messages disappear from the team channel and from later exports, although on Enterprise plans the workspace owner can set a legal hold, which keeps deleted messages.
 - What people write can identify them, through details, writing style or timing. The form warns about it.
 
 ### Security
 
-The database keeps Slack IDs and timestamps, not message contents, which stay in Slack. The logs only contain Slack error codes. Never run with `LOG_LEVEL=debug` in a real workspace, as it can print whole messages, with names.
+The database keeps Slack IDs and timestamps, and the text of anonymous conversations, encrypted. Every other message stays in Slack. The logs only contain Slack error codes. Never run with `LOG_LEVEL=debug` in a real workspace, as it can print whole messages, with names.
 
 Nothing is unhackable, and Agora doesn't claim to be. It does its best to keep anonymous messages truly anonymous, following a basic security principle: make getting at what it protects so much hassle that it isn't worth it for a bad actor to try. If anyone tells you, as a hard fact, that something can't be hacked, they are lying to you.
 
@@ -198,7 +207,7 @@ Every setting, with its default, is described in [.env.example](.env.example). T
 
 ### Starting over
 
-To start over with an empty database, for example after testing, run `pnpm clean-db`. It asks first, and works with the bot running. Threads already in the team channel stay, but they are no longer conversations: replies from them aren't sent, people's next messages start new threads, and anonymous conversations disappear from their authors' windows.
+To start over with an empty database, for example after testing, run `pnpm clean-db`. It asks first, and works with the bot running. Threads already in the team channel stay, but they are no longer conversations: replies from them aren't sent, people's next messages start new threads, anonymous conversations disappear from their authors' windows, and the text of encrypted ones is lost, as it is only kept in the database.
 
 ### Changing the app later
 
@@ -206,7 +215,7 @@ To change the app later, for example its name, a command, or a new version that 
 
 ### Moving to another team channel
 
-Changing `TEAM_CHANNEL_ID`, say from a test channel to the real one, is safe with the same database. People's next messages start new threads in the new channel, and anonymous conversations from the old one drop out of people's windows.
+Changing `TEAM_CHANNEL_ID`, say from a test channel to the real one, is safe with the same database. People's next messages start new threads in the new channel, and anonymous conversations from the old one drop out of people's windows. Their *Open* buttons in the old channel stop working too, so the team can no longer read encrypted ones from there.
 
 ### How the Home tab looks
 

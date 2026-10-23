@@ -7,6 +7,7 @@ import { modalTitle, slackDate } from '#src/slack/blocks.ts';
 import { richTextFromPlain } from '#src/slack/richtext.ts';
 import type { AnonConversation } from '#src/storage/index.ts';
 import {
+  anonModal,
   CONVERSATION_MAX_MESSAGES,
   INBOX_MAX_CONVERSATIONS,
   REPLY_BLOCK,
@@ -29,6 +30,8 @@ const conversation = (handle: string, fields?: Partial<AnonConversation>): AnonC
   seenAt: 0,
   closedAt: null,
   closedBy: null,
+  encrypted: false,
+  contentKey: null,
   ...fields,
 });
 
@@ -94,7 +97,17 @@ test('an open conversation has an empty reply box, a send button and stays under
   assert.equal(view.submit?.text, t.anonymous.conversation.send);
   const reply = view.blocks.find((b) => b.type === 'input');
   assert.equal(reply?.block_id, `${REPLY_BLOCK}123`);
-  assert.ok(shows(view, t.anonymous.conversation.hidden({ count: 7 })));
+  // The 7 earlier ones are a button away, and from there, the latest are too.
+  assert.ok(shows(view, t.anonymous.conversation.earlier({ count: 7 })));
+  assert.match(json(view), /"action_id":"anon_page_earlier","value":"30"/);
+  const earlier = conversationView(t, thread(conversation('AAAA'), CONVERSATION_MAX_MESSAGES + 7), bot, 7, 123, { earlier: 30 });
+  assert.equal(earlier.blocks.filter((b) => b.type === 'rich_text').length, 7);
+  assert.match(json(earlier), /"action_id":"anon_page_later","value":"0"/);
+  assert.ok(!shows(earlier, t.anonymous.conversation.earlier({ count: 7 })));
+  // Shown again to read back, the reply box keeps its ID, and so what is typed in it.
+  assert.equal(earlier.blocks.find((b) => b.type === 'input')?.block_id, `${REPLY_BLOCK}123`);
+  const kept = conversationView(t, thread(conversation('AAAA'), 1), bot, 7, 999, { replyBlock: `${REPLY_BLOCK}123` });
+  assert.equal(kept.blocks.find((b) => b.type === 'input')?.block_id, `${REPLY_BLOCK}123`);
   assert.match(json(view), /"anon_end"/);
   assert.equal(view.blocks.filter((b) => b.type === 'rich_text').length, CONVERSATION_MAX_MESSAGES);
 
@@ -121,9 +134,10 @@ test('a message gone from the team channel shows as unavailable', () => {
 test('messages read like a chat: the bot with its avatar, close messages from one side grouped', () => {
   const at = (minutes: number) => `${1_700_000_000 + minutes * 60}.000100`;
   const body = richTextFromPlain('hola');
+  // Ended, so the author's own messages have no menu and group too.
   const view = conversationView(t, 
     {
-      conversation: conversation('AAAA'),
+      conversation: conversation('AAAA', { closedAt: 1, closedBy: 'team' }),
       messages: [
         { author: 'person', ts: at(0), body, isNew: false },
         { author: 'person', ts: at(2), body, isNew: false },
@@ -177,4 +191,62 @@ test('the team status can be replaced on the parent message', () => {
   assert.doesNotMatch(json(forgotten), /anon_team_end/);
   // Nothing in the team channel may carry the handle the author's window uses.
   assert.doesNotMatch(json([...open, ...forgotten]), /"value"/);
+});
+
+test('the form says the conversation will be encrypted, and for how long its text is kept, only when it will', () => {
+  const said = t.anonymous.form.encrypted({ days: 365 });
+  assert.ok(shows(anonModal(t, undefined, 365), said));
+  assert.ok(!shows(anonModal(t), said));
+});
+
+test("an edited reply goes under a line of its own that says so, even right after another reply", () => {
+  const c = conversation('AAAA');
+  const view = conversationView(
+    t,
+    {
+      conversation: c,
+      messages: [
+        { author: 'team', ts: '100', body: richTextFromPlain('first'), isNew: false },
+        { author: 'team', ts: '160', body: richTextFromPlain('second, edited'), isNew: false, edited: true },
+      ],
+    },
+    bot,
+    7,
+  );
+  const lines = view.blocks.filter((b) => JSON.stringify(b).includes(`*${bot.name}*`));
+  assert.equal(lines.length, 2);
+  assert.ok(JSON.stringify(lines[1]).includes(`_${t.anonymous.conversation.editedReply}_`));
+  assert.ok(!JSON.stringify(lines[0]).includes(t.anonymous.conversation.editedReply));
+});
+
+test("while a conversation is open, each of the author's messages has a line of its own, with a menu to edit or delete it", () => {
+  const at = (minutes: number) => `${1_700_000_000 + minutes * 60}.000100`;
+  const body = richTextFromPlain('hola');
+  const messages = [
+    { author: 'person' as const, ts: at(0), body, isNew: false },
+    { author: 'person' as const, ts: at(1), body, isNew: false, edited: true },
+  ];
+  const view = conversationView(t, { conversation: conversation('AAAA'), messages }, bot, 7);
+  const menus = view.blocks.filter((b) => b.type === 'section' && json(b).includes('anon_own_message'));
+  assert.equal(menus.length, 2);
+  assert.match(json(menus[0]), new RegExp(`edit:${at(0)}`));
+  assert.ok(shows(menus[1], t.anonymous.conversation.editedMessage));
+});
+
+test('a message after an edited one goes under a line of its own, so the mark is only on the edited one', () => {
+  const body = richTextFromPlain('hola');
+  const view = conversationView(
+    t,
+    {
+      conversation: conversation('AAAA'),
+      messages: [
+        { author: 'team', ts: '100', body, isNew: false, edited: true },
+        { author: 'team', ts: '160', body, isNew: false },
+      ],
+    },
+    bot,
+    7,
+  );
+  const lines = view.blocks.filter((b) => JSON.stringify(b).includes(`*${bot.name}*`));
+  assert.deepEqual(lines.map((b) => JSON.stringify(b).includes(t.anonymous.conversation.editedReply)), [true, false]);
 });

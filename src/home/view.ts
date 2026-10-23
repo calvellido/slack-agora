@@ -21,7 +21,15 @@ export interface HomeOptions {
   sourceUrl?: string;
   version?: string;
   /** Only for team members, with the ways to post as the bot besides the Home tab's button. */
-  team?: { channel: string; sendEmoji: string; deleteEmoji: string; publishCommand: boolean; publishShortcut: boolean };
+  team?: {
+    channel: string;
+    sendEmoji: string;
+    deleteEmoji: string;
+    publishCommand: boolean;
+    publishShortcut: boolean;
+    /** Whether new anonymous conversations are encrypted, and so answered from their window. */
+    anonEncrypted: boolean;
+  };
 }
 
 const plain = (text: string) => ({ type: 'plain_text' as const, text });
@@ -121,7 +129,7 @@ export function homeView(t: Strings, options: HomeOptions): HomeView {
         type: 'section',
         fields: [
           mrkdwn(t.home.team.conversations({ teamChannel })),
-          mrkdwn(t.home.team.reply({ sendEmoji: team.sendEmoji })),
+          mrkdwn(t.home.team.reply({ sendEmoji: team.sendEmoji, anonymous: team.anonEncrypted ? 'encrypted' : 'plain' })),
         ],
       },
       spacer(),

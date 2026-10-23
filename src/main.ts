@@ -1,4 +1,5 @@
 import { App, SocketModeReceiver } from '@slack/bolt';
+import { contentKeys } from './anonymous/content.ts';
 import { registerAnonymous } from './anonymous/index.ts';
 import { ownerHasher } from './anonymous/keys.ts';
 import { loadConfig } from './config.ts';
@@ -42,6 +43,7 @@ const deps: Deps = {
   store,
   team: new TeamDirectory(app.client, config.teamChannelId),
   anonOwner: ownerHasher(config.anonSecret),
+  anonContent: contentKeys(config.anonSecret),
   bot,
   i18n,
   notices: new Notices(config.teamChannelId, i18n.team.notices.sender, notices.emoji),

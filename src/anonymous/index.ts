@@ -26,14 +26,17 @@ export interface Anonymous {
 
 /**
  * Anonymous mode. People write through modals, never a DM, so nothing stays in their message history, and their
- * conversations only show in the "Anonymous messages" window, never on the Home tab. Their messages land in the team
- * channel with no name or code. Only a keyed hash of the author is stored (see keys.ts), until the conversation is
- * purged.
+ * conversations only show in the "Anonymous messages" window, never on the Home tab. Each becomes a thread in the team
+ * channel with no name or code: its text is kept encrypted in the database, and the thread only shows placeholders
+ * (or, with ANON_ENCRYPTED=false and from before encryption, the text itself). Only a keyed hash of the author is
+ * stored, until the conversation is purged.
  *
  * - window.ts: the author's side, in their language.
- * - team.ts: the team's side, in the team channel.
- * - thread.ts: what the bot posts in the team channel for both.
+ * - team.ts: the team's side, in the team channel, and its window on a conversation.
+ * - thread.ts: what the bot posts in the team channel for both, and reading a conversation back.
  * - views.ts: the Block Kit views.
+ * - keys.ts: the keyed hash of the author, and the private handle.
+ * - content.ts: the encryption of conversations' text.
  */
 export function registerAnonymous(app: App, deps: Deps): Anonymous {
   const thread = createThread(app, deps);

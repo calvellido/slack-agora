@@ -55,6 +55,10 @@ export interface Config extends AppSettings {
   anonIdleDays: number;
   anonClosedVisibleDays: number;
   anonMaxOpen: number;
+  /** Whether new anonymous conversations are encrypted, with only placeholders in the team channel. */
+  anonEncrypted: boolean;
+  /** Days the team can still read an encrypted conversation after it ends, before its key is destroyed. */
+  anonReadableDays: number;
 }
 
 /** A setting that is true or false, or `fallback` when it isn't set. */
@@ -142,6 +146,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const heartbeatUrl = env.HEARTBEAT_URL?.trim() || undefined;
   if (heartbeatUrl && !/^https:\/\/\S+$/.test(heartbeatUrl)) throw new Error('HEARTBEAT_URL must be an https:// address');
   const anonSecret = required('ANON_SECRET');
+  // A conversation's text must outlive its author's view of it, or their window would show it gone.
+  const readableDays = positive('ANON_READABLE_DAYS', 365);
+  if (readableDays < positive('ANON_CLOSED_VISIBLE_DAYS', 7)) {
+    throw new Error('ANON_READABLE_DAYS must be at least ANON_CLOSED_VISIBLE_DAYS');
+  }
   if (anonSecret.length < 32) throw new Error('ANON_SECRET is too short: generate one with `openssl rand -base64 32`');
 
   return {
@@ -163,5 +172,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     anonIdleDays: positive('ANON_IDLE_DAYS', 30),
     anonClosedVisibleDays: positive('ANON_CLOSED_VISIBLE_DAYS', 7),
     anonMaxOpen: positive('ANON_MAX_OPEN', 3),
+    anonEncrypted: flag(env, 'ANON_ENCRYPTED', true),
+    anonReadableDays: readableDays,
   };
 }

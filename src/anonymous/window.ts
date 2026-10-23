@@ -1,11 +1,10 @@
-import type { App, BlockAction, ButtonAction, GlobalShortcut } from '@slack/bolt';
+import type { App, BlockAction, ButtonAction, GlobalShortcut, OverflowAction } from '@slack/bolt';
 import type { ModalView } from '@slack/types';
 import type { WebClient } from '@slack/web-api';
 import type { Deps } from '#src/deps.ts';
 import type { Strings } from '#src/i18n/index.ts';
 import { serialized } from '#src/lib/serialized.ts';
 import { ANON_SHORTCUT } from '#src/manifest/index.ts';
-import { threadMessages } from '#src/slack/messages.ts';
 import { isBlank, richTextBlocks, richTextFromPlain } from '#src/slack/richtext.ts';
 import type { AnonConversation } from '#src/storage/index.ts';
 import type { AnonymousThread } from './thread.ts';
@@ -14,14 +13,18 @@ import {
   REPLY_BLOCK,
   anonModal,
   conversationView,
+  deleteMessageView,
+  editMessageView,
   endView,
   inboxView,
   noticeModal,
+  type Page,
 } from './views.ts';
 
 /**
  * The author's side: the "Anonymous messages" window, opened from the Home tab, the command or the shortcut. From it
- * people start conversations, read the team's replies, write again, end a conversation and delete their messages.
+ * people start conversations, read the team's replies, write again, edit or delete their messages, end a conversation
+ * and delete it.
  * Everything is a modal in the author's language: nothing is stored as a message in their Slack.
  */
 export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): void {
@@ -37,7 +40,7 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
     const problem = newConversationProblem(t, anonOwner(userId));
     return problem
       ? noticeModal(t.anonymous.form.title, problem, t.common.close)
-      : anonModal(t, text ? richTextFromPlain(text) : undefined);
+      : anonModal(t, text ? richTextFromPlain(text) : undefined, config.anonEncrypted ? config.anonReadableDays : undefined);
   }
 
   /** The "Anonymous messages" window. Built from the database alone, so it opens fast. */
@@ -59,20 +62,21 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
     return conversation?.teamThreadTs && conversation.owner === anonOwner(userId) ? conversation : undefined;
   }
 
-  /** One conversation, with its messages read back from the team channel. Marks the team's replies as seen. */
-  async function conversation(client: WebClient, t: Strings, c: AnonConversation): Promise<ModalView> {
-    const posted = await threadMessages(client, config.teamChannelId, c.teamThreadTs!);
-    const messages = store.anonymous.messages(c.id).map((m) => {
-      const found = posted.get(m.teamMessageTs);
-      return {
-        author: m.author,
-        ts: m.teamMessageTs,
-        body: (found && richTextBlocks(found.blocks)[0]) ?? null,
-        isNew: m.author === 'team' && m.createdAt > c.seenAt,
-      };
-    });
+  /**
+   * One conversation, with its messages decrypted, or, from before encryption, read back from the team channel. Marks
+   * the team's replies as seen.
+   */
+  async function conversation(client: WebClient, t: Strings, c: AnonConversation, page: Page = {}): Promise<ModalView> {
+    const messages = (await thread.read(client, c)).map((m) => ({
+      author: m.author,
+      ts: m.ts,
+      body: m.body,
+      isNew: m.author === 'team' && m.createdAt > c.seenAt,
+      edited: m.editedAt !== null,
+      deleted: m.deleted,
+    }));
     store.anonymous.markSeen(c.id);
-    return conversationView(t, { conversation: c, messages }, bot, config.anonClosedVisibleDays);
+    return conversationView(t, { conversation: c, messages }, bot, config.anonClosedVisibleDays, Date.now(), page);
   }
 
   /** Refreshes the "Anonymous messages" window under a modal opened from it. */
@@ -167,6 +171,102 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
     await refreshInbox(client, t, view.previous_view_id, userId);
   });
 
+  /** One of the author's own messages, if they may still change it: in their open conversation, and not deleted. */
+  function ownMessage(userId: string, handle: string | undefined, ts: string | undefined) {
+    const own = ownConversation(userId, handle);
+    const message = ts ? store.anonymous.message(ts) : undefined;
+    const theirs = message?.conversationId === own?.id && message?.author === 'person' && !message.deletedAt;
+    return own && !own.closedAt && theirs ? own : undefined;
+  }
+
+  /** Which message one of the small windows over a conversation is about, and the conversation's reply box. */
+  function aboutMessage(metadata: string): { handle?: string; ts?: string; reply?: string } {
+    try {
+      return JSON.parse(metadata) as { handle?: string; ts?: string; reply?: string };
+    } catch {
+      return {};
+    }
+  }
+
+  /** The reply box of a window as it is now, so showing the window again keeps what is typed in it. */
+  const replyBlockOf = (view: { state?: { values?: Record<string, unknown> } } | undefined) =>
+    Object.keys(view?.state?.values ?? {}).find((id) => id.startsWith(REPLY_BLOCK));
+
+  /** Back in the conversation, shown again with the change, and with whatever was typed in its reply box. */
+  async function refreshConversation(client: WebClient, t: Strings, viewId: string | null | undefined, c: AnonConversation, replyBlock?: string) {
+    if (!viewId) return;
+    await client.views.update({ view_id: viewId, view: await conversation(client, t, store.anonymous.byId(c.id)!, { replyBlock }) });
+  }
+
+  // Reading back: earlier or later messages than the window shows.
+  for (const way of ['earlier', 'later']) {
+    app.action<BlockAction<ButtonAction>>(`anon_page_${way}`, async ({ ack, body, action, client }) => {
+      await ack();
+      const t = await i18n.forUser(body.user.id);
+      const own = ownConversation(body.user.id, body.view?.private_metadata);
+      if (!own || !body.view?.id) return;
+      const page = { earlier: Number(action.value), replyBlock: replyBlockOf(body.view) };
+      await client.views.update({ view_id: body.view.id, view: await conversation(client, t, own, page) });
+    });
+  }
+
+  // Editing or deleting one of their own messages, from the menu beside it, while the conversation is open.
+  app.action<BlockAction<OverflowAction>>('anon_own_message', async ({ ack, body, action, client }) => {
+    await ack();
+    const userId = body.user.id;
+    const t = await i18n.forUser(userId);
+    const [what, ts] = action.selected_option.value.split(':');
+    const handle = body.view?.private_metadata;
+    const own = ownMessage(userId, handle, ts);
+    if (!own || !ts) {
+      await client.views.push({ trigger_id: body.trigger_id, view: noticeModal(t.anonymous.window.title, t.anonymous.unavailable, t.common.back) });
+      return;
+    }
+    const c = t.anonymous.conversation;
+    const metadata = JSON.stringify({ handle, ts, reply: replyBlockOf(body.view) });
+    const current = await thread.readOne(client, own, ts);
+    const view =
+      what === 'edit'
+        ? editMessageView(t, { callbackId: 'anon_own_edit', metadata, title: c.editTitle, label: t.anonymous.form.message }, current)
+        : deleteMessageView(t, { callbackId: 'anon_own_delete', metadata, title: c.deleteTitle, text: c.deleteMessageConfirm, button: c.deleteMessage });
+    await client.views.push({ trigger_id: body.trigger_id, view });
+  });
+
+  // Both change the message before answering, so the person is told if it didn't go through: until the thread shows
+  // the change, a message whose text is there isn't changed.
+  app.view('anon_own_edit', async ({ ack, body, view, client }) => {
+    const userId = body.user.id;
+    const t = await i18n.forUser(userId);
+    const { handle, ts, reply } = aboutMessage(view.private_metadata);
+    const own = ownMessage(userId, handle, ts);
+    const [message] = richTextBlocks([view.state.values.reply?.reply?.rich_text_value]);
+    const error = !own ? t.anonymous.unavailable : !message || isBlank(message) ? t.anonymous.form.empty : undefined;
+    if (error) {
+      await ack({ response_action: 'errors', errors: { reply: error } });
+      return;
+    }
+    if (!(await thread.editMessage(client, own!, ts!, message!))) {
+      await ack({ response_action: 'errors', errors: { reply: t.anonymous.conversation.changeFailed } });
+      return;
+    }
+    await ack();
+    await refreshConversation(client, t, view.previous_view_id, own!, reply);
+  });
+
+  app.view('anon_own_delete', async ({ ack, body, view, client }) => {
+    const userId = body.user.id;
+    const t = await i18n.forUser(userId);
+    const { handle, ts, reply } = aboutMessage(view.private_metadata);
+    const own = ownMessage(userId, handle, ts);
+    const problem = !own ? t.anonymous.unavailable : !(await thread.deleteMessage(client, own, ts!)) ? t.anonymous.conversation.changeFailed : undefined;
+    if (problem) {
+      await ack({ response_action: 'update', view: noticeModal(t.anonymous.window.title, problem, t.common.back) });
+      return;
+    }
+    await ack();
+    await refreshConversation(client, t, view.previous_view_id, own!, reply);
+  });
+
   // Ending a conversation: the author confirms first, and can also delete their messages from the team channel.
   app.action<BlockAction<ButtonAction>>('anon_end', async ({ ack, body, action, client }) => {
     await ack();
@@ -175,7 +275,7 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
     if (!body.view?.id) return;
     await client.views.update({
       view_id: body.view.id,
-      view: own && !own.closedAt ? endView(t, own.handle) : noticeModal(t.anonymous.window.title, t.anonymous.unavailable, t.common.back),
+      view: own && !own.closedAt ? endView(t, own.handle, own.encrypted) : noticeModal(t.anonymous.window.title, t.anonymous.unavailable, t.common.back),
     });
   });
 
@@ -195,7 +295,7 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
     });
     await refreshInbox(client, t, view.previous_view_id, userId);
     if (remove) {
-      await thread.remove(client, own, i18n.team.anonymous.team.deletedByPerson);
+      await thread.remove(client, own, i18n.team.anonymous.team.deletedByPerson({ encrypted: own.encrypted ? 'yes' : 'no' }));
     } else {
       await thread.setStatus(client, own, { state: 'forgotten', note: i18n.team.anonymous.team.endedByPerson });
       await thread.note(client, own, i18n.team.anonymous.team.endedByPerson);
@@ -217,6 +317,6 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
     if (!deletable) return;
     store.anonymous.purge(deletable.id);
     await refreshInbox(client, t, body.view?.previous_view_id, body.user.id);
-    await thread.remove(client, deletable, i18n.team.anonymous.team.deletedByPerson);
+    await thread.remove(client, deletable, i18n.team.anonymous.team.deletedByPerson({ encrypted: deletable.encrypted ? 'yes' : 'no' }));
   });
 }

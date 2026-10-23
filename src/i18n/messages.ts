@@ -4,6 +4,7 @@
 export interface Strings {
   common: {
     cancel: string;
+    save: string;
     close: string;
     back: string;
   };
@@ -172,7 +173,7 @@ export interface Strings {
       title: string;
       onlyTeam: (params: { teamChannel: string }) => string;
       conversations: (params: { teamChannel: string }) => string;
-      reply: (params: { sendEmoji: string }) => string;
+      reply: (params: { sendEmoji: string; anonymous: string }) => string;
       delete: (params: { deleteEmoji: string; teamChannel: string }) => string;
       publish: (params: { ways: string }) => string;
       publishButton: string;
@@ -201,7 +202,18 @@ export interface Strings {
       expired: (params: { days: number }) => string;
       you: string;
       new: string;
-      hidden: (params: { count: number }) => string;
+      editedReply: string;
+      editedMessage: string;
+      deletedReply: string;
+      deletedMessage: string;
+      editMessage: string;
+      deleteMessage: string;
+      editTitle: string;
+      deleteTitle: string;
+      deleteMessageConfirm: string;
+      changeFailed: string;
+      earlier: (params: { count: number }) => string;
+      later: string;
       unavailable: string;
       reply: string;
       send: string;
@@ -216,7 +228,7 @@ export interface Strings {
       intro: string;
       deleteLabel: string;
       deleteOption: string;
-      deleteHint: string;
+      deleteHint: (params: { encrypted: string }) => string;
       submit: string;
       done: string;
       doneDeleted: string;
@@ -227,6 +239,7 @@ export interface Strings {
       intro: string;
       message: string;
       privacy: string;
+      encrypted: (params: { days: number }) => string;
       sent: string;
       empty: string;
       tooMany: (params: { max: number }) => string;
@@ -235,6 +248,18 @@ export interface Strings {
       header: string;
       followUp: string;
       openStatus: (params: { sendEmoji: string }) => string;
+      openStatusEncrypted: string;
+      locked: string;
+      openButton: string;
+      followUpLocked: string;
+      replied: (params: { user: string }) => string;
+      personDeleted: string;
+      personEdited: string;
+      repliedEdited: (params: { user: string; editor: string }) => string;
+      repliedDeleted: (params: { user: string; deleter: string }) => string;
+      nothingToDelete: (params: { deleteEmoji: string }) => string;
+      replyFromWindow: string;
+      textExpired: (params: { days: number }) => string;
       endButton: string;
       endConfirmTitle: string;
       endConfirm: (params: { days: number }) => string;
@@ -246,14 +271,28 @@ export interface Strings {
       deletableStatus: string;
       deleteButton: string;
       deleteConfirmTitle: string;
-      deleteConfirm: string;
+      deleteConfirm: (params: { encrypted: string }) => string;
       deleteConfirmButton: string;
-      deletedByTeam: string;
-      deletedByPerson: string;
+      deletedByTeam: (params: { encrypted: string }) => string;
+      deletedByPerson: (params: { encrypted: string }) => string;
       notDeletable: string;
       replyClosed: string;
       alreadyClosed: string;
       replyDeleted: (params: { user: string }) => string;
+    };
+    teamWindow: {
+      intro: string;
+      ended: string;
+      person: string;
+      edit: string;
+      delete: string;
+      editedBy: (params: { user: string }) => string;
+      deletedBy: (params: { user: string }) => string;
+      deletedByPerson: string;
+      editTitle: string;
+      deleteTitle: string;
+      deleteConfirm: string;
+      expired: (params: { days: number }) => string;
     };
   };
 }

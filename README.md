@@ -15,14 +15,14 @@ People write to the bot, with their name or anonymously. The conversations show 
 ## What it does
 
 - People write to the team with their name, from the bot's *Messages* tab, a form or an @mention, and get the replies in the same place, with files both ways.
-- Or without their name, in the *Anonymous messages* window, where they also read the team's replies. Nothing stays in their Slack messages, and the bot forgets who wrote a conversation once it ends.
-- Each conversation is a thread in the team's private channel. The team discusses it there, and sends a reply as the bot by adding :outbox_tray: to it.
+- Or without their name, in the *Anonymous messages* window, where they also read the team's replies. Nothing stays in their Slack messages, the text is encrypted outside Slack, and the bot forgets who wrote a conversation once it ends.
+- Each conversation is a thread in the team's private channel. The team discusses it there, and sends a reply as the bot by adding :outbox_tray: to it, or, for anonymous conversations, from the window their *Open* button shows.
 - Team members can also post in channels, or write to people, as the bot.
 - What people see on their own is in their Slack language, English or Spanish, and what the bot posts in the team channel is in the team's.
 
 ## Privacy
 
-Messages with your name are not anonymous: the team sees who wrote them. With anonymous messages the team sees the text and when it was sent, and nothing else, and nothing the author writes or reads stays in their Slack history or in DM exports.
+Messages with your name are not anonymous: the team sees who wrote them. With anonymous messages the team sees the text and when it was sent, and nothing else, and nothing the author writes or reads stays in their Slack history or in DM exports. By default, their text is encrypted on the bot's server, so an export of the team channel doesn't have it, as long as the team doesn't quote it in the thread.
 
 Nothing is unhackable, and Agora doesn't claim to be. [SECURITY.md](SECURITY.md) explains how someone could try to get at anonymous messages, what they could get, and how to make it harder.
 

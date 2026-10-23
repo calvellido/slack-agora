@@ -6,9 +6,9 @@ Ideas for what Agora could do next, and what each would take, given how the code
 
 ### Database backups
 
-If the database is lost, no messages are lost, as they all live in Slack, but the links between them are: replies from old threads stop being sent, people's next messages start new threads, anonymous authors no longer find their conversations, and what the bot sent can no longer be deleted with the delete emoji.
+If the database is lost, the text of encrypted anonymous conversations is lost with it, as it is only kept there. The other messages live in Slack, but the links between them are lost: replies from old threads stop being sent, people's next messages start new threads, anonymous authors no longer find their conversations, and what the bot sent can no longer be deleted with the delete emoji.
 
-What it takes: a `pnpm backup-db` command that writes a consistent copy of the database while the bot keeps running, with SQLite's own backup, which `node:sqlite` supports, and a section in the guide with a daily scheduled job as an example. The guide would also say where the copies should go: off the machine, and never next to `ANON_SECRET`, as both together can tell who wrote each anonymous conversation still open. Estimated: S, much like `pnpm clean-db`.
+What it takes: a `pnpm backup-db` command that writes a consistent copy of the database while the bot keeps running, with SQLite's own backup, which `node:sqlite` supports, and a section in the guide with a daily scheduled job as an example. The guide would also say where the copies should go: off the machine, and never next to `ANON_SECRET`, as both together can tell who wrote each anonymous conversation still open, and read the text of those whose key the copy still holds. Estimated: S, much like `pnpm clean-db`.
 
 ### A warning for permissions the bot doesn't need
 
@@ -69,12 +69,6 @@ What it takes: the most of these ideas. One answer per person, without storing w
 What it takes: on start, reading the history of the channels the bot is in, since its last heartbeat, and relaying the mentions without its received mark. Private channels need no new permission, but public ones would need `channels:history`, and mentions inside threads mean reading every thread with new replies, which is slow in busy channels. Estimated: M.
 
 ## Data
-
-### Anonymous messages encrypted in Slack
-
-On plans where the workspace owner can export private channels, such as Business+ and Enterprise, the owner can read the text of anonymous messages in the team channel, though not who wrote them. Encrypting that text in Slack would leave an export with nothing readable.
-
-What it takes: posting the person's messages encrypted in the thread, with a button that opens a window where the bot shows the conversation decrypted, as the author's window does. The team would reply from that window too, since text typed in the thread is a plaintext Slack message an export can keep, even if the bot deleted it right after. Each conversation would get its own key, stored on the server encrypted with a new secret, and destroying it would make the conversation unreadable everywhere, including in exports made earlier. The team's internal discussion would stay in the thread, in plaintext, so quoting a message there would undo the protection. It would be a setting, so a deployment can keep today's behaviour. Open questions: when to destroy a conversation's key (when the bot forgets its author, or only when the team deletes it), whether to post earlier conversations again, encrypted, and what the team's window shows. Estimated: L.
 
 ### A retention period for conversations with a name
 
