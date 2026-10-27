@@ -2,7 +2,7 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
-## [Unreleased]
+## [3.2.0] - 2026-10-27
 
 - The bot catches up while it runs, as it does when it starts: when its machine wakes from sleep, or its connection to Slack comes back after more than a minute, it relays the DMs it missed, apologises to their senders, and tells the team channel how long it was offline if that was more than 5 minutes. Until now, DMs sent while a laptop slept were lost. The log says how long the machine slept, or the connection was lost.
 - The guide explains running the bot on macOS as a LaunchAgent, keeping a Mac awake with its lid closed, and what happens after the machine restarts, in *Running it with Node* and *Keeping a laptop awake*.
@@ -125,6 +125,7 @@ The first release.
 - `pnpm clean-db` empties the database.
 - A Docker image, for linux/amd64 and linux/arm64.
 
+[3.2.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.2.0
 [3.1.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.1.0
 [3.0.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.0.0
 [2.3.1]: https://github.com/calvellido/slack-agora/releases/tag/v2.3.1
