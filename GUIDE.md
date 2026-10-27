@@ -76,7 +76,7 @@ One exception, which Slack imposes: apps can't upload files under another name. 
 
 ## If the bot is down
 
-Slack only delivers messages to a running bot, so nothing answers while it is down. The *Home* tab tells people that a message without :incoming_envelope: means the bot is offline. When it is back, it relays the DMs it missed, marked with when they were sent, and apologises once to each sender. If it was away for more than 5 minutes, or relayed any late DMs, it also tells the team channel how long it was offline.
+Slack only delivers messages to a running bot, so nothing answers while it is down. The *Home* tab tells people that a message without :incoming_envelope: means the bot is offline. When it is back, whether it started again, its machine woke from sleep or its connection to Slack returned, it relays the DMs it missed, marked with when they were sent, and apologises once to each sender. If it was away for more than 5 minutes, or relayed any late DMs, it also tells the team channel how long it was offline.
 
 ### Getting alerted
 
@@ -194,6 +194,37 @@ WantedBy=multi-user.target
 
 Then start it with `sudo systemctl enable --now agora`, and read its log with `journalctl -u agora`.
 
+On macOS, run it as a LaunchAgent, which starts it when you log in and again whenever it stops. It runs in your session, so it can read the secret from the Keychain (see [Keeping ANON_SECRET apart](#keeping-anon_secret-apart)). Save this as `~/Library/LaunchAgents/agora.plist`, with the folder you cloned, the path that `which node` gives, and your home folder in the log's path, all written out in full, as launchd doesn't expand `~`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>agora</string>
+  <key>WorkingDirectory</key>
+  <string>/Users/you/slack-agora</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/node</string>
+    <string>--env-file=.env</string>
+    <string>src/main.ts</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/Users/you/Library/Logs/agora.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/you/Library/Logs/agora.log</string>
+</dict>
+</plist>
+```
+
+Then start it with `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/agora.plist`, and read its log with `tail -f ~/Library/Logs/agora.log`. `launchctl kickstart -k gui/$(id -u)/agora` restarts it, after an update for example, and `launchctl bootout gui/$(id -u)/agora` stops it until you next log in; delete the file to stop it for good. macOS lists it among the background items in *System Settings > General > Login Items*, where it must stay allowed. A LaunchAgent doesn't get your shell's `PATH`, so a command in `ANON_SECRET_COMMAND` from outside the system's folders, such as 1Password's `op` installed with Homebrew, needs its full path.
+
 ### Keeping ANON_SECRET apart
 
 Whoever has both the database and `ANON_SECRET` can tell who wrote each anonymous conversation the bot hasn't forgotten, and read the encrypted ones, so the two should never be stored together. In `.env`, the secret sits next to the database, and goes wherever the folder is copied, synced or backed up.
@@ -216,7 +247,7 @@ On macOS, with the Keychain:
 
 A password manager with a command-line tool works the same way, such as 1Password's `op read "op://<vault>/<item>/<field>"`.
 
-The keychain is encrypted with your login password and unlocked while you are logged in, so the bot can read it when you start it from your session. A service that starts with the machine, before anyone logs in, can't: run the bot from your session instead, as a user service (`systemctl --user` on Linux, a LaunchAgent on macOS) or from a terminal. Inside Docker, the command can't reach the host's keychain either, so with Docker the secret stays in `.env`, or in a file only the container reads.
+The keychain is encrypted with your login password and unlocked while you are logged in, so the bot can read it when you start it from your session. A service that starts with the machine, before anyone logs in, can't: run the bot from your session instead, as a user service (`systemctl --user` on Linux, a LaunchAgent on macOS, as in [Running it with Node](#running-it-with-node)) or from a terminal. Inside Docker, the command can't reach the host's keychain either, so with Docker the secret stays in `.env`, or in a file only the container reads.
 
 ### A copy of ANON_SECRET, or none
 
@@ -235,7 +266,22 @@ A laptop works, since the bot only connects out, but some care keeps the databas
 - Encrypt its disk (LUKS on Linux, usually chosen when installing; FileVault on macOS, in *System Settings > Privacy & Security*), and lock its screen when you leave it.
 - Keep the bot's folder out of synced folders, such as Dropbox, Google Drive or OneDrive, and, on macOS, out of *Desktop* and *Documents* when iCloud syncs them.
 - Backups (Time Machine, Déjà Dup) should be encrypted, or leave the bot's folder out, and never include `.env` with the secret in it.
-- A laptop sleeps when idle or when its lid closes, and the bot goes offline with it. On Linux, `systemd-inhibit --what=sleep:handle-lid-switch pnpm start` keeps it awake while the bot runs, lid closed too. On macOS, `caffeinate -s pnpm start` keeps it awake while on power, but closing the lid still puts it to sleep, unless it is connected to a display. When it wakes, the bot catches up on the DMs it missed.
+
+### Keeping a laptop awake
+
+A laptop sleeps when it is idle or its lid closes, and the bot goes offline with it. When the laptop wakes, the bot catches up on the DMs it missed, as after any time offline (see [If the bot is down](#if-the-bot-is-down)), but nobody gets an answer meanwhile.
+
+On Linux, `systemd-inhibit --what=sleep:handle-lid-switch pnpm start` keeps it awake while the bot runs, with its lid closed too.
+
+On macOS, `caffeinate -s pnpm start` keeps it awake while on power, but closing the lid puts it to sleep all the same. To keep it running with its lid closed, turn sleep off:
+
+```sh
+sudo pmset -a disablesleep 1   # pmset -g then shows SleepDisabled 1; 0 turns sleep back on
+```
+
+The Mac then doesn't sleep at all until you turn sleep back on, on battery too, with its lid closed or not. So keep it plugged in, and never put it in a bag while it's on. Without changing that setting, a Mac only stays awake with its lid closed while it is plugged in and connected to a display, and an HDMI dummy plug counts as one.
+
+After a restart, for example for a system update, an encrypted disk waits for its password before anything runs, and a bot run from your session, as a LaunchAgent or a user service, waits for you to log in. On a Mac with FileVault, typing the password at start-up also logs you in. Docker Desktop, too, only starts once you log in. So someone needs to be near the laptop, and a monitor tells you when the bot is down (see [Getting alerted](#getting-alerted)). A locked screen is fine: the bot keeps running while you're logged in.
 
 ### Updating
 

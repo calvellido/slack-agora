@@ -31,6 +31,7 @@ src/
 
   slack/             Slack plumbing shared by the features.
     identity.ts        The bot's own name, avatar and IDs, read from Slack at start.
+    connection.ts      Following the Socket Mode connection as it opens and is lost.
     team-directory.ts  Who is in the team channel: who may act as the bot, and who the Home tab can list.
     messages.ts        Fetching a message or thread, and posting in a thread that may no longer exist.
     blocks.ts          Small Block Kit pieces: context lines, quoted messages, dates, modal titles.
@@ -64,7 +65,8 @@ src/
     write.ts           The form to write with your name, from the command, the shortcut or the Home tab.
     mentions.ts        @mentions in other channels.
     replies.ts         The team's reactions: send a reply as the bot, delete what it sent.
-    downtime.ts        The heartbeat, which DMs were missed, and the "back online" note.
+    downtime.ts        The heartbeat, which DMs were missed, catching up on start and after a sleep or a lost
+                       connection, and the "back online" note.
 
   publish/           Posting as the bot.
     index.ts           The Home tab button, the optional command and message shortcut, and the form submission.
@@ -98,7 +100,7 @@ Files (`slack/files.ts`). Slack doesn't share a file from one conversation into 
 
 An anonymous message (`anonymous/`). The author submits the form in their window (`window.ts`); `thread.ts` records the conversation, with the author's keyed hash as its owner and a new key of its own (`content.ts`), keeps the message encrypted, and posts a placeholder in the team channel as *Anonymous message*, with an *Open* button. The team opens the conversation in a window (`team.ts`), where it reads and replies; each reply is kept encrypted too, and posted in the thread as a placeholder. Both windows read the conversation from the database (`thread.read`). The person can edit or delete their own messages from their window, and the team its replies from its own: the text changes in the database, or goes from it, and the thread says so in place (`showChange`, `editReply`, `withdrawReply`). Both windows keep a deleted message in its place, without its text. Changes to a thread's messages go one after another (`serialized`), so a status change and an edit don't undo each other. Both windows show 30 messages at a time, with buttons for earlier ones. An hourly cleanup destroys the keys of conversations ended `ANON_READABLE_DAYS` ago. A conversation from before encryption, or with `ANON_ENCRYPTED=false`, has its text in the thread instead: a team reply with the send emoji goes through `inbox/replies.ts` to `team.ts`, which only records it, and the author's window reads it back from the thread.
 
-After downtime (`inbox/downtime.ts`). On start, the bot compares the last heartbeat with now, lists its DM conversations, relays every DM since then that lacks its :incoming_envelope:, apologises to each sender, and posts a note in the team channel if it was away more than 5 minutes.
+After downtime (`inbox/downtime.ts`). On start, the bot compares the last heartbeat with now, lists its DM conversations, relays every DM since then that lacks its :incoming_envelope:, apologises to each sender, and posts a note in the team channel if it was away more than 5 minutes. While it runs, it does the same in two cases: when its machine wakes from sleep, noticed as the minute's timer ticking late (timers stop while the machine sleeps, the clock doesn't), and when Socket Mode connects again after more than a minute without a connection. Shorter losses, such as Slack renewing the connection, are left to Slack's retries. Right after waking, the old connection can still look open, so the catch-up waits for a tick on time or a new connection. A catch-up that fails is tried again on the next tick. If the bot stops before catching up, its last heartbeat is when the DMs started to be missing, so the next start catches them up.
 
 ## Data model
 

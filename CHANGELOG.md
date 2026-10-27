@@ -2,6 +2,13 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## [Unreleased]
+
+- The bot catches up while it runs, as it does when it starts: when its machine wakes from sleep, or its connection to Slack comes back after more than a minute, it relays the DMs it missed, apologises to their senders, and tells the team channel how long it was offline if that was more than 5 minutes. Until now, DMs sent while a laptop slept were lost. The log says how long the machine slept, or the connection was lost.
+- The guide explains running the bot on macOS as a LaunchAgent, keeping a Mac awake with its lid closed, and what happens after the machine restarts, in *Running it with Node* and *Keeping a laptop awake*.
+
+No new permissions or settings: updating the bot is enough.
+
 ## [3.1.0] - 2026-10-23
 
 - `ANON_SECRET_COMMAND`: the command that prints `ANON_SECRET`, which the bot runs when it starts, so the secret can stay in the system's keychain instead of in `.env`, next to the database. The guide explains it for Linux and macOS, in *Keeping ANON_SECRET apart*, with advice for running the bot on a laptop, and the choice between keeping one sealed copy of the secret or none, generating it straight into the keychain so that nobody knows it.

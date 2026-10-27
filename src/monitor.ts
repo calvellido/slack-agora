@@ -1,4 +1,5 @@
 import type { Logger } from '@slack/bolt';
+import { followConnection, type Connection } from './slack/connection.ts';
 import { errorCode } from './slack/errors.ts';
 
 /**
@@ -9,7 +10,7 @@ import { errorCode } from './slack/errors.ts';
  */
 export function startMonitorPings(
   url: string,
-  connection: { on(state: string, listener: () => void): unknown },
+  connection: Connection,
   logger: Logger,
   everyMs = 60_000,
 ): { stop(): void } {
@@ -30,11 +31,14 @@ export function startMonitorPings(
     }
   }
 
-  connection.on('connected', () => {
-    connected = true;
-    void ping();
-  });
-  for (const state of ['disconnecting', 'disconnected', 'reconnecting']) connection.on(state, () => (connected = false));
+  followConnection(
+    connection,
+    () => {
+      connected = true;
+      void ping();
+    },
+    () => (connected = false),
+  );
   const timer = setInterval(() => void ping(), everyMs);
   return { stop: () => clearInterval(timer) };
 }

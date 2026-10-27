@@ -6,7 +6,7 @@ import { loadConfig } from './config.ts';
 import type { Deps } from './deps.ts';
 import { registerHome } from './home/index.ts';
 import { I18n } from './i18n/index.ts';
-import { recoverDowntime, startHeartbeat } from './inbox/downtime.ts';
+import { catchUpWhileRunning, recoverDowntime, startHeartbeat } from './inbox/downtime.ts';
 import { registerInbox } from './inbox/index.ts';
 import { startMonitorPings } from './monitor.ts';
 import { ANON_SHORTCUT, PUBLISH_SHORTCUT, WRITE_SHORTCUT } from './manifest/index.ts';
@@ -61,10 +61,12 @@ app.error(async (error) => {
   app.logger.error(`Listener failed: ${errorCode(error.original ?? error)}`);
 });
 
-// Start, telling the monitor, if there is one, while the bot is connected
+// Start, telling the monitor, if there is one, while the bot is connected, and catching up on what it missed whenever
+// the machine wakes from sleep or the connection comes back
 const monitor = config.heartbeatUrl
   ? startMonitorPings(config.heartbeatUrl, receiver.client, app.logger, config.heartbeatMinutes * 60_000)
   : undefined;
+const gaps = catchUpWhileRunning(app.client, deps, inbox, receiver.client, app.logger);
 await app.start();
 try {
   const { channel } = await app.client.conversations.info({ channel: config.teamChannelId });
@@ -82,12 +84,14 @@ const cleanup = () => {
 cleanup();
 const cleanupTimer = setInterval(cleanup, 60 * 60_000);
 
-// Clean shutdown
+// Clean shutdown. DMs it hasn't caught up on yet, after a sleep or while the connection is lost, are left for the next
+// start.
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, async () => {
     clearInterval(cleanupTimer);
     monitor?.stop();
-    uptime.stop();
+    gaps.stop();
+    uptime.stop(gaps.missingSince());
     await app.stop();
     store.close();
     process.exit(0);
