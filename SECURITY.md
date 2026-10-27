@@ -19,7 +19,7 @@ Mainly, the link between an anonymous message and its author, and the text of an
 
 The scrambled code protects nothing once someone has the secret: there are only a few hundred Slack IDs to try. That is why the secret must never sit next to the database or its backups. Once a conversation is forgotten, the bot overwrites the link in the database file and empties its log, where SQLite would otherwise keep an earlier copy for a while, so it is gone from the database. It is not gone from older backups, nor from old copies of blocks the server's disk itself may keep.
 
-Some things don't work for an attacker. Without the secret, the codes can't be guessed (it has 256 bits). The network traffic is encrypted, and the server has no open port besides SSH, because the bot only connects out. The logs hold only error codes, as long as `LOG_LEVEL=debug` is never used in a real workspace.
+Some things don't work for an attacker. Without the secret, the codes can't be guessed (it has 256 bits). The network traffic is encrypted, and the server has no open port besides SSH, because the bot only connects out. The logs hold only error codes, and at the `trace` level the kinds of events the bot handles, without IDs or text, as long as `LOG_LEVEL=debug` is never used in a real workspace. The console, in the bot's terminal, can't set it, and nothing controls the bot from Slack or the network.
 
 ## Keeping the risk low
 

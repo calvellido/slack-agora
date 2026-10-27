@@ -16,11 +16,21 @@ Imports come in three groups: packages; then `#src/…` for another part of the 
 
 ```text
 src/
-  main.ts            Entry point: settings, database, Slack connection, features, start, background work.
+  main.ts            Entry point: settings, database, Slack connection, features, start, background work, console.
+  launcher.ts        What `pnpm start` runs: main.ts in a process of its own, started again when it asks to.
   config.ts          Reads .env: AppSettings (what names the deployment, shared with the manifest) and Config,
                      running ANON_SECRET_COMMAND when the secret comes from the keychain.
   deps.ts            Deps: the shared services every feature receives.
+  log.ts             The log, shared with Bolt and the Slack clients, and its levels, trace included.
+  activity.ts        What the bot did since it started, in counts and times, for the console's status.
   monitor.ts         Calls HEARTBEAT_URL while connected to Slack, for a monitor to alert when the calls stop.
+
+  console/           Commands typed in the bot's terminal.
+    index.ts           Reading them, and printing log lines above what is being typed.
+    commands.ts        status, log, restart and update.
+    status.ts          How the bot is doing, in counts and times.
+    update.ts          Finding a newer release among the repository's tags, and installing it.
+    restart.ts         How the bot asks the launcher to start it again.
 
   lib/               Generic helpers, nothing Slack-specific.
     once.ts            Doing something once per key, such as telling someone about a message once.
@@ -30,7 +40,7 @@ src/
     version.ts         The version that is running, from package.json.
 
   slack/             Slack plumbing shared by the features.
-    identity.ts        The bot's own name, avatar and IDs, read from Slack at start.
+    identity.ts        The bot's own name, avatar, IDs and permissions, read from Slack at start.
     connection.ts      Following the Socket Mode connection as it opens and is lost.
     team-directory.ts  Who is in the team channel: who may act as the bot, and who the Home tab can list.
     messages.ts        Fetching a message or thread, and posting in a thread that may no longer exist.
@@ -86,7 +96,8 @@ src/
     content.ts         Encrypting anonymous conversations' text, with a key of its own for each conversation.
 
   manifest/          The Slack app's manifest.
-    index.ts           Builds it from AppSettings and what the code needs (scopes, events, callback IDs).
+    index.ts           Builds it from AppSettings and what the code needs (scopes, events, callback IDs), and
+                       says which scopes the bot's token lacks.
     cli.ts             `pnpm manifest`.
 ```
 
@@ -175,11 +186,20 @@ To add a language, copy `locales/en.yml` to `locales/<code>.yml`, with the langu
 
 The app's settings in Slack are generated, never edited by hand. `manifest/index.ts` combines AppSettings (name, description, commands, language and the about text, from `.env`) with what the code needs (scopes, events, the shortcut callback IDs its handlers listen for). `pnpm manifest` writes `manifest.yml` for the deployment, which is not committed; `pnpm manifest --example` writes `manifest.example.yml` with the defaults, and a test fails if it is out of date. If you add an API call that needs a new scope, add it to `BOT_SCOPES`.
 
+## The console
+
+When the bot runs in a terminal, `console/` reads commands typed there. It is the only way in: nothing listens on the network, and nothing is controlled from Slack, whose workspace owner is who anonymity protects people from, and where a command's answers would end up in exportable messages.
+
+The log is one `Log` (`log.ts`) shared with Bolt, the Socket Mode client and the Web API clients, so `log` changes the level for all of them. Besides Bolt's levels it has `trace`, which `activity.ts` feeds from a global middleware: a line for each event, action, command or form, named by the code's own names (event type, action and callback IDs), with how long it took and the error code if it failed, never IDs or text. The console can't set Bolt's `debug`, which logs whole payloads: the author and text of an anonymous message among them. `Activity` keeps the counts and times that `status` shows, in memory only.
+
+`pnpm start` runs `launcher.ts`, which runs `main.ts` in a child process with the terminal, and starts it again when it exits with `RESTART_CODE` (`restart`, `update apply`), or when it fails after running for over a minute, unless the launcher itself was asked to stop (SIGINT, SIGTERM), which it passes on to the bot. `update` fetches the repository's tags and reads the next release's notes from its `CHANGELOG.md`, within the same major version; `update apply` only works in a clean clone at the running version's tag, checks out the next one, installs its dependencies, and goes back to the running version's tag if that fails. A signed tag must verify. The update is `git` and `pnpm` run by the bot, in a session of their own so they can't ask for a password in its terminal, and the bot keeps running the code it loaded until it restarts. While a command runs, Ctrl-C has to be pressed twice, so as not to leave an update half done. `pnpm dev` has the console too, but no launcher: `node --watch` restarts the bot on changes instead.
+
 ## Working on it
 
 ```sh
 pnpm install
-pnpm dev                  # runs with .env, restarting on changes
+pnpm dev                  # runs with .env, restarting on changes, with the console
+pnpm start                # runs with .env through the launcher, which the console's restart and update need
 pnpm test                 # node:test, every src/**/*.test.ts
 pnpm typecheck
 pnpm check                # typecheck and test, as CI does

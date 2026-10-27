@@ -6,6 +6,8 @@ export interface BotIdentity {
   userId: string;
   name: string;
   avatar?: string;
+  /** The permissions its token has, as Slack reports them; undefined if it didn't. */
+  scopes?: string[];
 }
 
 export async function botIdentity(client: WebClient): Promise<BotIdentity> {
@@ -17,5 +19,6 @@ export async function botIdentity(client: WebClient): Promise<BotIdentity> {
     userId: auth.user_id,
     name: user?.profile?.display_name || user?.real_name || user?.name || 'Bot',
     avatar: user?.profile?.image_72,
+    scopes: auth.response_metadata?.scopes,
   };
 }

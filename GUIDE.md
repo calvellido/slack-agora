@@ -225,6 +225,20 @@ On macOS, run it as a LaunchAgent, which starts it when you log in and again whe
 
 Then start it with `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/agora.plist`, and read its log with `tail -f ~/Library/Logs/agora.log`. `launchctl kickstart -k gui/$(id -u)/agora` restarts it, after an update for example, and `launchctl bootout gui/$(id -u)/agora` stops it until you next log in; delete the file to stop it for good. macOS lists it among the background items in *System Settings > General > Login Items*, where it must stay allowed. A LaunchAgent doesn't get your shell's `PATH`, so a command in `ANON_SECRET_COMMAND` from outside the system's folders, such as 1Password's `op` installed with Homebrew, needs its full path.
 
+### The console
+
+When the bot runs in a terminal, with `pnpm start`, you can type commands there:
+
+- `status` says how the bot is doing: its version and how long it has been running, its connection to Slack, the times its machine slept or the connection was lost, the DMs it relayed late, how much it handled and how much failed, the monitor's last call, and any permissions the app lacks. It shows counts and times, never people or messages.
+- `log` shows the log's level, and `log trace` adds a line for each event, action or command the bot handles, saying what kind it was and how it went, but not who or what was written; `log info` goes back. The change lasts until the bot stops, and `LOG_LEVEL` in `.env` sets the level it starts with. The console can't turn on `debug`, which prints whole messages, with names.
+- `update` looks for a newer release with the same major version, and shows what changed, and `update apply` installs it and restarts the bot. If its dependencies fail to install, the folder goes back to the version running, and the bot keeps running it. `update apply` needs a folder cloned at a release, as in [Installing](#installing), without changes of your own. A new major version is installed by hand, as its notes explain.
+- `restart` stops the bot and starts it again, reading `.env` again.
+- `help` lists them, and Ctrl-C stops the bot, or Ctrl-C twice while a command is still running, so as not to stop an update halfway.
+
+`pnpm start` also starts the bot again if it stops with an error after running for over a minute, as a service would. It doesn't start with the machine, though: after a restart, start it again. A service (systemd, a LaunchAgent) or Docker runs the bot without a terminal, so without the console.
+
+To keep the terminal running while you're away from it, run the bot in tmux (`brew install tmux` on macOS, `sudo apt install tmux` on Linux): `tmux new -s agora pnpm start`. Ctrl-B and then D leave it running in the background, and `tmux attach -t agora` takes you back to its console. Closing the terminal window doesn't stop it.
+
 ### Keeping ANON_SECRET apart
 
 Whoever has both the database and `ANON_SECRET` can tell who wrote each anonymous conversation the bot hasn't forgotten, and read the encrypted ones, so the two should never be stored together. In `.env`, the secret sits next to the database, and goes wherever the folder is copied, synced or backed up.
@@ -281,14 +295,14 @@ sudo pmset -a disablesleep 1   # pmset -g then shows SleepDisabled 1; 0 turns sl
 
 The Mac then doesn't sleep at all until you turn sleep back on, on battery too, with its lid closed or not. So keep it plugged in, and never put it in a bag while it's on. Without changing that setting, a Mac only stays awake with its lid closed while it is plugged in and connected to a display, and an HDMI dummy plug counts as one.
 
-After a restart, for example for a system update, an encrypted disk waits for its password before anything runs, and a bot run from your session, as a LaunchAgent or a user service, waits for you to log in. On a Mac with FileVault, typing the password at start-up also logs you in. Docker Desktop, too, only starts once you log in. So someone needs to be near the laptop, and a monitor tells you when the bot is down (see [Getting alerted](#getting-alerted)). A locked screen is fine: the bot keeps running while you're logged in.
+After a restart, for example for a system update, an encrypted disk waits for its password before anything runs, and a bot run from your session, as a LaunchAgent or a user service, waits for you to log in. One run in a terminal, for its [console](#the-console), has to be started again. On a Mac with FileVault, typing the password at start-up also logs you in. Docker Desktop, too, only starts once you log in. So someone needs to be near the laptop, and a monitor tells you when the bot is down (see [Getting alerted](#getting-alerted)). A locked screen is fine: the bot keeps running while you're logged in.
 
 ### Updating
 
 Each release's section in [CHANGELOG.md](CHANGELOG.md), which is also its release notes, says what changed and what to do. When the app's manifest changes, for example with a new command or permission, generate it again and paste it, as in [Changing the app later](#changing-the-app-later).
 
 - With Docker, `docker compose pull && docker compose up -d`. The `3` tag in `compose.yaml` gets every 3.x release; a new major version can need changes, which its notes explain, and a `compose.yaml` with its own tag. If yours still says `:1` or `:2`, download it again, or change its tag to `:3`.
-- With Node, `git fetch --tags`, `git checkout` the new version's tag, `pnpm install --prod`, and restart the bot.
+- With Node, `git fetch --tags`, `git checkout` the new version's tag, `pnpm install --prod`, and restart the bot. With `pnpm start`, `update` and `update apply` in the bot's [console](#the-console) do it for you.
 
 ### Settings and data
 

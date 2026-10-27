@@ -12,6 +12,7 @@ import {
   buildManifest,
   contrastWithWhite,
   exampleManifest,
+  missingScopes,
   renderManifest,
 } from './index.ts';
 
@@ -85,6 +86,14 @@ test('extra scopes are added to the ones the code needs', () => {
   const scopes = manifest.oauth_config.scopes.bot;
   for (const scope of [...BOT_SCOPES, 'files:read']) assert.ok(scopes.includes(scope), scope);
   assert.equal(scopes.filter((s) => s === 'users:read').length, 1);
+});
+
+test("the scopes the token lacks are those the manifest asks for, extra ones too, unless Slack didn't say", () => {
+  const settings = loadAppSettings({ EXTRA_BOT_SCOPES: 'channels:history' });
+  const granted = BOT_SCOPES.filter((scope) => scope !== 'im:read');
+  assert.deepEqual(missingScopes(granted, settings), ['channels:history', 'im:read']);
+  assert.deepEqual(missingScopes([...BOT_SCOPES, 'channels:history', 'team:read'], settings), []);
+  assert.equal(missingScopes(undefined, settings), undefined);
 });
 
 test('the about text becomes the long description, without formatting, when Slack accepts its length', () => {

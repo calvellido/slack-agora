@@ -72,7 +72,7 @@ export function startHeartbeat(heartbeat: Heartbeat): Uptime {
 export async function recoverDowntime(client: WebClient, deps: Deps, dms: Dms, uptime: Uptime): Promise<void> {
   const { lastAlive, startedAt } = uptime;
   if (!lastAlive) return;
-  const recovered = await dms.catchUp(client, lastAlive);
+  const recovered = await relayMissed(client, deps, dms, lastAlive);
   await tellBack(client, deps, lastAlive, startedAt, recovered);
 }
 
@@ -117,7 +117,7 @@ export function catchUpWhileRunning(
     missingSince = undefined;
     let recovered: number;
     try {
-      recovered = await dms.catchUp(client, since);
+      recovered = await relayMissed(client, deps, dms, since);
       failing = false;
     } catch (error) {
       if (!failing) logger.error(`Catching up failed, and it will be tried again: ${errorCode(error)}`);
@@ -140,6 +140,7 @@ export function catchUpWhileRunning(
       everConnected = true;
       if (lostAt !== undefined && now() - lostAt >= CATCH_UP_AFTER_MS) {
         logger.warn(`The connection to Slack was lost for ${formatDuration(now() - lostAt)}`);
+        deps.activity.lostConnection(now() - lostAt);
         missing(lostAt);
       }
       lostAt = undefined;
@@ -157,6 +158,7 @@ export function catchUpWhileRunning(
     const late = tick - lastTick - everyMs;
     if (late >= SLEPT_AFTER_MS) {
       logger.warn(`The machine was asleep for about ${formatDuration(late)}`);
+      deps.activity.slept(late);
       missing(lastTick);
     } else if (connected) {
       void catchUp();
@@ -170,6 +172,13 @@ export function catchUpWhileRunning(
       return since.length > 0 ? Math.min(...since) : undefined;
     },
   };
+}
+
+/** Relays the DMs sent since `away` (ms) that weren't marked as received, and returns how many. */
+async function relayMissed(client: WebClient, { activity }: Deps, dms: Dms, away: number): Promise<number> {
+  const recovered = await dms.catchUp(client, away);
+  activity.caughtUp(recovered);
+  return recovered;
 }
 
 /** Tells the team the bot is back after being away from `away` to `back` (ms), if that was a while or it relayed DMs. */

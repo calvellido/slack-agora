@@ -3,6 +3,7 @@ import type { WebClient } from '@slack/web-api';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { test, type TestContext } from 'node:test';
+import { Activity } from '#src/activity.ts';
 import type { Deps } from '#src/deps.ts';
 import { I18n, stringsIn } from '#src/i18n/index.ts';
 import { slackDate } from '#src/slack/blocks.ts';
@@ -32,8 +33,8 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * The bot running with its timer ticking every `everyMs`, until the test ends, on a clock that `skip` moves forward,
- * as it does while the machine sleeps. Records the catch-ups (since when), the notices in the team channel, and the
- * log's warnings and errors.
+ * as it does while the machine sleeps. Records the catch-ups (since when), the notices in the team channel, the log's
+ * warnings and errors, and the activity.
  */
 function setup(test: TestContext, everyMs: number, failures = 0) {
   const caughtUp: number[] = [];
@@ -44,8 +45,9 @@ function setup(test: TestContext, everyMs: number, failures = 0) {
   } as unknown as WebClient;
   let skipped = 0;
   const now = () => Date.now() + skipped;
+  const activity = new Activity(now);
   const notices = new Notices('CTEAM', 'Helpdesk · notices', 'robot_face');
-  const deps = { i18n: new I18n(client, names, 'en'), notices } as unknown as Deps;
+  const deps = { i18n: new I18n(client, names, 'en'), notices, activity } as unknown as Deps;
   // The first `failures` catch-ups fail, as when Slack can't be reached.
   const catchUp = async (_: WebClient, since: number) => {
     if (failures-- > 0) throw new Error('fetch failed');
@@ -59,11 +61,11 @@ function setup(test: TestContext, everyMs: number, failures = 0) {
   test.after(() => gaps.stop());
   const skip = (ms: number) => (skipped += ms);
   const backOnline = (duration: string) => t.inbox.backOnline({ duration, since: slackDate(String(caughtUp[0]! / 1000)), recovered: 0 });
-  return { caughtUp, posted, warnings, errors, connection, gaps, now, skip, backOnline };
+  return { caughtUp, posted, warnings, errors, activity, connection, gaps, now, skip, backOnline };
 }
 
 test('after the machine sleeps, the DMs since it fell asleep are caught up, and the team is told', async (t) => {
-  const { caughtUp, posted, warnings, connection, now, skip, backOnline } = setup(t, 10);
+  const { caughtUp, posted, warnings, activity, connection, now, skip, backOnline } = setup(t, 10);
   connection.emit('connected');
   await wait(25);
   const asleep = now();
@@ -74,6 +76,7 @@ test('after the machine sleeps, the DMs since it fell asleep are caught up, and 
   assert.ok(caughtUp[0]! <= asleep && caughtUp[0]! > asleep - MINUTE);
   assert.deepEqual(posted, [backOnline('2 h')]);
   assert.deepEqual(warnings, ['The machine was asleep for about 2 h']);
+  assert.equal(activity.sleeps, 1);
 });
 
 test('after a sleep, the catch-up waits for Slack to connect again', async (t) => {
@@ -95,7 +98,7 @@ test('after a sleep, the catch-up waits for Slack to connect again', async (t) =
 });
 
 test('a connection lost for a while is caught up when it comes back, and a short one is not', async (t) => {
-  const { caughtUp, posted, warnings, connection, now, skip, backOnline } = setup(t, 60 * MINUTE);
+  const { caughtUp, posted, warnings, activity, connection, now, skip, backOnline } = setup(t, 60 * MINUTE);
   connection.emit('connected');
   connection.emit('reconnecting');
   skip(30_000);
@@ -112,6 +115,7 @@ test('a connection lost for a while is caught up when it comes back, and a short
   assert.ok(caughtUp[0]! >= lost && caughtUp[0]! < lost + MINUTE);
   assert.deepEqual(posted, [backOnline('10 min')]);
   assert.deepEqual(warnings, ['The connection to Slack was lost for 10 min']);
+  assert.ok(Math.abs(activity.lastLoss!.ms - 10 * MINUTE) < MINUTE);
 
   // Once caught up, a quick reconnection doesn't catch up again.
   connection.emit('reconnecting');

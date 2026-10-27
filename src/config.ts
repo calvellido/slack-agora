@@ -1,6 +1,6 @@
-import { LogLevel } from '@slack/bolt';
 import { execSync } from 'node:child_process';
 import { DEFAULT_LANGUAGE, isLanguage, type Language } from './i18n/index.ts';
+import { LEVELS, type Level } from './log.ts';
 
 /**
  * What names this deployment, shared by the bot and by `pnpm manifest`, which builds the Slack app's manifest from it.
@@ -51,7 +51,7 @@ export interface Config extends AppSettings {
   heartbeatUrl?: string;
   /** How often it is called: once a day by default, as a monitor's checks often expect. */
   heartbeatMinutes: number;
-  logLevel: LogLevel;
+  logLevel: Level;
   anonSecret: string;
   anonIdleDays: number;
   anonClosedVisibleDays: number;
@@ -172,8 +172,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, run: RunCommand
     if (!(value > 0)) throw new Error(`${name} must be a positive number`);
     return value;
   };
-  const logLevel = (env.LOG_LEVEL ?? 'info') as LogLevel;
-  if (!Object.values(LogLevel).includes(logLevel)) throw new Error(`Invalid LOG_LEVEL ${logLevel}`);
+  const logLevel = (env.LOG_LEVEL ?? 'info') as Level;
+  if (!LEVELS.includes(logLevel)) throw new Error(`Invalid LOG_LEVEL ${logLevel}`);
   const homeBanner = env.HOME_BANNER_URL?.trim() || undefined;
   if (homeBanner && !/^https:\/\/\S+$/.test(homeBanner)) throw new Error('HOME_BANNER_URL must be an https:// address');
   const heartbeatUrl = env.HEARTBEAT_URL?.trim() || undefined;

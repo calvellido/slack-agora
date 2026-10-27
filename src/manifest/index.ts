@@ -32,6 +32,19 @@ export const BOT_SCOPES = [
   'users:read', // the bot's own profile, and each person's language
 ];
 
+/** The bot scopes the manifest asks for: the code's, and the deployment's extra ones. */
+export function botScopes(settings: Pick<AppSettings, 'extraScopes'>): string[] {
+  return [...new Set([...BOT_SCOPES, ...settings.extraScopes])].sort();
+}
+
+/**
+ * The scopes the manifest asks for that the bot's token lacks, as when a new version needs one and its manifest wasn't
+ * pasted yet; undefined when Slack didn't say which the token has.
+ */
+export function missingScopes(granted: readonly string[] | undefined, settings: Pick<AppSettings, 'extraScopes'>): string[] | undefined {
+  return granted && botScopes(settings).filter((scope) => !granted.includes(scope));
+}
+
 const BOT_EVENTS = [
   'app_home_opened',
   'app_mention',
@@ -129,7 +142,7 @@ export function buildManifest(settings: AppSettings): { manifest: object; warnin
           : []),
       ],
     },
-    oauth_config: { scopes: { bot: [...new Set([...BOT_SCOPES, ...settings.extraScopes])].sort() } },
+    oauth_config: { scopes: { bot: botScopes(settings) } },
     settings: {
       event_subscriptions: { bot_events: BOT_EVENTS },
       interactivity: { is_enabled: true },

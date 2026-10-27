@@ -2,6 +2,14 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## [Unreleased]
+
+- The console: when the bot runs in a terminal with `pnpm start`, commands typed there say how it is doing (`status`), change the log's level (`log`), restart it (`restart`), and look for a newer release and install it (`update`, `update apply`). `pnpm start` now runs the bot through a launcher, which starts it again for those, and when it stops with an error after running for over a minute. While a command is still running, such as an update, Ctrl-C has to be pressed twice to stop the bot. See *The console* in the guide.
+- `LOG_LEVEL=trace`: what `info` logs, plus a line for each event, action or command the bot handles, saying what kind it was and how it went, without who or what was written. Log lines no longer name the library that wrote them.
+- On start, the bot warns when its token lacks permissions the manifest asks for, as when a new version's manifest wasn't pasted into the app's settings yet, and `status` says so too.
+
+No new permissions or settings: updating the bot is enough. `pnpm start` now runs the bot through the launcher; services that run `node src/main.ts` themselves, as the guide's systemd and LaunchAgent examples do, and the Docker image, run it as before, without the console.
+
 ## [3.2.0] - 2026-10-27
 
 - The bot catches up while it runs, as it does when it starts: when its machine wakes from sleep, or its connection to Slack comes back after more than a minute, it relays the DMs it missed, apologises to their senders, and tells the team channel how long it was offline if that was more than 5 minutes. Until now, DMs sent while a laptop slept were lost. The log says how long the machine slept, or the connection was lost.

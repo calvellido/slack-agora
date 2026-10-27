@@ -1,3 +1,4 @@
+import type { Activity } from './activity.ts';
 import type { ContentKeys } from './anonymous/content.ts';
 import type { Config } from './config.ts';
 import type { I18n } from './i18n/index.ts';
@@ -19,4 +20,6 @@ export interface Deps {
   i18n: I18n;
   /** Posts what happened in the team channel, apart from the team's messages. */
   notices: Notices;
+  /** What the bot has done since it started, for the console's status. */
+  activity: Activity;
 }

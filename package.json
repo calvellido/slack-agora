@@ -13,7 +13,7 @@
     "node": ">=26.12.1"
   },
   "scripts": {
-    "start": "node --env-file-if-exists=.env src/main.ts",
+    "start": "node src/launcher.ts",
     "dev": "node --env-file-if-exists=.env --watch src/main.ts",
     "manifest": "node --env-file-if-exists=.env src/manifest/cli.ts",
     "i18n": "node src/i18n/cli.ts",
