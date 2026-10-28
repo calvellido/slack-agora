@@ -74,6 +74,10 @@ Only what the team sends is posted as the bot itself: replies sent with :outbox_
 
 One exception, which Slack imposes: apps can't upload files under another name. So relayed images show in a notice, but other relayed files, such as PDFs, appear as uploaded by the bot itself, right after a notice line saying whose they are.
 
+### Checking for updates
+
+*Check for updates*, on the team's part of the *Home* tab, says whether a newer release of the bot is out, with a link to what changed, and that it is installed on the bot's machine by whoever runs it (see [Updating](#updating)). Nothing is installed from Slack: whoever controls a team member's Slack account, the workspace's owner among them, could otherwise change the code running next to the anonymity secret. The button looks among the releases of the repository in `SOURCE_URL`, so it only shows when that is a repository on GitHub, as Agora's own is.
+
 ## If the bot is down
 
 Slack only delivers messages to a running bot, so nothing answers while it is down. The *Home* tab tells people that a message without :incoming_envelope: means the bot is offline. When it is back, whether it started again, its machine woke from sleep or its connection to Slack returned, it relays the DMs it missed, marked with when they were sent, and apologises once to each sender. If it was away for more than 5 minutes, or relayed any late DMs, it also tells the team channel how long it was offline.
@@ -299,7 +303,7 @@ After a restart, for example for a system update, an encrypted disk waits for it
 
 ### Updating
 
-Each release's section in [CHANGELOG.md](CHANGELOG.md), which is also its release notes, says what changed and what to do. When the bot starts on a new version, it tells the team channel, with a link to that release's notes on `SOURCE_URL` (Agora's repository, unless it says otherwise), and when it goes back to an earlier one, it says so too. When the app's manifest changes, for example with a new command or permission, generate it again and paste it, as in [Changing the app later](#changing-the-app-later).
+Each release's section in [CHANGELOG.md](CHANGELOG.md), which is also its release notes, says what changed and what to do. *Check for updates* on the team's part of the *Home* tab says when a newer release is out. When the bot starts on a new version, it tells the team channel, with a link to that release's notes on `SOURCE_URL` (Agora's repository, unless it says otherwise), and when it goes back to an earlier one, it says so too. When the app's manifest changes, for example with a new command or permission, generate it again and paste it, as in [Changing the app later](#changing-the-app-later).
 
 - With Docker, `docker compose pull && docker compose up -d`. The `3` tag in `compose.yaml` gets every 3.x release; a new major version can need changes, which its notes explain, and a `compose.yaml` with its own tag. If yours still says `:1` or `:2`, download it again, or change its tag to `:3`.
 - With Node, `git fetch --tags`, `git checkout` the new version's tag, `pnpm install --prod`, and restart the bot. With `pnpm start`, `update` and `update apply` in the bot's [console](#the-console) do it for you.

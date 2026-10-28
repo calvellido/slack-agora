@@ -15,3 +15,18 @@ export function parseVersion(text: string): Version | undefined {
 export function compareVersions(a: Version, b: Version): number {
   return a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
 }
+
+/**
+ * Among release tags (v1.2.3), the newest with the same major version as `current`, if newer, and the newest with a
+ * later major version, if any; as versions, without the v.
+ */
+export function newerReleases(tags: readonly string[], current: string): { next?: string; major?: string } {
+  const now = parseVersion(current);
+  if (!now) return {};
+  const newer = tags
+    .map(parseVersion)
+    .filter((v): v is Version => v !== undefined && compareVersions(v, now) > 0)
+    .sort((a, b) => compareVersions(b, a));
+  const name = (v: Version | undefined) => v?.join('.');
+  return { next: name(newer.find((v) => v[0] === now[0])), major: name(newer.find((v) => v[0] > now[0])) };
+}

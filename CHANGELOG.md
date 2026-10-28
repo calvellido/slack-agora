@@ -2,6 +2,12 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## [Unreleased]
+
+- *Check for updates*, a button on the team's part of the *Home* tab, says whether a newer release is out, with a link to what changed, and that whoever runs the bot installs it on its machine, from the console or with Docker. It only tells: nothing is installed from Slack. It looks among the releases of `SOURCE_URL`'s repository on GitHub, so it shows only when that is one, as Agora's own repository is.
+
+No new permissions or settings: updating the bot is enough.
+
 ## [3.4.0] - 2026-10-28
 
 - When the bot starts on a new version, it tells the team channel, as it does when it is back online, with a link to what changed: the release's notes on `SOURCE_URL`, which is Agora's repository unless it says otherwise. Going back to an earlier version is told too. The first time a version is announced, the bot doesn't know which one it ran before, so it only says it was updated.

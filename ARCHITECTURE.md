@@ -87,6 +87,7 @@ src/
   home/              The Home tab, the same for everyone in their language, plus a part for team members.
     index.ts           Publishes it whenever someone opens it.
     view.ts            Its blocks.
+    updates.ts         The team's button to check for a newer release on GitHub, which only tells.
 
   anonymous/         Anonymous mode.
     window.ts          The author's side: the "Anonymous messages" window and everything done from it.

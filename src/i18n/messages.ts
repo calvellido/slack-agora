@@ -179,6 +179,16 @@ export interface Strings {
       delete: (params: { deleteEmoji: string; teamChannel: string }) => string;
       publish: (params: { ways: string }) => string;
       publishButton: string;
+      updatesButton: string;
+      updates: {
+        title: string;
+        checking: string;
+        newer: (params: { current: string; next: string; url: string }) => string;
+        latest: (params: { current: string; major: string }) => string;
+        newMajor: (params: { version: string; url: string }) => string;
+        howTo: string;
+        failed: string;
+      };
     };
     source: (params: { url: string; label: string }) => string;
     version: (params: { version: string }) => string;

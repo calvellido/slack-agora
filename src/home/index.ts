@@ -3,10 +3,13 @@ import type { Deps } from '#src/deps.ts';
 import { VERSION } from '#src/lib/version.ts';
 import { errorCode } from '#src/slack/errors.ts';
 import type { Person } from '#src/slack/team-directory.ts';
+import { canCheckForUpdates, registerUpdateCheck } from './updates.ts';
 import { homeView, type HomeOptions } from './view.ts';
 
-/** The bot's Home tab, published again every time someone opens it, in their language. */
+/** The bot's Home tab, published again every time someone opens it, in their language, and its team's buttons. */
 export function registerHome(app: App, { config, team, bot, i18n }: Deps): void {
+  registerUpdateCheck(app, { config, team, i18n });
+
   // Without the list, the tab still opens: Slack may be slow or the channel unreadable for a moment.
   async function teamPeople(): Promise<Person[] | undefined> {
     try {
@@ -37,6 +40,7 @@ export function registerHome(app: App, { config, team, bot, i18n }: Deps): void 
             publishCommand: Boolean(config.publishCommand),
             publishShortcut: config.publishShortcut,
             anonEncrypted: config.anonEncrypted,
+            updates: canCheckForUpdates(config.sourceUrl),
           }
         : undefined,
     };

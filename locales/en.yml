@@ -220,6 +220,17 @@ home:
       *📣 Posting*
       Post in a channel or write to people as {bot} with the button below{ways, select, both {, `{publishCommand}`, or the shortcut in a message's *⋯* menu} command { or `{publishCommand}`} shortcut { or the shortcut in a message's *⋯* menu} other {}}.
     publishButton: "Post as {bot}"
+    updatesButton: "Check for updates"
+    # The window that button opens, saying whether a newer release of Agora is out. It is installed on the bot's
+    # machine, never from Slack.
+    updates:
+      title: "Updates"
+      checking: "Checking for a newer release…"
+      newer: "{bot} is running version {current}, and *version {next}* is out: <{url}|what changed>."
+      latest: "{bot} is running version {current}, the latest {major}.x release."
+      newMajor: "Version {version} is out too, a new major version, which can need changes: <{url}|read its notes> before updating to it."
+      howTo: "Whoever runs {bot} installs it on its machine: with `update apply` in the bot's console, or `docker compose pull && docker compose up -d` with Docker. Nothing is installed from Slack."
+      failed: "GitHub couldn't be reached to check for updates. Try again in a while."
   # At the bottom, for everyone.
   source: "This Slack app is running an instance of Agora, an open source project. Anyone can read its code at <{url}|{label}>, and see how it works. If you find something to improve, contributions are welcome."
   # The version that is running, under that.

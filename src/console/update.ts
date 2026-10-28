@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { compareVersions, parseVersion, type Version } from '#src/lib/version.ts';
+import { compareVersions, newerReleases, parseVersion } from '#src/lib/version.ts';
 
 // The console's update: finding a newer release among the repository's tags, and installing it, in a folder cloned
 // at a release as GUIDE.md installs it. Only within the same major version, as a new one can need changes by hand.
@@ -38,21 +38,6 @@ export const runInRoot: Run = (command, args) =>
 function said(error: unknown): string {
   const { stderr, message } = error as { stderr?: string; message?: string };
   return (stderr?.trim() || message || String(error)).split('\n')[0]!;
-}
-
-/**
- * Among release tags (v1.2.3), the newest with the same major version as `current`, if newer, and the newest with a
- * later major version, if any; as versions, without the v.
- */
-export function newerReleases(tags: readonly string[], current: string): { next?: string; major?: string } {
-  const now = parseVersion(current);
-  if (!now) return {};
-  const newer = tags
-    .map(parseVersion)
-    .filter((v): v is Version => v !== undefined && compareVersions(v, now) > 0)
-    .sort((a, b) => compareVersions(b, a));
-  const name = (v: Version | undefined) => v?.join('.');
-  return { next: name(newer.find((v) => v[0] === now[0])), major: name(newer.find((v) => v[0] > now[0])) };
 }
 
 /** The changelog's sections for the versions after `from`, up to `to`, without the links at its end. */

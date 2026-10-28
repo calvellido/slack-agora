@@ -34,6 +34,13 @@ test('everyone gets the same Home tab, and team members also get how to act as t
   assert.ok(shows(member, t.home.team.conversations({ teamChannel: 'C1' })));
 });
 
+test('team members get a button to check for updates, when SOURCE_URL has releases to check', () => {
+  const view = (updates: boolean) => JSON.stringify(homeView(t, { bot: { name: 'Helpdesk' }, team: { ...team, updates } }));
+  assert.match(view(true), /"action_id":"updates_check"/);
+  assert.doesNotMatch(view(false), /updates_check/);
+  assert.doesNotMatch(JSON.stringify(homeView(t, { bot: { name: 'Helpdesk' } })), /updates_check/);
+});
+
 test('the avatar goes above the about text, which replaces the intro', () => {
   const bot = { name: 'Helpdesk', avatar: 'https://example.com/a.png' };
   const [avatar, title, intro] = homeView(t, { bot, about: 'We help.' }).blocks;

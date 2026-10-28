@@ -3,6 +3,7 @@ import type { Strings } from '#src/i18n/index.ts';
 import type { Person } from '#src/slack/team-directory.ts';
 import { readableUrl } from '#src/lib/url.ts';
 import { context, spacer } from '#src/slack/blocks.ts';
+import { UPDATES_ACTION } from './updates.ts';
 
 // The Home tab, in the language of `t`. Everyone gets the same one, and team members also get how to act as the bot,
 // so it never gives away that someone writes anonymously: those conversations live in a modal.
@@ -29,6 +30,8 @@ export interface HomeOptions {
     publishShortcut: boolean;
     /** Whether new anonymous conversations are encrypted, and so answered from their window. */
     anonEncrypted: boolean;
+    /** Whether there's a button to check for a newer release, which needs SOURCE_URL on GitHub. */
+    updates?: boolean;
   };
 }
 
@@ -142,7 +145,10 @@ export function homeView(t: Strings, options: HomeOptions): HomeView {
       },
       {
         type: 'actions',
-        elements: [{ type: 'button', action_id: 'publish_open', text: plain(t.home.team.publishButton) }],
+        elements: [
+          { type: 'button', action_id: 'publish_open', text: plain(t.home.team.publishButton) },
+          ...(team.updates ? [{ type: 'button' as const, action_id: UPDATES_ACTION, text: plain(t.home.team.updatesButton) }] : []),
+        ],
       },
     );
   }
