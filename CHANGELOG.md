@@ -2,7 +2,7 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
-## [Unreleased]
+## [3.4.0] - 2026-10-28
 
 - When the bot starts on a new version, it tells the team channel, as it does when it is back online, with a link to what changed: the release's notes on `SOURCE_URL`, which is Agora's repository unless it says otherwise. Going back to an earlier version is told too. The first time a version is announced, the bot doesn't know which one it ran before, so it only says it was updated.
 
@@ -139,6 +139,7 @@ The first release.
 - `pnpm clean-db` empties the database.
 - A Docker image, for linux/amd64 and linux/arm64.
 
+[3.4.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.4.0
 [3.3.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.3.0
 [3.2.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.2.0
 [3.1.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.1.0
