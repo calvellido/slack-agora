@@ -2,6 +2,12 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## Unreleased
+
+- *Check for updates* says when GitHub refuses to answer for now, and until when, instead of that it couldn't be reached. Without an account, GitHub answers 60 calls an hour from the same network, shared by every app there, so they can run out. Until then, pressing the button doesn't ask GitHub again. When GitHub can't be reached at all, the log says why, such as a certificate the bot doesn't trust, instead of only `fetch failed`.
+
+No new permissions or settings: updating the bot is enough.
+
 ## [3.7.1] - 2026-10-28
 
 - DMs sent while the bot was down are no longer lost when it can't catch up on them right away. Until now, the bot noted it was running as soon as it started, before connecting to Slack: if it then failed to connect, as when a machine starts without a network, or catching up failed, or it stopped before finishing, the next start only looked back to then. Now the bot catches up once it connects, tries again every minute if that fails, and only notes it was running once it has caught up, which also covers a crash while its connection to Slack is lost.

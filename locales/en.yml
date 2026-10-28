@@ -238,6 +238,8 @@ home:
       newMajor: "Version {version} is out too, a new major version, which can need changes: <{url}|read its notes> before updating to it."
       howTo: "Whoever runs {bot} installs it on its machine: with `update apply` in the bot's console, or `docker compose pull && docker compose up -d` with Docker. Nothing is installed from Slack."
       failed: "GitHub couldn't be reached to check for updates. Try again in a while."
+      # GitHub allows 60 checks an hour from one address without an account, shared by every app on the network.
+      rateLimited: "GitHub limits how often it is asked from the same network, by {bot} and any other app there, and the limit is reached for now. Try again after {time}."
     # Above the status and updates buttons, apart from the posting one. `updates` says whether there's the second.
     maintenance: |-
       *🛠️ Maintenance*

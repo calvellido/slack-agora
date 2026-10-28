@@ -191,6 +191,7 @@ home:
       newMajor: "También está disponible la versión {version}, una versión mayor nueva, que puede necesitar cambios: <{url}|lee sus notas> antes de actualizar a ella."
       howTo: "Quien gestiona {bot} la instala en su máquina: con `update apply` en la consola del bot, o con `docker compose pull && docker compose up -d` si usa Docker. Desde Slack no se instala nada."
       failed: "No se ha podido consultar GitHub para buscar actualizaciones. Prueba de nuevo dentro de un rato."
+      rateLimited: "GitHub limita cuántas veces se le consulta desde una misma red, por {bot} y cualquier otra aplicación en ella, y por ahora se ha llegado al límite. Prueba de nuevo después de las {time}."
     maintenance: |-
       *🛠️ Mantenimiento*
       Cómo está {bot}{updates, select, yes {, y si hay una versión más reciente} other {}}.

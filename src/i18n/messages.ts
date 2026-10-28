@@ -193,6 +193,7 @@ export interface Strings {
         newMajor: (params: { version: string; url: string }) => string;
         howTo: string;
         failed: string;
+        rateLimited: (params: { time: string }) => string;
       };
       maintenance: (params: { updates: string }) => string;
       statusButton: string;

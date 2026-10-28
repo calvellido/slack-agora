@@ -34,6 +34,12 @@ export function slackDate(ts: string): string {
   return `<!date^${seconds}^{date_short_pretty} {time}|${fallback} UTC>`;
 }
 
+/** A time of day (ms), as each person sees it, such as "14:30". */
+export function slackTime(ms: number): string {
+  const seconds = Math.floor(ms / 1000);
+  return `<!date^${seconds}^{time}|${new Date(seconds * 1000).toISOString().slice(11, 16)} UTC>`;
+}
+
 /** How long ago a moment (ms) was, which Slack keeps up to date as time passes, as in "3 minutes ago". */
 export function slackAgo(ms: number): string {
   const seconds = Math.floor(ms / 1000);
