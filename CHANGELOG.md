@@ -2,7 +2,7 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
-## Unreleased
+## [3.7.2] - 2026-10-28
 
 - *Check for updates* says when GitHub refuses to answer for now, and until when, instead of that it couldn't be reached. Without an account, GitHub answers 60 calls an hour from the same network, shared by every app there, so they can run out. Until then, pressing the button doesn't ask GitHub again. When GitHub can't be reached at all, the log says why, such as a certificate the bot doesn't trust, instead of only `fetch failed`.
 
@@ -178,6 +178,7 @@ The first release.
 - `pnpm clean-db` empties the database.
 - A Docker image, for linux/amd64 and linux/arm64.
 
+[3.7.2]: https://github.com/calvellido/slack-agora/releases/tag/v3.7.2
 [3.7.1]: https://github.com/calvellido/slack-agora/releases/tag/v3.7.1
 [3.7.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.7.0
 [3.6.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.6.0
