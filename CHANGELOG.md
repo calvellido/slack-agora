@@ -2,7 +2,7 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
-## [Unreleased]
+## [3.6.0] - 2026-10-28
 
 - *Status*, a button on the team's part of the *Home* tab, says how the bot is doing, as the console's `status` does, in the team's language, with *Refresh* to see it again. Of what failed, it only says how many and the last error code: what failed and when stay in the console. It only shows: changing the log's level, restarting and updating are only done from the console.
 
@@ -151,6 +151,7 @@ The first release.
 - `pnpm clean-db` empties the database.
 - A Docker image, for linux/amd64 and linux/arm64.
 
+[3.6.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.6.0
 [3.5.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.5.0
 [3.4.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.4.0
 [3.3.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.3.0
