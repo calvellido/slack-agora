@@ -217,7 +217,7 @@ home:
   source: "Esta aplicación de Slack está ejecutando una instancia de Agora, un proyecto de código abierto. Cualquiera puede leer su código en <{url}|{label}>, y ver cómo funciona. Si encuentras algo que mejorar, cualquier sugerencia o aportación es bienvenida."
   version: "Versión {version}"
   online: "🟢 En línea, comprobado {checked}"
-  waiting: "⚪ Al abrir esta pestaña se comprueba si {bot} está en línea: si no se pone en 🟢 en unos segundos, está sin conexión, y los mensajes llegarán al equipo cuando vuelva."
+  lastOnline: "⚪ En línea en la última comprobación, {checked}. Para comprobarlo ahora, vuelve a abrir esta pestaña: si el emoji no se pone en verde en unos segundos, {bot} está sin conexión, y los mensajes llegarán al equipo cuando vuelva."
 
 anonymous:
   unavailable: "Esta conversación ya ha terminado."

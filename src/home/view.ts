@@ -23,10 +23,10 @@ export interface HomeOptions {
   sourceUrl?: string;
   version?: string;
   /**
-   * When the bot said it is running, by publishing the tab: shown next to the version. Without it, the tab says that
-   * opening it checks, which stays true once the bot is down and can't change the tab any more.
+   * When the bot last said it is running, by publishing the tab, shown next to the version, and whether the tab says it
+   * is `now`. Otherwise it says when the bot last was, which stays true once it is down and can't change the tab.
    */
-  online?: number;
+  online?: { at: number; now: boolean };
   /** Only for team members, with the ways to post as the bot besides the Home tab's button. */
   team?: {
     channel: string;
@@ -165,7 +165,7 @@ export function homeView(t: Strings, options: HomeOptions): HomeView {
       },
     );
   }
-  const running = online === undefined ? t.home.waiting : t.home.online({ checked: slackAgo(online) });
+  const running = online && (online.now ? t.home.online : t.home.lastOnline)({ checked: slackAgo(online.at) });
   const footer = [
     sourceUrl ? t.home.source({ url: sourceUrl, label: readableUrl(sourceUrl) }) : '',
     [version ? t.home.version({ version }) : '', running].filter(Boolean).join(' · '),

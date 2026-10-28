@@ -23,7 +23,7 @@ function setup(test: TestContext, unreadable = false) {
       publish: async ({ user_id, view }: { user_id: string; view: unknown }) => {
         const text = JSON.stringify(view);
         const online = text.includes(t.home.online({ checked: '' }).trim());
-        assert.notEqual(online, text.includes(JSON.stringify(t.home.waiting).slice(1, -1)));
+        assert.notEqual(online, text.includes(t.home.lastOnline({ checked: '' }).split(',')[0]!));
         published.push({ user: user_id, online });
         return { ok: true };
       },

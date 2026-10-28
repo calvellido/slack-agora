@@ -273,8 +273,9 @@ home:
   # When the bot has just published the tab, as it does whenever someone opens it. Slack keeps {checked} up to date,
   # as in "3 minutes ago".
   online: "🟢 Online, checked {checked}"
-  # A minute later, and when the bot stops, since it can't change the tab once it is down.
-  waiting: "⚪ Opening this tab checks whether {bot} is running: if this doesn't turn 🟢 in a few seconds, it is offline, and messages will reach the team when it's back."
+  # A minute later, and when the bot stops, since it can't change the tab once it is down: when it was last online,
+  # which stays true. "Green" in words, so nothing shows 🟢 while the bot may be offline.
+  lastOnline: "⚪ Online when last checked, {checked}. To check now, open this tab again: if this doesn't turn green within a few seconds, {bot} is offline, and messages will reach the team when it's back."
 
 anonymous:
   unavailable: "This conversation has ended."

@@ -11,14 +11,14 @@ import { canCheckForUpdates, registerUpdateCheck } from './updates.ts';
 import { homeView, type HomeOptions } from './view.ts';
 
 /**
- * How long the tab says the bot is online after publishing it, before saying that opening it checks. The bot can't
- * change the tab once it is down, so it doesn't leave it saying it is online for long.
+ * How long the tab says the bot is online after publishing it, before saying when it last was. The bot can't change
+ * the tab once it is down, so it doesn't leave it saying it is online for long.
  */
 export const ONLINE_FOR_MS = 60_000;
 
 /**
  * The bot's Home tab, published again every time someone opens it, in their language, and its team's buttons. On a
- * clean stop, `stop` turns the tabs still saying the bot is online into saying that opening them checks.
+ * clean stop, `stop` turns the tabs still saying the bot is online into saying when it last was.
  */
 export function registerHome(
   app: App,
@@ -80,7 +80,7 @@ export function registerHome(
       writeCommand: config.writeCommand,
       sourceUrl: config.sourceUrl,
       version: VERSION,
-      online: Date.now(),
+      online: { at: Date.now(), now: true },
       team: (await inTeam(event.user))
         ? {
             channel: config.teamChannelId,
@@ -99,7 +99,7 @@ export function registerHome(
     clearTimeout(online.get(user)?.timer);
     const settle = async () => {
       online.delete(user);
-      await publish(client, user, t, { ...published, online: undefined });
+      await publish(client, user, t, { ...published, online: published.online && { ...published.online, now: false } });
     };
     const timer = setTimeout(() => {
       settle().catch((error) => app.logger.warn(`Couldn't update the Home tab: ${errorCode(error)}`));

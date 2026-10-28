@@ -220,7 +220,7 @@ export interface Strings {
     source: (params: { url: string; label: string }) => string;
     version: (params: { version: string }) => string;
     online: (params: { checked: string }) => string;
-    waiting: string;
+    lastOnline: (params: { checked: string }) => string;
   };
   anonymous: {
     unavailable: string;

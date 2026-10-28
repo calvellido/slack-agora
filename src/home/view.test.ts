@@ -93,14 +93,17 @@ test('the bottom of the Home tab says where to read the code, which version is r
   const source = t.home.source({ url, label: 'github.com/example/helpdesk' });
   const version = t.home.version({ version: '1.2.3' });
   const online = t.home.online({ checked: slackAgo(1_000_000) });
-  const footer = (options: { sourceUrl?: string; version?: string; online?: number }) =>
+  const footer = (options: { sourceUrl?: string; version?: string; online?: { at: number; now: boolean } }) =>
     homeView(t, { bot: { name: 'Helpdesk' }, ...options }).blocks.at(-1);
   const note = (text: string) => ({ type: 'context', elements: [{ type: 'mrkdwn', text }] });
-  assert.deepEqual(footer({ sourceUrl: url, version: '1.2.3', online: 1_000_000 }), note(`${source}\n${version} · ${online}`));
+  const checked = { at: 1_000_000, now: true };
+  assert.deepEqual(footer({ sourceUrl: url, version: '1.2.3', online: checked }), note(`${source}\n${version} · ${online}`));
   assert.match(online, /<!date\^1000\^\{ago\}\|/);
-  // Without saying it is online, it says opening the tab checks, which stays true once the bot is down.
-  assert.deepEqual(footer({ version: '1.2.3' }), note(`${version} · ${t.home.waiting}`));
-  assert.deepEqual(footer({}), note(t.home.waiting));
+  // A minute later it says when the bot was last online, which stays true once the bot is down, with no 🟢 in it.
+  const last = t.home.lastOnline({ checked: slackAgo(1_000_000) });
+  assert.deepEqual(footer({ version: '1.2.3', online: { ...checked, now: false } }), note(`${version} · ${last}`));
+  assert.doesNotMatch(last, /🟢/);
+  assert.deepEqual(footer({ version: '1.2.3' }), note(version));
 });
 
 test('the people in the team channel can be listed after the about text, before its small text', () => {

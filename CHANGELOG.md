@@ -2,6 +2,12 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## Unreleased
+
+- A minute after the *Home* tab says the bot is online, it says when the bot was last online, and that opening the tab again checks. Until now it said that opening it checks, and to watch for :large_green_circle:, which read as the bot being offline to whoever still had the tab open. It says "green" in words, so nothing shows :large_green_circle: while the bot may be offline.
+
+No new permissions or settings: updating the bot is enough.
+
 ## [3.7.2] - 2026-10-28
 
 - *Check for updates* says when GitHub refuses to answer for now, and until when, instead of that it couldn't be reached. Without an account, GitHub answers 60 calls an hour from the same network, shared by every app there, so they can run out. Until then, pressing the button doesn't ask GitHub again. When GitHub can't be reached at all, the log says why, such as a certificate the bot doesn't trust, instead of only `fetch failed`.
