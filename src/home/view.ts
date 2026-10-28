@@ -2,7 +2,7 @@ import type { ContextBlock, HeaderBlock, HomeView, ImageBlock, KnownBlock, Secti
 import type { Strings } from '#src/i18n/index.ts';
 import type { Person } from '#src/slack/team-directory.ts';
 import { readableUrl } from '#src/lib/url.ts';
-import { context, spacer } from '#src/slack/blocks.ts';
+import { context, slackAgo, spacer } from '#src/slack/blocks.ts';
 import { STATUS_ACTION } from './status.ts';
 import { UPDATES_ACTION } from './updates.ts';
 
@@ -22,6 +22,11 @@ export interface HomeOptions {
   /** Where the bot's code can be read, and the version that is running, for the note at the bottom. */
   sourceUrl?: string;
   version?: string;
+  /**
+   * When the bot said it is running, by publishing the tab: shown next to the version. Without it, the tab says that
+   * opening it checks, which stays true once the bot is down and can't change the tab any more.
+   */
+  online?: number;
   /** Only for team members, with the ways to post as the bot besides the Home tab's button. */
   team?: {
     channel: string;
@@ -85,7 +90,7 @@ function publishWays({ publishCommand, publishShortcut }: { publishCommand: bool
 }
 
 export function homeView(t: Strings, options: HomeOptions): HomeView {
-  const { bot, about, banner, writeCommand, members, sourceUrl, version, team } = options;
+  const { bot, about, banner, writeCommand, members, sourceUrl, version, online, team } = options;
   const intro = aboutBlocks(about ?? t.home.intro);
   // The team's people go after the about text, before any small text that closes it.
   if (members?.length) {
@@ -146,18 +151,25 @@ export function homeView(t: Strings, options: HomeOptions): HomeView {
       },
       {
         type: 'actions',
+        elements: [{ type: 'button', action_id: 'publish_open', text: plain(t.home.team.publishButton) }],
+      },
+      // Looking after the bot, apart from what the team does as it.
+      spacer(),
+      { type: 'section', text: mrkdwn(t.home.team.maintenance({ updates: team.updates ? 'yes' : 'no' })) },
+      {
+        type: 'actions',
         elements: [
-          { type: 'button', action_id: 'publish_open', text: plain(t.home.team.publishButton) },
           { type: 'button', action_id: STATUS_ACTION, text: plain(t.home.team.statusButton) },
           ...(team.updates ? [{ type: 'button' as const, action_id: UPDATES_ACTION, text: plain(t.home.team.updatesButton) }] : []),
         ],
       },
     );
   }
+  const running = online === undefined ? t.home.waiting : t.home.online({ checked: slackAgo(online) });
   const footer = [
     sourceUrl ? t.home.source({ url: sourceUrl, label: readableUrl(sourceUrl) }) : '',
-    version ? t.home.version({ version }) : '',
+    [version ? t.home.version({ version }) : '', running].filter(Boolean).join(' · '),
   ].filter(Boolean);
-  if (footer.length > 0) blocks.push(spacer(), { type: 'divider' }, context(footer.join('\n')));
+  blocks.push(spacer(), { type: 'divider' }, context(footer.join('\n')));
   return { type: 'home', blocks };
 }

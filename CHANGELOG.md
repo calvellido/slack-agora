@@ -2,6 +2,13 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## [Unreleased]
+
+- At the bottom of the *Home* tab, next to the version, everyone sees whether the bot is running: :large_green_circle: when it has just published the tab, as it does whenever someone opens it, with how long ago that was. A minute later, and when the bot stops, it says that opening the tab checks, since the bot can't change it once it is down. Slack's own green dot next to the app's name is on all the time, so it doesn't tell.
+- On the team's part of the *Home* tab, *Status* and *Check for updates* are a group of their own, *Maintenance*, apart from the button to post as the bot.
+
+No new permissions or settings: updating the bot is enough.
+
 ## [3.6.0] - 2026-10-28
 
 - *Status*, a button on the team's part of the *Home* tab, says how the bot is doing, as the console's `status` does, in the team's language, with *Refresh* to see it again. Of what failed, it only says how many and the last error code: what failed and when stay in the console. It only shows: changing the log's level, restarting and updating are only done from the console.

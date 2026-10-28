@@ -79,7 +79,7 @@ warnAboutUnknownShortcuts(app, [WRITE_SHORTCUT, ANON_SHORTCUT, PUBLISH_SHORTCUT]
 const anonymous = registerAnonymous(app, deps);
 const inbox = registerInbox(app, deps, anonymous);
 registerPublish(app, deps);
-registerHome(app, deps, statusInfo);
+const home = registerHome(app, deps, statusInfo);
 
 // Log the Slack error code only: the default handler would print payloads, which carry message contents.
 app.error(async (error) => {
@@ -140,6 +140,8 @@ function stop(code = 0): Promise<void> {
     monitor?.stop();
     gaps.stop();
     uptime.stop(gaps.missingSince());
+    // The Home tabs saying the bot is online, within a few seconds, as a service manager only waits so long.
+    await Promise.race([home.stop(), new Promise((resolve) => setTimeout(resolve, 5_000))]);
     await app.stop();
     store.close();
     process.exit(code);

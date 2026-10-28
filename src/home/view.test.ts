@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { stringsIn } from '#src/i18n/index.ts';
-import { spacer } from '#src/slack/blocks.ts';
+import { slackAgo, spacer } from '#src/slack/blocks.ts';
 import { aboutBlocks, homeView } from './view.ts';
 
 const t = stringsIn('en', { bot: 'Helpdesk', publishCommand: '/post', anonymousCommand: '/anon' });
@@ -33,6 +33,15 @@ test('everyone gets the same Home tab, and team members also get how to act as t
   assert.match(JSON.stringify(member), /"action_id":"status_open"/);
   assert.ok(shows(member, t.home.team.reply({ sendEmoji: 'outbox_tray', anonymous: 'encrypted' })));
   assert.ok(shows(member, t.home.team.conversations({ teamChannel: 'C1' })));
+});
+
+test("the buttons to look after the bot are a group of their own, apart from the posting one", () => {
+  const view = homeView(t, { bot: { name: 'Helpdesk' }, team: { ...team, updates: true } });
+  const rows = view.blocks.filter((b) => b.type === 'actions').map((b) => JSON.stringify(b));
+  const ids = (row: string) => [...row.matchAll(/"action_id":"(\w+)"/g)].map((m) => m[1]);
+  assert.deepEqual(ids(rows.at(-2)!), ['publish_open']);
+  assert.deepEqual(ids(rows.at(-1)!), ['status_open', 'updates_check']);
+  assert.ok(shows(view, t.home.team.maintenance({ updates: 'yes' })));
 });
 
 test('team members get a button to check for updates, when SOURCE_URL has releases to check', () => {
@@ -79,18 +88,19 @@ test("the team's part only mentions the ways to post the deployment has", () => 
   assert.ok(shows(view({ publishCommand: false, publishShortcut: false }), t.home.team.publish({ ways: 'none' })));
 });
 
-test('the bottom of the Home tab says where to read the code and which version is running', () => {
+test('the bottom of the Home tab says where to read the code, which version is running, and whether the bot is', () => {
   const url = 'https://github.com/example/helpdesk/';
   const source = t.home.source({ url, label: 'github.com/example/helpdesk' });
   const version = t.home.version({ version: '1.2.3' });
-  const footer = (options: { sourceUrl?: string; version?: string }) =>
+  const online = t.home.online({ checked: slackAgo(1_000_000) });
+  const footer = (options: { sourceUrl?: string; version?: string; online?: number }) =>
     homeView(t, { bot: { name: 'Helpdesk' }, ...options }).blocks.at(-1);
   const note = (text: string) => ({ type: 'context', elements: [{ type: 'mrkdwn', text }] });
-  assert.deepEqual(footer({ sourceUrl: url, version: '1.2.3' }), note(`${source}\n${version}`));
-  assert.deepEqual(footer({ version: '1.2.3' }), note(version));
-  // With neither, the tab ends before the space, the line and the note.
-  const without = homeView(t, { bot: { name: 'Helpdesk' } });
-  assert.equal(without.blocks.length, homeView(t, { bot: { name: 'Helpdesk' }, version: '1.2.3' }).blocks.length - 3);
+  assert.deepEqual(footer({ sourceUrl: url, version: '1.2.3', online: 1_000_000 }), note(`${source}\n${version} · ${online}`));
+  assert.match(online, /<!date\^1000\^\{ago\}\|/);
+  // Without saying it is online, it says opening the tab checks, which stays true once the bot is down.
+  assert.deepEqual(footer({ version: '1.2.3' }), note(`${version} · ${t.home.waiting}`));
+  assert.deepEqual(footer({}), note(t.home.waiting));
 });
 
 test('the people in the team channel can be listed after the about text, before its small text', () => {

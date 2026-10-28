@@ -231,6 +231,10 @@ home:
       newMajor: "Version {version} is out too, a new major version, which can need changes: <{url}|read its notes> before updating to it."
       howTo: "Whoever runs {bot} installs it on its machine: with `update apply` in the bot's console, or `docker compose pull && docker compose up -d` with Docker. Nothing is installed from Slack."
       failed: "GitHub couldn't be reached to check for updates. Try again in a while."
+    # Above the status and updates buttons, apart from the posting one. `updates` says whether there's the second.
+    maintenance: |-
+      *🛠️ Maintenance*
+      How {bot} is doing{updates, select, yes {, and whether a newer version is out} other {}}.
     statusButton: "Status"
     # The window that button opens: how the bot is doing, as the console's status says, in counts and times, without
     # who or what. Each field is its name in bold and, under it, its value.
@@ -255,8 +259,13 @@ home:
       memory: "*Memory*\n{megabytes} MB"
   # At the bottom, for everyone.
   source: "This Slack app is running an instance of Agora, an open source project. Anyone can read its code at <{url}|{label}>, and see how it works. If you find something to improve, contributions are welcome."
-  # The version that is running, under that.
+  # The version that is running, under that, followed by whether the bot is running.
   version: "Version {version}"
+  # When the bot has just published the tab, as it does whenever someone opens it. Slack keeps {checked} up to date,
+  # as in "3 minutes ago".
+  online: "🟢 Online, checked {checked}"
+  # A minute later, and when the bot stops, since it can't change the tab once it is down.
+  waiting: "⚪ Opening this tab checks whether {bot} is running: if this doesn't turn 🟢 in a few seconds, it is offline, and messages will reach the team when it's back."
 
 anonymous:
   unavailable: "This conversation has ended."

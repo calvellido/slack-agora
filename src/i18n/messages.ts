@@ -189,6 +189,7 @@ export interface Strings {
         howTo: string;
         failed: string;
       };
+      maintenance: (params: { updates: string }) => string;
       statusButton: string;
       status: {
         title: string;
@@ -212,6 +213,8 @@ export interface Strings {
     };
     source: (params: { url: string; label: string }) => string;
     version: (params: { version: string }) => string;
+    online: (params: { checked: string }) => string;
+    waiting: string;
   };
   anonymous: {
     unavailable: string;

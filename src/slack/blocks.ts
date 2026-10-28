@@ -34,6 +34,13 @@ export function slackDate(ts: string): string {
   return `<!date^${seconds}^{date_short_pretty} {time}|${fallback} UTC>`;
 }
 
+/** How long ago a moment (ms) was, which Slack keeps up to date as time passes, as in "3 minutes ago". */
+export function slackAgo(ms: number): string {
+  const seconds = Math.floor(ms / 1000);
+  const fallback = new Date(seconds * 1000).toISOString().slice(0, 16).replace('T', ' ');
+  return `<!date^${seconds}^{ago}|${fallback} UTC>`;
+}
+
 /** Slack rejects modal titles longer than 24 characters, and a bot name can make them longer. */
 export function modalTitle(text: string): { type: 'plain_text'; text: string } {
   return { type: 'plain_text', text: text.length > 24 ? `${text.slice(0, 23)}…` : text };

@@ -82,7 +82,7 @@ One exception, which Slack imposes: apps can't upload files under another name. 
 
 ## If the bot is down
 
-Slack only delivers messages to a running bot, so nothing answers while it is down. The *Home* tab tells people that a message without :incoming_envelope: means the bot is offline. When it is back, whether it started again, its machine woke from sleep or its connection to Slack returned, it relays the DMs it missed, marked with when they were sent, and apologises once to each sender. If it was away for more than 5 minutes, or relayed any late DMs, it also tells the team channel how long it was offline.
+Slack only delivers messages to a running bot, so nothing answers while it is down. The *Home* tab tells people that a message without :incoming_envelope: means the bot is offline. At its bottom, next to the version, :large_green_circle: says the bot is running, with how long ago that was checked: the bot publishes the tab whenever someone opens it. A minute later, and when the bot stops, it says instead that opening the tab checks, since the bot can't change the tab once it is down: if it doesn't turn :large_green_circle: within a few seconds, the bot is offline. The green dot Slack shows next to the app's name doesn't tell: Slack shows it all the time, whether the bot runs or not. When it is back, whether it started again, its machine woke from sleep or its connection to Slack returned, it relays the DMs it missed, marked with when they were sent, and apologises once to each sender. If it was away for more than 5 minutes, or relayed any late DMs, it also tells the team channel how long it was offline.
 
 ### Getting alerted
 
