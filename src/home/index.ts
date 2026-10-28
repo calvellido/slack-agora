@@ -39,6 +39,16 @@ export function registerHome(
     }
   }
 
+  // For the same reason, it opens without the team's part, which shows once Slack can say who is in the team.
+  async function inTeam(user: string): Promise<boolean> {
+    try {
+      return await team.isMember(user);
+    } catch (error) {
+      app.logger.warn(`Couldn't read the team channel's members for the Home tab: ${errorCode(error)}`);
+      return false;
+    }
+  }
+
   /** Publishes the tab, without the banner if Slack can't fetch it, and returns the options it used. */
   async function publish(client: WebClient, user: string, t: Strings, options: HomeOptions): Promise<HomeOptions> {
     try {
@@ -71,7 +81,7 @@ export function registerHome(
       sourceUrl: config.sourceUrl,
       version: VERSION,
       online: Date.now(),
-      team: (await team.isMember(event.user))
+      team: (await inTeam(event.user))
         ? {
             channel: config.teamChannelId,
             sendEmoji: config.sendEmoji,

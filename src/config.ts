@@ -185,6 +185,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, run: RunCommand
     throw new Error('ANON_READABLE_DAYS must be at least ANON_CLOSED_VISIBLE_DAYS');
   }
   if (anonSecret.length < 32) throw new Error('ANON_SECRET is too short: generate one with `openssl rand -base64 32`');
+  // Without colons, as reactions name them, so `:outbox_tray:` is `outbox_tray`.
+  const emoji = (name: string, fallback: string) => env[name]?.trim().replace(/^:|:$/g, '') || fallback;
+  const [sendEmoji, deleteEmoji] = [emoji('SEND_EMOJI', 'outbox_tray'), emoji('DELETE_EMOJI', 'wastebasket')];
+  if (sendEmoji === deleteEmoji) throw new Error('SEND_EMOJI and DELETE_EMOJI must be different emoji');
+  // A timer waits at most about 24 days: longer, and it would call the monitor all the time instead.
+  const heartbeatMinutes = positive('HEARTBEAT_MINUTES', 1440);
+  if (heartbeatMinutes * 60_000 > 2 ** 31 - 1) throw new Error('HEARTBEAT_MINUTES must be at most 35791, about 24 days');
 
   return {
     ...loadAppSettings(env),
@@ -193,13 +200,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, run: RunCommand
     teamChannelId: required('TEAM_CHANNEL_ID'),
     dbPath: databasePath(env),
     inboxIdleDays: positive('INBOX_IDLE_DAYS', 7),
-    sendEmoji: env.SEND_EMOJI ?? 'outbox_tray',
-    deleteEmoji: env.DELETE_EMOJI ?? 'wastebasket',
-    noticeEmoji: env.NOTICE_EMOJI?.trim().replace(/^:|:$/g, '') || 'robot_face',
+    sendEmoji,
+    deleteEmoji,
+    noticeEmoji: emoji('NOTICE_EMOJI', 'robot_face'),
     homeBanner,
     homeTeamMembers: flag(env, 'HOME_TEAM_MEMBERS', false),
     heartbeatUrl,
-    heartbeatMinutes: positive('HEARTBEAT_MINUTES', 1440),
+    heartbeatMinutes,
     logLevel,
     anonSecret,
     anonIdleDays: positive('ANON_IDLE_DAYS', 30),

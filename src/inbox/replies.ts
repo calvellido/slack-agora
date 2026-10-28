@@ -105,13 +105,20 @@ export function registerReplies(app: App, { config, store, i18n, notices }: Deps
     }
     // As the bot itself, which is the team's voice, so uploaded as they are.
     const copies = files.length > 0 ? await uploadCopies(client, files, where) : { fileIds: [], problems: [] };
+    // Recorded before telling the team about the files that didn't go, so what went can be edited and deleted even
+    // if that fails.
+    const sent = Boolean(sentTs) || copies.fileIds.length > 0;
+    if (sent) {
+      store.deliveries.complete(ts, sentTs ?? null, copies.fileIds);
+      store.conversations.touch(conversation.id);
+    } else {
+      store.deliveries.release(ts);
+    }
     if (copies.problems.length > 0) {
       const list = describeProblems(i18n.team, copies.problems, 'team');
       await notices.post(client, { text: i18n.team.files.notSent({ list }), threadTs });
     }
-    if (!sentTs && copies.fileIds.length === 0) return store.deliveries.release(ts);
-    store.deliveries.complete(ts, sentTs ?? null, copies.fileIds);
-    store.conversations.touch(conversation.id);
+    if (!sent) return;
     // It was sent: a mark that fails, as when someone added it by hand first, changes nothing.
     await client.reactions.add({ channel: team, timestamp: ts, name: 'white_check_mark' }).catch(() => {});
   }

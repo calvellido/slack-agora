@@ -2,6 +2,17 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## Unreleased
+
+- DMs sent while the bot was down are no longer lost when it can't catch up on them right away. Until now, the bot noted it was running as soon as it started, before connecting to Slack: if it then failed to connect, as when a machine starts without a network, or catching up failed, or it stopped before finishing, the next start only looked back to then. Now the bot catches up once it connects, tries again every minute if that fails, and only notes it was running once it has caught up, which also covers a crash while its connection to Slack is lost.
+- Catching up reads all of a DM's messages since the bot went away, not only the latest 200.
+- The hourly cleanup of anonymous conversations goes on when Slack refuses to change one of their threads: until now, that stopped it, holding back forgetting authors and destroying keys until a later hour, and leaving other expired conversations without their note in the team channel.
+- A reply sent with the send emoji can be deleted, and its edits follow, even when telling the team that some of its files couldn't be sent fails.
+- The *Home* tab opens when Slack can't say who is in the team channel for a moment, without the team's part, instead of not opening at all.
+- `SEND_EMOJI` and `DELETE_EMOJI` can be written with colons, as `NOTICE_EMOJI` could: `:outbox_tray:` no longer leaves the send emoji doing nothing. They must be different emoji, and `HEARTBEAT_MINUTES` at most 35791 (about 24 days), as a longer wait made the bot call the monitor all the time.
+
+No new permissions or settings: updating the bot is enough.
+
 ## [3.7.0] - 2026-10-28
 
 - At the bottom of the *Home* tab, next to the version, everyone sees whether the bot is running: :large_green_circle: when it has just published the tab, as it does whenever someone opens it, with how long ago that was. A minute later, and when the bot stops, it says that opening the tab checks, since the bot can't change it once it is down. Slack's own green dot next to the app's name is on all the time, so it doesn't tell.

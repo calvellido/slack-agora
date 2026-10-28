@@ -9,6 +9,7 @@ import { Notices } from '#src/slack/notices.ts';
 import { slackError, type Call } from '#src/slack/testing.ts';
 import { Store } from '#src/storage/index.ts';
 import { registerDms } from './dms.ts';
+import type { HistoryMessage } from './downtime.ts';
 import type { Relay } from './relay.ts';
 
 const names = { bot: 'Helpdesk', publishCommand: '/post', anonymousCommand: '/anon' };
@@ -38,11 +39,11 @@ function setup(relay: Relay) {
     bot: { userId: 'UBOT' },
     notices: new Notices('CTEAM', 'Helpdesk · notices', 'robot_face'),
   } as unknown as Deps;
-  registerDms(app, deps, relay);
+  const dms = registerDms(app, deps, relay);
   const store = deps.store;
   const dm = (event: Record<string, unknown>) => handlers.message!({ event: { channel_type: 'im', channel: 'D1', ...event }, client });
   const told = () => calls.filter((c) => c.method === 'chat.postMessage').map((c) => c.args.text);
-  return { calls, store, dm, told };
+  return { calls, store, dm, told, dms, client };
 }
 
 test("a DM that can't reach the team is not marked as received, and the person is told to send it again", async () => {
@@ -72,4 +73,26 @@ test("a DM whose copy can't be recorded is still thanked and marked, as the team
   await dm({ user: 'U1', ts: '5.0', text: 'Hola' });
   assert.deepEqual(told(), [t.inbox.dm.ack]);
   assert.ok(calls.some((c) => c.method === 'reactions.add'));
+});
+
+test('catching up reads every page of a DM since the bot went away, and relays what it missed oldest first', async () => {
+  const relayed: string[] = [];
+  const { dms, client, told } = setup(async (_, __, ___, message) => (relayed.push(message.text), { ts: '1.0', fileIds: [], problems: [] }));
+  // Slack gives the latest messages first, and the earlier ones on the next page.
+  const pages: Record<string, { messages: HistoryMessage[]; next?: string }> = {
+    first: { messages: [{ ts: '30.0', user: 'U1', text: 'third' }, { ts: '20.0', user: 'U1', text: 'second' }], next: 'earlier' },
+    earlier: { messages: [{ ts: '10.0', user: 'U1', text: 'first' }] },
+  };
+  Object.assign(client, {
+    conversations: {
+      list: async () => ({ channels: [{ id: 'D1', user: 'U1' }] }),
+      history: async ({ cursor }: { cursor?: string }) => {
+        const page = pages[cursor ?? 'first']!;
+        return { messages: page.messages, response_metadata: { next_cursor: page.next ?? '' } };
+      },
+    },
+  });
+  assert.equal(await dms.catchUp(client, 5_000), 3);
+  assert.deepEqual(relayed, ['first', 'second', 'third']);
+  assert.deepEqual(told(), [t.inbox.dm.lateAck]);
 });

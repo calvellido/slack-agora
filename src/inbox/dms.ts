@@ -10,7 +10,7 @@ import { context, escapeMrkdwn, quoted } from '#src/slack/blocks.ts';
 import { errorCode } from '#src/slack/errors.ts';
 import { copiedNames, describeProblems, type AttachedFile, type Copies } from '#src/slack/files.ts';
 import { plainText } from '#src/slack/richtext.ts';
-import { RECEIVED_EMOJI, missedDms } from './downtime.ts';
+import { RECEIVED_EMOJI, missedDms, type HistoryMessage } from './downtime.ts';
 import type { Incoming, Relay, Relayed } from './relay.ts';
 
 interface Dm extends Incoming {
@@ -35,6 +35,17 @@ export interface Dms {
   write(client: WebClient, user: string, written: Written): Promise<Copies['problems']>;
 }
 
+/** A DM's messages since `oldest` (seconds), every page of them: the first holds only the latest. */
+async function historySince(client: WebClient, channel: string, oldest: string): Promise<HistoryMessage[]> {
+  const messages: HistoryMessage[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await client.conversations.history({ channel, oldest, limit: 200, cursor });
+    messages.push(...(page.messages ?? []));
+    cursor = page.response_metadata?.next_cursor || undefined;
+  } while (cursor);
+  return messages;
+}
 
 /** The bot's automatic messages in someone's DM, in their language, so they don't look like the team's. */
 export function tellPerson({ i18n, notices }: Pick<Deps, 'i18n' | 'notices'>) {
@@ -152,9 +163,8 @@ export function registerDms(app: App, deps: Deps, relay: Relay): Dms {
         const page = await client.conversations.list({ types: 'im', limit: 200, cursor });
         for (const im of page.channels ?? []) {
           if (!im.id || !im.user || im.user === 'USLACKBOT') continue;
-          const { messages } = await client.conversations.history({ channel: im.id, oldest, limit: 200 });
           let relayed = 0;
-          for (const m of missedDms(messages ?? [], bot.userId)) {
+          for (const m of missedDms(await historySince(client, im.id, oldest), bot.userId)) {
             const dm = {
               channel: im.id,
               user: m.user!,

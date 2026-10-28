@@ -9,9 +9,9 @@ import type { Heartbeat } from '#src/storage/heartbeat.ts';
 import type { Dms } from './dms.ts';
 
 // While the bot is down nobody receives Slack's events, and DMs sent meanwhile would be lost. The bot writes a
-// heartbeat to its database every minute; on start, it relays the DMs it never marked as received since then, and
-// tells the team how long it was away. It does the same while running, when its machine wakes from sleep or its
-// connection to Slack comes back.
+// heartbeat to its database every minute; once connected after a start, it relays the DMs it never marked as received
+// since then, and tells the team how long it was away. It does the same while running, when its machine wakes from
+// sleep or its connection to Slack comes back. The heartbeat waits for each of those catch-ups.
 
 export type HistoryMessage = NonNullable<ConversationsHistoryResponse['messages']>[number];
 
@@ -41,39 +41,21 @@ export function missedDms(messages: readonly HistoryMessage[], botUserId: string
     .sort((a, b) => Number(a.ts) - Number(b.ts));
 }
 
-export interface Uptime {
-  /** When the bot was last running before this start; undefined on its very first start with this database. */
-  lastAlive?: number;
-  startedAt: number;
-  /**
-   * Writes a last heartbeat and stops; for a clean shutdown. With `missingSince`, when DMs from then on weren't caught
-   * up yet, the heartbeat says the bot was last alive then, so the next start catches them up.
-   */
-  stop(missingSince?: number): void;
-}
-
-/** Writes a heartbeat now and every minute after, and reports when the bot was last alive before. */
-export function startHeartbeat(heartbeat: Heartbeat): Uptime {
-  const lastAlive = heartbeat.last();
-  const startedAt = Date.now();
-  heartbeat.beat(startedAt);
-  const timer = setInterval(() => heartbeat.beat(), HEARTBEAT_MS);
+/**
+ * Writes a heartbeat now and every minute after, which says until when the bot ran with no DM left to catch up: while
+ * some may be missing, since `missingSince`, it stays at when they started to be. So when the bot stops before
+ * catching up, cleanly or not, or fails to start at all, the next start catches them up. `stop` writes a last one.
+ */
+export function startHeartbeat(heartbeat: Heartbeat, missingSince: () => number | undefined): { stop(): void } {
+  const beat = () => heartbeat.beat(missingSince() ?? Date.now());
+  beat();
+  const timer = setInterval(beat, HEARTBEAT_MS);
   return {
-    lastAlive,
-    startedAt,
-    stop(missingSince) {
+    stop() {
       clearInterval(timer);
-      heartbeat.beat(missingSince);
+      beat();
     },
   };
-}
-
-/** Relays the DMs sent while the bot was down, and tells the team it is back if it was away for a while. */
-export async function recoverDowntime(client: WebClient, deps: Deps, dms: Dms, uptime: Uptime): Promise<void> {
-  const { lastAlive, startedAt } = uptime;
-  if (!lastAlive) return;
-  const recovered = await relayMissed(client, deps, dms, lastAlive);
-  await tellBack(client, deps, lastAlive, startedAt, recovered);
 }
 
 /** What catchUpWhileRunning returns. */
@@ -84,10 +66,11 @@ export interface Gaps {
 }
 
 /**
- * Catches up while the bot runs, as recoverDowntime does on start: when the machine sleeps, or the connection to Slack
- * is lost for a while, the bot keeps running but Slack's events from meanwhile never arrive. After a sleep, the
- * connection can look open until the client notices it isn't, so the catch-up waits for a tick on time, or for Slack
- * to connect again. A catch-up that fails is tried again on the next tick.
+ * Catches up on the DMs the bot missed: once it first connects, those since it was last alive before this start,
+ * `lastAlive`; and while it runs, those from when the machine slept, or the connection to Slack was lost for a while,
+ * as the bot keeps running but Slack's events from meanwhile never arrive. After a sleep, the connection can look open
+ * until the client notices it isn't, so the catch-up waits for a tick on time, or for Slack to connect again. A
+ * catch-up that fails is tried again on the next tick.
  */
 export function catchUpWhileRunning(
   client: WebClient,
@@ -95,15 +78,16 @@ export function catchUpWhileRunning(
   dms: Dms,
   connection: Connection,
   logger: Logger,
+  lastAlive: number | undefined,
   clock = { everyMs: HEARTBEAT_MS, now: Date.now },
 ): Gaps {
   const { everyMs, now } = clock;
   let connected = false;
-  // Retries before the first connection aren't a lost connection: recoverDowntime covers the time until then.
+  // Retries before the first connection aren't a lost connection: the catch-up since `lastAlive` covers them.
   let everConnected = false;
   let lostAt: number | undefined;
   // Since when DMs may be missing, until a catch-up covers them, and since when for the catch-up running.
-  let missingSince: number | undefined;
+  let missingSince: number | undefined = lastAlive;
   let catchingUpSince: number | undefined;
   // Logged once, until a catch-up works again.
   let failing = false;

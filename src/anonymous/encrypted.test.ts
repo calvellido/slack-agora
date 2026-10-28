@@ -8,7 +8,7 @@ import { DAY } from '#src/lib/time.ts';
 import type { SlackMessage } from '#src/slack/messages.ts';
 import { Notices } from '#src/slack/notices.ts';
 import { richTextFromPlain } from '#src/slack/richtext.ts';
-import type { Call } from '#src/slack/testing.ts';
+import { slackError, type Call } from '#src/slack/testing.ts';
 import { Store } from '#src/storage/index.ts';
 import { contentKeys } from './content.ts';
 import { registerAnonymous } from './index.ts';
@@ -251,4 +251,26 @@ test("in a conversation that isn't encrypted, a deletion Slack can't show is tol
   await run('view:anon_own_delete', { body: { user: { id: 'U1' } }, view: { private_metadata: metadata, previous_view_id: 'V2', state: { values: {} } } });
   assert.match(JSON.stringify(acks.at(-1)), new RegExp(t.anonymous.conversation.changeFailed));
   assert.deepEqual(store.anonymous.messages(conversation.id).map((m) => m.teamMessageTs), ['1.0']);
+});
+
+test("a thread Slack refuses to change doesn't hold back the cleanup: the others change, authors are forgotten and keys destroyed", async () => {
+  const { store, run, text, posted, anonymous, client } = setup();
+  for (const user of ['U1', 'U2', 'U3']) {
+    await run('view:anon_message', { body: { user: { id: user } }, view: { state: { values: { message: { message: text(`Hola, soy ${user}`) } } } } });
+  }
+  const [first, second, old] = ['1.0', '2.0', '3.0'].map((ts) => store.anonymous.byTeamThread(ts)!);
+  store.anonymous.touch(first!.id, Date.now() - 40 * DAY);
+  store.anonymous.touch(second!.id, Date.now() - 40 * DAY);
+  store.anonymous.close(old!.id, 'team', Date.now() - 400 * DAY);
+  const update = client.chat.update;
+  client.chat.update = (async (args: { ts: string }) => {
+    if (args.ts === '1.0') throw slackError('cant_update_message');
+    return update(args as never);
+  }) as typeof update;
+
+  await anonymous.cleanup(client);
+  assert.ok(JSON.stringify(posted.get('2.0')).includes(t.anonymous.team.expired({ days: 30 })));
+  assert.equal(store.anonymous.byId(second!.id)?.closedBy, 'expired');
+  const forgotten = store.anonymous.byId(old!.id)!;
+  assert.deepEqual([forgotten.owner, forgotten.contentKey], [null, null]);
 });

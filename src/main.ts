@@ -11,7 +11,7 @@ import type { StatusInfo } from './console/status.ts';
 import type { Deps } from './deps.ts';
 import { registerHome } from './home/index.ts';
 import { I18n } from './i18n/index.ts';
-import { catchUpWhileRunning, recoverDowntime, startHeartbeat } from './inbox/downtime.ts';
+import { catchUpWhileRunning, startHeartbeat } from './inbox/downtime.ts';
 import { registerInbox } from './inbox/index.ts';
 import { VERSION } from './lib/version.ts';
 import { Log } from './log.ts';
@@ -32,7 +32,8 @@ import { announceVersion } from './updated.ts';
 // Settings and storage
 const config = loadConfig();
 const store = new Store(config.dbPath, config.teamChannelId);
-const uptime = startHeartbeat(store.heartbeat);
+// When the bot last ran with every DM caught up; undefined on its first start with this database.
+const lastAlive = store.heartbeat.last();
 
 // The Slack app, over Socket Mode, and the services every feature shares. The receiver is made here, for its
 // connection's events. They share one log, whose level the console can change.
@@ -86,12 +87,14 @@ app.error(async (error) => {
   app.logger.error(`Listener failed: ${errorCode(error.original ?? error)}`);
 });
 
-// Start, telling the monitor, if there is one, while the bot is connected, and catching up on what it missed whenever
-// the machine wakes from sleep or the connection comes back
+// Start, telling the monitor, if there is one, while the bot is connected, and catching up on what it missed: while it
+// was down, once connected, and whenever the machine wakes from sleep or the connection comes back. The heartbeat
+// waits for each catch-up, so what one leaves behind, as when the bot stops first, is caught up on the next start.
 const monitor = config.heartbeatUrl
   ? startMonitorPings(config.heartbeatUrl, receiver.client, app.logger, config.heartbeatMinutes * 60_000, (ok) => activity.pinged(ok))
   : undefined;
-const gaps = catchUpWhileRunning(app.client, deps, inbox, receiver.client, app.logger);
+const gaps = catchUpWhileRunning(app.client, deps, inbox, receiver.client, app.logger, lastAlive);
+const heartbeat = startHeartbeat(store.heartbeat, gaps.missingSince);
 await app.start();
 try {
   const { channel } = await app.client.conversations.info({ channel: config.teamChannelId });
@@ -104,12 +107,11 @@ if (missing?.length) {
 }
 app.logger.info(`${bot.name} is running`);
 
-// Background work: telling the team about a new version, and catching up after downtime, once; ending and forgetting
-// anonymous conversations, every hour
-announceVersion(app.client, deps, store.heartbeat, VERSION, uptime.lastAlive !== undefined).catch((error) => {
+// Background work: telling the team about a new version, once; ending and forgetting anonymous conversations, every
+// hour
+announceVersion(app.client, deps, store.heartbeat, VERSION, lastAlive !== undefined).catch((error) => {
   app.logger.error(`Telling the team about the new version failed: ${errorCode(error)}`);
 });
-recoverDowntime(app.client, deps, inbox, uptime).catch((error) => app.logger.error(`Catching up failed: ${errorCode(error)}`));
 const cleanup = () => {
   anonymous.cleanup(app.client).catch((error) => app.logger.error(`Cleanup failed: ${errorCode(error)}`));
 };
@@ -131,7 +133,7 @@ const terminal =
     : undefined;
 
 // Clean shutdown, on a signal or from the console; with RESTART_CODE, the launcher starts the bot again. DMs it hasn't
-// caught up on yet, after a sleep or while the connection is lost, are left for the next start.
+// caught up on yet are left for the next start.
 let stopping: Promise<void> | undefined;
 function stop(code = 0): Promise<void> {
   stopping ??= (async () => {
@@ -139,7 +141,7 @@ function stop(code = 0): Promise<void> {
     clearInterval(cleanupTimer);
     monitor?.stop();
     gaps.stop();
-    uptime.stop(gaps.missingSince());
+    heartbeat.stop();
     // The Home tabs saying the bot is online, within a few seconds, as a service manager only waits so long.
     await Promise.race([home.stop(), new Promise((resolve) => setTimeout(resolve, 5_000))]);
     await app.stop();

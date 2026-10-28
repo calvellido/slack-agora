@@ -4,6 +4,7 @@ import type { WebClient } from '@slack/web-api';
 import type { Deps } from '#src/deps.ts';
 import type { Strings } from '#src/i18n/index.ts';
 import { DAY } from '#src/lib/time.ts';
+import { errorCode } from '#src/slack/errors.ts';
 import { isBlank, richTextBlocks } from '#src/slack/richtext.ts';
 import type { AnonConversation } from '#src/storage/index.ts';
 import type { Anonymous } from './index.ts';
@@ -217,7 +218,8 @@ export function registerTeamSide(app: App, { config, store, team, i18n, notices,
       if (conversation.closedAt) return notify(t.anonymous.team.replyClosed);
       if (!store.anonymous.addMessage(ts, conversation.id, 'team', user)) return notify(t.inbox.reply.alreadySent);
       store.anonymous.touch(conversation.id);
-      await client.reactions.add({ channel, timestamp: ts, name: 'white_check_mark' });
+      // It was sent: a mark that fails, as when someone added it by hand first, changes nothing.
+      await client.reactions.add({ channel, timestamp: ts, name: 'white_check_mark' }).catch(() => {});
       // For the whole team, in the thread: the person gets the text only.
       const threadTs = conversation.teamThreadTs!;
       if (message.files?.length) await notices.post(client, { text: i18n.team.files.anonymous, threadTs });
@@ -237,22 +239,29 @@ export function registerTeamSide(app: App, { config, store, team, i18n, notices,
     async cleanup(client) {
       const now = Date.now();
       // Conversations of another team channel (from before TEAM_CHANNEL_ID changed) expire and are forgotten too,
-      // but their threads are left alone: they aren't in this channel.
-      const here = (c: AnonConversation) => c.teamChannel === channel;
-      for (const conversation of store.anonymous.expire(now - config.anonIdleDays * DAY, now).filter(here)) {
+      // but their threads are left alone: they aren't in this channel. Each thread on its own, so one Slack refuses
+      // to change doesn't hold back the others, nor the steps after, which forget authors and destroy keys.
+      const inEachThread = async (conversations: AnonConversation[], update: (c: AnonConversation) => Promise<void>) => {
+        for (const conversation of conversations.filter((c) => c.teamChannel === channel)) {
+          await update(conversation).catch((error: unknown) => {
+            app.logger.error(`Cleanup couldn't update an anonymous thread: ${errorCode(error)}`);
+          });
+        }
+      };
+      await inEachThread(store.anonymous.expire(now - config.anonIdleDays * DAY, now), async (conversation) => {
         const text = i18n.team.anonymous.team.expired({ days: config.anonIdleDays });
         await thread.setStatus(client, conversation, { state: 'ended', note: text });
         await thread.note(client, conversation, text);
-      }
+      });
       // The authors can't see these any more, so the team may now delete them.
-      for (const conversation of store.anonymous.purgeClosed(now - config.anonClosedVisibleDays * DAY).filter(here)) {
+      await inEachThread(store.anonymous.purgeClosed(now - config.anonClosedVisibleDays * DAY), async (conversation) => {
         await thread.setStatus(client, conversation, { state: 'forgotten', note: ended(conversation) });
-      }
+      });
       // Long enough ended for their text to go from the database, by destroying their keys.
-      for (const conversation of store.anonymous.destroyContent(now - config.anonReadableDays * DAY).filter(here)) {
+      await inEachThread(store.anonymous.destroyContent(now - config.anonReadableDays * DAY), async (conversation) => {
         const note = `${ended(conversation)} ${i18n.team.anonymous.team.textExpired({ days: config.anonReadableDays })}`;
         await thread.textDestroyed(client, conversation, { state: conversation.owner ? 'ended' : 'forgotten', note });
-      }
+      });
     },
   };
 }

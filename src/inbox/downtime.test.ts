@@ -8,7 +8,8 @@ import type { Deps } from '#src/deps.ts';
 import { I18n, stringsIn } from '#src/i18n/index.ts';
 import { slackDate } from '#src/slack/blocks.ts';
 import { Notices } from '#src/slack/notices.ts';
-import { RECEIVED_EMOJI, catchUpWhileRunning, missedDms, type HistoryMessage } from './downtime.ts';
+import { Store } from '#src/storage/index.ts';
+import { RECEIVED_EMOJI, catchUpWhileRunning, missedDms, startHeartbeat, type HistoryMessage } from './downtime.ts';
 import type { Dms } from './dms.ts';
 
 const BOT = 'UBOT';
@@ -33,10 +34,10 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * The bot running with its timer ticking every `everyMs`, until the test ends, on a clock that `skip` moves forward,
- * as it does while the machine sleeps. Records the catch-ups (since when), the notices in the team channel, the log's
- * warnings and errors, and the activity.
+ * as it does while the machine sleeps, and last alive before this start at `lastAlive`. Records the catch-ups (since
+ * when), the notices in the team channel, the log's warnings and errors, and the activity.
  */
-function setup(test: TestContext, everyMs: number, failures = 0) {
+function setup(test: TestContext, everyMs: number, failures = 0, lastAlive?: number) {
   const caughtUp: number[] = [];
   const posted: string[] = [];
   const warnings: string[] = [];
@@ -57,7 +58,7 @@ function setup(test: TestContext, everyMs: number, failures = 0) {
   const errors: string[] = [];
   const logger = { warn: (text: string) => warnings.push(text), error: (text: string) => errors.push(text) } as unknown as Logger;
   const connection = new EventEmitter();
-  const gaps = catchUpWhileRunning(client, deps, dms, connection, logger, { everyMs, now });
+  const gaps = catchUpWhileRunning(client, deps, dms, connection, logger, lastAlive, { everyMs, now });
   test.after(() => gaps.stop());
   const skip = (ms: number) => (skipped += ms);
   const backOnline = (duration: string) => t.inbox.backOnline({ duration, since: slackDate(String(caughtUp[0]! / 1000)), recovered: 0 });
@@ -154,4 +155,46 @@ test('while the connection is lost, its DMs are missing, but not while the bot f
   const lost = now();
   connection.emit('reconnecting');
   assert.ok(gaps.missingSince()! >= lost && gaps.missingSince()! < lost + MINUTE);
+});
+
+test('on start, the DMs since the bot was last alive are caught up once it connects, and the team is told', async (t) => {
+  const lastAlive = Date.now() - 2 * 60 * MINUTE;
+  const { caughtUp, posted, connection, gaps, backOnline } = setup(t, 60 * MINUTE, 0, lastAlive);
+  // Until then, they are missing, as when Slack can't be reached at start.
+  assert.equal(gaps.missingSince(), lastAlive);
+  connection.emit('reconnecting');
+  await wait(5);
+  assert.deepEqual(caughtUp, []);
+
+  connection.emit('connected');
+  await wait(5);
+  assert.deepEqual(caughtUp, [lastAlive]);
+  assert.deepEqual(posted, [backOnline('2 h')]);
+  assert.equal(gaps.missingSince(), undefined);
+});
+
+test('a catch-up on start that fails is tried again, and until then its DMs are missing', async (t) => {
+  const lastAlive = Date.now() - 10 * MINUTE;
+  const { caughtUp, connection, gaps } = setup(t, 10, 1, lastAlive);
+  connection.emit('connected');
+  await wait(5);
+  assert.deepEqual(caughtUp, []);
+  assert.equal(gaps.missingSince(), lastAlive);
+
+  await wait(30);
+  assert.deepEqual(caughtUp, [lastAlive]);
+  assert.equal(gaps.missingSince(), undefined);
+});
+
+test('the heartbeat stays when DMs started to be missing, until they are caught up', () => {
+  const store = new Store(':memory:', 'CTEAM');
+  const lastAlive = Date.now() - 60 * MINUTE;
+  store.heartbeat.beat(lastAlive);
+  let missingSince: number | undefined = lastAlive;
+  const heartbeat = startHeartbeat(store.heartbeat, () => missingSince);
+  assert.equal(store.heartbeat.last(), lastAlive);
+
+  missingSince = undefined;
+  heartbeat.stop();
+  assert.ok(store.heartbeat.last()! > Date.now() - MINUTE);
 });

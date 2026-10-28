@@ -12,8 +12,11 @@ const t = stringsIn('en', names);
 const ONLINE_FOR_MS = 20;
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** The Home tab, saying the bot is online for ONLINE_FOR_MS, with whether each tab it publishes says so recorded. */
-function setup(test: TestContext) {
+/**
+ * The Home tab, saying the bot is online for ONLINE_FOR_MS, with whether each tab it publishes says so recorded. With
+ * `unreadable`, Slack can't say who is in the team channel.
+ */
+function setup(test: TestContext, unreadable = false) {
   const published: { user: string; online: boolean }[] = [];
   const client = {
     views: {
@@ -34,8 +37,10 @@ function setup(test: TestContext) {
     logger: { warn: () => {} },
   } as unknown as App;
   const deps = {
-    config: { about: {}, homeTeamMembers: false },
-    team: { isMember: async () => false },
+    config: { about: {}, homeTeamMembers: unreadable },
+    team: unreadable
+      ? { isMember: async () => Promise.reject(new Error('ratelimited')), people: async () => Promise.reject(new Error('ratelimited')) }
+      : { isMember: async () => false },
     bot: { name: 'Helpdesk' },
     i18n: new I18n(client, names, 'en'),
     activity: new Activity(),
@@ -77,4 +82,10 @@ test('a clean stop turns the tabs still saying the bot is online at once, and no
   ]);
   await wait(ONLINE_FOR_MS * 3);
   assert.equal(published.length, 4);
+});
+
+test("the tab opens when Slack can't say who is in the team channel, without the team's part", async (t) => {
+  const { published, open } = setup(t, true);
+  await open('U1');
+  assert.deepEqual(published, [{ user: 'U1', online: true }]);
 });

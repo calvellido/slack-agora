@@ -7,7 +7,7 @@ import type { Deps } from '#src/deps.ts';
 import { I18n, stringsIn } from '#src/i18n/index.ts';
 import { describeProblems } from '#src/slack/files.ts';
 import { Notices } from '#src/slack/notices.ts';
-import { attached, fakeFileApi, serveFiles, type Call } from '#src/slack/testing.ts';
+import { attached, fakeFileApi, serveFiles, slackError, type Call } from '#src/slack/testing.ts';
 import { Store } from '#src/storage/index.ts';
 import { registerReplies } from './replies.ts';
 
@@ -63,7 +63,7 @@ function setup(replies: Record<string, Record<string, unknown>>) {
       },
       client,
     });
-  return { calls, store, react, edit };
+  return { calls, store, react, edit, client };
 }
 
 test("a reply's files are sent with its text, and deleting the reply deletes both", async () => {
@@ -95,6 +95,22 @@ test('a reply of files only is sent, and files that can\'t go are told to the wh
   const notice = calls.find((c) => c.method === 'chat.postMessage' && c.args.channel === 'CTEAM')!;
   assert.equal(notice.args.thread_ts, '1.0');
   assert.equal(notice.args.text, t.files.notSent({ list: describeProblems(t, [{ name: 'big.zip', problem: 'tooLarge' }], 'team') }));
+});
+
+test("a reply that went out is recorded even if telling the team about its files fails, so it can still be deleted", async () => {
+  const { calls, store, react, client } = setup({ '7.0': { text: 'Here it is', files: [attached('big.zip', { size: 30 * 1024 * 1024 })] } });
+  const post = client.chat.postMessage;
+  client.chat.postMessage = (async (args: { channel: string }) => {
+    if (args.channel === 'CTEAM') throw slackError('ratelimited');
+    return post(args as never);
+  }) as typeof post;
+  await assert.rejects(react('7.0', 'outbox_tray'));
+  const targetTs = store.deliveries.get('7.0')?.targetTs;
+  assert.ok(targetTs);
+
+  await assert.rejects(react('7.0', 'wastebasket'));
+  assert.ok(calls.some((c) => c.method === 'chat.delete' && c.args.channel === 'D1' && c.args.ts === targetTs));
+  assert.ok(store.deliveries.get('7.0')?.deletedAt);
 });
 
 test('the delete emoji on something the bot never sent says what it deletes', async () => {

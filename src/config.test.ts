@@ -39,3 +39,14 @@ test("anonymous conversations are encrypted by default, and their text can't go 
   assert.equal(loadConfig({ ...env, ANON_ENCRYPTED: 'false' }).anonEncrypted, false);
   assert.throws(() => loadConfig({ ...env, ANON_READABLE_DAYS: '3', ANON_CLOSED_VISIBLE_DAYS: '7' }), /ANON_READABLE_DAYS/);
 });
+
+test('emoji are named as reactions name them, with or without colons, and the send and delete ones differ', () => {
+  const config = loadConfig({ ...env, SEND_EMOJI: ':rocket: ', DELETE_EMOJI: '', NOTICE_EMOJI: ':bell:' });
+  assert.deepEqual([config.sendEmoji, config.deleteEmoji, config.noticeEmoji], ['rocket', 'wastebasket', 'bell']);
+  assert.throws(() => loadConfig({ ...env, SEND_EMOJI: 'x', DELETE_EMOJI: ':x:' }), /must be different/);
+});
+
+test('the monitor is called at most as rarely as a timer can wait', () => {
+  assert.equal(loadConfig({ ...env, HEARTBEAT_MINUTES: '35791' }).heartbeatMinutes, 35791);
+  assert.throws(() => loadConfig({ ...env, HEARTBEAT_MINUTES: '40000' }), /HEARTBEAT_MINUTES/);
+});
