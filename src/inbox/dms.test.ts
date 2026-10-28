@@ -109,9 +109,9 @@ test("catching up looks into the DM's threads with replies since, also those sta
   const relayed: string[] = [];
   const { dms, client } = setup(async (_, __, ___, message) => (relayed.push(message.text), { ts: '1.0', fileIds: [], problems: [] }));
   const ago = (minutes: number) => (Date.now() / 1000 - minutes * 60).toFixed(6);
-  const reply = ago(24 * 60);
+  const [reply, broadcast] = [ago(24 * 60), ago(2)];
   const history: HistoryMessage[] = [
-    { ts: ago(2), user: 'U1', text: 'also in the DM', subtype: 'thread_broadcast', thread_ts: reply },
+    { ts: broadcast, user: 'U1', text: 'also in the DM', subtype: 'thread_broadcast', thread_ts: reply },
     { ts: ago(5), user: 'U1', text: 'in the DM' },
     { ts: ago(60), user: 'U1', text: 'before the bot went away' },
     { ts: ago(120), user: 'UBOT', text: 'an older reply', reply_count: 1, latest_reply: ago(90) },
@@ -120,7 +120,7 @@ test("catching up looks into the DM's threads with replies since, also those sta
   const thread: HistoryMessage[] = [
     { ts: reply, user: 'UBOT', text: "the team's reply" },
     { ts: ago(30), user: 'U1', text: 'in the thread, before the bot went away' },
-    { ts: ago(2), user: 'U1', text: 'also in the DM', subtype: 'thread_broadcast', thread_ts: reply },
+    { ts: broadcast, user: 'U1', text: 'also in the DM', subtype: 'thread_broadcast', thread_ts: reply },
     { ts: ago(1), user: 'U1', text: 'in the thread', thread_ts: reply },
   ];
   const looked: string[] = [];

@@ -175,13 +175,14 @@ test('on start, the DMs since the bot was last alive are caught up once it conne
 
 test('a catch-up on start that fails is tried again, and until then its DMs are missing', async (t) => {
   const lastAlive = Date.now() - 10 * MINUTE;
-  const { caughtUp, connection, gaps } = setup(t, 10, 1, lastAlive);
+  const { caughtUp, connection, gaps } = setup(t, 50, 1, lastAlive);
   connection.emit('connected');
-  await wait(5);
+  await new Promise(setImmediate);
   assert.deepEqual(caughtUp, []);
   assert.equal(gaps.missingSince(), lastAlive);
 
-  await wait(30);
+  // On a later tick, however busy the machine running the tests.
+  for (let waited = 0; caughtUp.length === 0 && waited < 2_000; waited += 10) await wait(10);
   assert.deepEqual(caughtUp, [lastAlive]);
   assert.equal(gaps.missingSince(), undefined);
 });

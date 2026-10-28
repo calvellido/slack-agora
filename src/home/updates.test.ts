@@ -114,21 +114,25 @@ test("GitHub's answer says until when it refuses calls from the network, for too
 });
 
 test('when GitHub refuses calls for now, the window says until when, and no press asks again before then', async () => {
-  const until = Date.now() + 40;
-  const { windows, press, asked } = setup([
-    () => {
-      throw new RateLimited(403, until);
-    },
-    () => [release('3.4.0')],
-  ]);
-  const limited = u.rateLimited({ time: slackTime(until) });
-  await press();
-  assert.ok(shows(windows[1] as never, limited));
-  await press();
-  assert.equal(asked(), 1);
-  assert.ok(shows(windows[3] as never, limited));
-  await new Promise((resolve) => setTimeout(resolve, 60));
-  await press();
-  assert.equal(asked(), 2);
-  assert.ok(shows(windows[5] as never, u.latest({ current: '3.4.0', major: '3' })));
+  const refusing = (until: number) =>
+    setup([
+      () => {
+        throw new RateLimited(403, until);
+      },
+      () => [release('3.4.0')],
+    ]);
+  const until = Date.now() + 60_000;
+  const limited = refusing(until);
+  await limited.press();
+  assert.ok(shows(limited.windows[1] as never, u.rateLimited({ time: slackTime(until) })));
+  await limited.press();
+  assert.equal(limited.asked(), 1);
+  assert.ok(shows(limited.windows[3] as never, u.rateLimited({ time: slackTime(until) })));
+
+  // Once that time has come, the next press asks again.
+  const over = refusing(Date.now() - 1);
+  await over.press();
+  await over.press();
+  assert.equal(over.asked(), 2);
+  assert.ok(shows(over.windows[3] as never, u.latest({ current: '3.4.0', major: '3' })));
 });
