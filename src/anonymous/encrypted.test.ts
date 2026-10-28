@@ -13,6 +13,7 @@ import { Store } from '#src/storage/index.ts';
 import { contentKeys } from './content.ts';
 import { registerAnonymous } from './index.ts';
 import { ownerHasher } from './keys.ts';
+import { noticeModal } from './views.ts';
 
 const names = { bot: 'Helpdesk', publishCommand: '/post', anonymousCommand: '/anon' };
 const t = stringsIn('en', names);
@@ -20,8 +21,11 @@ const secret = 'a-secret-of-at-least-thirty-two-characters';
 
 type Handler = (args: Record<string, unknown>) => Promise<void>;
 
-/** Anonymous mode over a fake Slack that keeps what the bot posts, so it can read it back. */
-function setup(encrypted = true) {
+/**
+ * Anonymous mode over a fake Slack that keeps what the bot posts, so it can read it back. Forms wait `sendWaitMs` for
+ * what they send before saying they are sending.
+ */
+function setup(encrypted = true, sendWaitMs?: number) {
   const calls: Call[] = [];
   const posted = new Map<string, Record<string, unknown>>();
   let next = 0;
@@ -77,7 +81,7 @@ function setup(encrypted = true) {
     i18n: new I18n(client, names, 'en'),
     notices: new Notices('CTEAM', 'Helpdesk · bot', 'robot_face'),
   } as unknown as Deps;
-  const anonymous = registerAnonymous(app, deps);
+  const anonymous = registerAnonymous(app, deps, sendWaitMs);
   const acks: unknown[] = [];
   const ack = async (response?: unknown) => void acks.push(response);
   const run = (name: string, args: Record<string, unknown>) => handlers[name]!({ ack, client, ...args });
@@ -273,4 +277,18 @@ test("a thread Slack refuses to change doesn't hold back the cleanup: the others
   assert.equal(store.anonymous.byId(second!.id)?.closedBy, 'expired');
   const forgotten = store.anonymous.byId(old!.id)!;
   assert.deepEqual([forgotten.owner, forgotten.contentKey], [null, null]);
+});
+
+test("a message Slack is slow to post says it is sending, and then that it went, so it isn't sent again", async () => {
+  const { run, text, acks, calls, client, store } = setup(true, 10);
+  const post = client.chat.postMessage.bind(client.chat);
+  Object.assign(client.chat, { postMessage: async (args: never) => (await new Promise((resolve) => setTimeout(resolve, 50)), post(args)) });
+  await run('view:anon_message', { body: { user: { id: 'U1' } }, view: { id: 'V1', state: { values: { message: { message: text('Hola') } } } } });
+  const title = t.anonymous.form.title;
+  assert.deepEqual(acks, [{ response_action: 'update', view: noticeModal(title, t.common.sending, t.common.close) }]);
+  assert.deepEqual(calls.find((c) => c.method === 'views.update')?.args, {
+    view_id: 'V1',
+    view: noticeModal(title, t.anonymous.form.sent, t.common.close),
+  });
+  assert.ok(store.anonymous.byTeamThread('1.0'));
 });

@@ -1,23 +1,17 @@
-import type { App, BlockAction, ButtonAction, GlobalShortcut } from '@slack/bolt';
+import type { App, BlockAction, ButtonAction, GlobalShortcut, ViewSubmitAction } from '@slack/bolt';
 import type { ModalView, RichTextBlock } from '@slack/types';
 import type { WebClient } from '@slack/web-api';
 import type { Deps } from '#src/deps.ts';
 import type { Strings } from '#src/i18n/index.ts';
 import { WRITE_SHORTCUT } from '#src/manifest/index.ts';
 import { context, modalTitle, spacer } from '#src/slack/blocks.ts';
-import { within } from '#src/lib/time.ts';
 import { errorCode } from '#src/slack/errors.ts';
 import { MAX_FILE_MB, describeProblems, filesInForm, foreseenProblems } from '#src/slack/files.ts';
+import { SEND_WAIT_MS, answerInTime, type Answer } from '#src/slack/forms.ts';
 import { isBlank, richTextBlocks, richTextFromPlain } from '#src/slack/richtext.ts';
 import type { Dms } from './dms.ts';
 
 const plain = (text: string) => ({ type: 'plain_text' as const, text });
-
-/**
- * How long the form waits for a message alone to reach the team before saying it is sending. Slack waits 3 seconds for
- * the form's answer, counted from before the bot gets it, and then shows the person an error, though it may arrive.
- */
-export const SEND_WAIT_MS = 2_000;
 
 /** The form to write to the team with your name: a message, files, or both. */
 export function writeView(t: Strings, message?: RichTextBlock): ModalView {
@@ -80,7 +74,7 @@ export function registerWrite(app: App, { config, i18n }: Deps, dms: Dms, sendWa
     await open(client, body.trigger_id, body.user.id);
   });
 
-  app.view('write_message', async ({ ack, body, view, client }) => {
+  app.view<ViewSubmitAction>('write_message', async ({ ack, body, view, client }) => {
     const received = Date.now();
     const userId = body.user.id;
     const t = await i18n.forUser(userId);
@@ -105,37 +99,26 @@ export function registerWrite(app: App, { config, i18n }: Deps, dms: Dms, sendWa
       blocks: [{ type: 'section', text: { type: 'mrkdwn', text } }],
     });
 
-    // What the form says once it went, or nothing if it couldn't go.
-    const sending = dms.write(client, userId, { message, files }).then(
-      (problems) => {
+    const answering = dms.write(client, userId, { message, files }).then(
+      (problems): Answer => {
         const missing = t.files.notReceived({ list: describeProblems(t, problems, 'person') });
         // Each file has at most one problem, so fewer problems than files means some arrived.
         const arrived = message || problems.length < files.length;
-        return problems.length === 0 ? t.inbox.write.sent : arrived ? `${t.inbox.write.sent}\n\n${missing}` : missing;
+        const result = problems.length === 0 ? t.inbox.write.sent : arrived ? `${t.inbox.write.sent}\n\n${missing}` : missing;
+        return { response_action: 'update', view: notice(result) };
       },
-      (error: unknown) => {
+      (error: unknown): Answer => {
         app.logger.error(`Writing to the team failed: ${errorCode(error)}`);
-        return undefined;
+        return { response_action: 'errors', errors: { message: t.inbox.write.sendFailed } };
       },
     );
 
     // A message alone is usually in the team channel within moments, so the form waits for it: the person sees "sent"
     // once it is there, or the error with their message still in the form. Copying files takes longer than Slack waits
-    // for the answer, as a slow Slack can: then the form says it is sending, and how it went after.
-    if (files.length === 0) {
-      const went = await within(sending, sendWaitMs - (Date.now() - received));
-      if (went.done) {
-        await ack(
-          went.value
-            ? { response_action: 'update', view: notice(went.value) }
-            : { response_action: 'errors', errors: { message: t.inbox.write.sendFailed } },
-        );
-        return;
-      }
-    }
-    await ack({ response_action: 'update', view: notice(t.inbox.write.sending({ files: files.length > 0 ? 'yes' : 'no' })) });
-    const result = (await sending) ?? t.inbox.write.sendFailed;
-    // The person may have closed the window meanwhile.
-    await client.views.update({ view_id: view.id, view: notice(result) }).catch(() => {});
+    // for the answer, so with files the form says at once that it is sending, and how it went after.
+    const sending = t.inbox.write.sending({ files: files.length > 0 ? 'yes' : 'no' });
+    const late = { notice, sending, done: t.inbox.write.sent, failed: t.inbox.write.sendFailed };
+    const form = { ack, client, viewId: view.id, received };
+    await answerInTime(form, answering, late, files.length > 0 ? 0 : sendWaitMs);
   });
 }

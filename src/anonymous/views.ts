@@ -2,6 +2,7 @@ import type { ActionsBlock, Button, KnownBlock, ModalView, RichTextBlock } from 
 import type { Strings } from '#src/i18n/index.ts';
 import { DAY } from '#src/lib/time.ts';
 import { context, modalTitle, slackDate, spacer } from '#src/slack/blocks.ts';
+import type { Late } from '#src/slack/forms.ts';
 import type { AnonConversation, AnonMessage } from '#src/storage/index.ts';
 
 // Views of anonymous mode, in the language of `t`. Nothing here may contain the author's identity. They are all modals, never the Home tab:
@@ -42,6 +43,18 @@ export function noticeModal(title: string, text: string, close: string): ModalVi
     close: plain(close),
     blocks: [{ type: 'section', text: mrkdwn(text) }],
   };
+}
+
+/** What a form sending a message shows in its place when Slack is slow (see answerInTime). */
+export function lateSending(t: Strings, title: string, close: string): Late {
+  const notice = (text: string) => noticeModal(title, text, close);
+  return { notice, sending: t.common.sending, done: t.common.sent, failed: t.anonymous.sendFailed };
+}
+
+/** What a form changing a message shows in its place when Slack is slow. */
+export function lateChange(t: Strings, title: string, close: string): Late {
+  const notice = (text: string) => noticeModal(title, text, close);
+  return { notice, sending: t.common.working, done: t.common.done, failed: t.anonymous.conversation.changeFailed };
 }
 
 export interface InboxItem {

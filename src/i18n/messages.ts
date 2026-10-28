@@ -7,6 +7,10 @@ export interface Strings {
     save: string;
     close: string;
     back: string;
+    sending: string;
+    sent: string;
+    working: string;
+    done: string;
   };
   notices: {
     sender: string;

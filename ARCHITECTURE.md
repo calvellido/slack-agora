@@ -36,7 +36,7 @@ src/
   lib/               Generic helpers, nothing Slack-specific.
     once.ts            Doing something once per key, such as telling someone about a message once.
     serialized.ts      Runs tasks with the same key one after another.
-    time.ts            DAY, and durations such as "2 h 14 min".
+    time.ts            DAY, durations such as "2 h 14 min", and waiting for something for a while at most.
     url.ts             Addresses as people read them, without https://.
     version.ts         The version that is running, from package.json, and comparing versions.
 
@@ -50,6 +50,7 @@ src/
     errors.ts          The Slack error code of a failed call.
     notices.ts         Posting the bot's notices in the team channel, under their own name and icon.
     files.ts           Copying the files of messages: downloads, uploads, images shown in a message, what went wrong.
+    forms.ts           Answering a form in the time Slack waits, or saying it is sending and how it went after.
     testing.ts         Stand-ins for Slack's errors, file API and file servers, for tests.
     unknown-shortcuts.ts  Logging shortcuts the app settings have but this version doesn't.
 
@@ -175,7 +176,7 @@ Break one of these and anonymous mode stops being anonymous.
 - A message with text of its own, such as the line above relayed files, stays when its file is deleted, showing a deleted file: `deleteCopiesAndMessages()` finds those messages through where Slack says each copy was shared, and deletes them too.
 - A DM deleted while it has replies in its thread stays as a placeholder, which arrives as a `message_changed` of subtype `tombstone` instead of a `message_deleted`.
 - Editing a message with `chat.update` keeps the name and icon it was posted under, so the copies of DMs stay notices when they follow an edit.
-- Slack's 3-second limit: commands, actions and form submissions must be acknowledged quickly. Anonymous form submissions post first and acknowledge after, so the author only sees "sent" once it is in the team channel. The form to write with your name waits so for a message alone, but only for 2 seconds: past that, and at once with files, it says it is sending, and updates the form with how it went. Slack counts the 3 seconds from before the bot gets the form, and an answer later than that shows the person an error, though the message may arrive. The posting form always says it is sending first.
+- Slack's 3-second limit: commands, actions and form submissions must be acknowledged quickly. Slack counts the 3 seconds from before the bot gets the form, and an answer later than that shows the person an error, though what they sent may have gone, so they might send it twice. The forms that send or change a message (the anonymous ones, and the form to write with your name without files) do it before answering, so the person only sees "sent" once it is in the team channel, or the error with what they wrote still in the form, but they wait 2 seconds at most (`slack/forms.ts`): past that, the form says it is sending, and then shows how it went in its place. With files, the form to write with your name says so at once, as copying them takes longer, and so does the posting form always.
 
 ## Languages
 

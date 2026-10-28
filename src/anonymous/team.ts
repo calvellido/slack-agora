@@ -1,22 +1,37 @@
-import type { App, BlockAction, ButtonAction, OverflowAction } from '@slack/bolt';
+import type { App, BlockAction, ButtonAction, OverflowAction, ViewSubmitAction } from '@slack/bolt';
 import type { ModalView } from '@slack/types';
 import type { WebClient } from '@slack/web-api';
 import type { Deps } from '#src/deps.ts';
 import type { Strings } from '#src/i18n/index.ts';
 import { DAY } from '#src/lib/time.ts';
 import { errorCode } from '#src/slack/errors.ts';
+import { SEND_WAIT_MS, answerInTime, type Answer } from '#src/slack/forms.ts';
 import { isBlank, richTextBlocks } from '#src/slack/richtext.ts';
 import type { AnonConversation } from '#src/storage/index.ts';
 import type { Anonymous } from './index.ts';
 import type { AnonymousThread } from './thread.ts';
-import { REPLY_BLOCK, deleteMessageView, editMessageView, noticeModal, teamConversationView, type Page } from './views.ts';
+import {
+  REPLY_BLOCK,
+  deleteMessageView,
+  editMessageView,
+  lateChange,
+  lateSending,
+  noticeModal,
+  teamConversationView,
+  type Page,
+} from './views.ts';
 
 /**
  * The team's side, in the team channel: the buttons on each thread (open, end, and delete once the author is
  * forgotten), the window where the team reads and replies to an encrypted conversation, replies sent with the send
  * emoji to one from before encryption, replies withdrawn, and the hourly cleanup.
  */
-export function registerTeamSide(app: App, { config, store, team, i18n, notices, bot }: Deps, thread: AnonymousThread): Anonymous {
+export function registerTeamSide(
+  app: App,
+  { config, store, team, i18n, notices, bot }: Deps,
+  thread: AnonymousThread,
+  sendWaitMs = SEND_WAIT_MS,
+): Anonymous {
   const channel = config.teamChannelId;
 
   // What a button has to say goes in the channel, next to the thread's first message, where the buttons are.
@@ -115,7 +130,8 @@ export function registerTeamSide(app: App, { config, store, team, i18n, notices,
   }
 
   // A reply from the window, encrypted like everything in the conversation.
-  app.view('anon_team_conversation', async ({ ack, body, view, client }) => {
+  app.view<ViewSubmitAction>('anon_team_conversation', async ({ ack, body, view, client }) => {
+    const form = { ack, client, viewId: view.id, received: Date.now() };
     const user = body.user.id;
     const blockId = Object.keys(view.state.values).find((id) => id.startsWith(REPLY_BLOCK)) ?? REPLY_BLOCK;
     const [message] = richTextBlocks([view.state.values[blockId]?.reply?.rich_text_value]);
@@ -126,12 +142,13 @@ export function registerTeamSide(app: App, { config, store, team, i18n, notices,
       await ack({ response_action: 'errors', errors: { [blockId]: error } });
       return;
     }
-    const result = await thread.reply(client, conversation!, user, message!);
-    if (result !== 'sent') {
-      await ack({ response_action: 'errors', errors: { [blockId]: result === 'failed' ? t.anonymous.sendFailed : t.anonymous.unavailable } });
-      return;
-    }
-    await ack({ response_action: 'update', view: await teamWindow(client, t, store.anonymous.byId(conversation!.id)!) });
+    const answering = thread.reply(client, conversation!, user, message!).then(async (result): Promise<Answer> => {
+      if (result !== 'sent') {
+        return { response_action: 'errors', errors: { [blockId]: result === 'failed' ? t.anonymous.sendFailed : t.anonymous.unavailable } };
+      }
+      return { response_action: 'update', view: await teamWindow(client, t, store.anonymous.byId(conversation!.id)!) };
+    });
+    await answerInTime(form, answering, lateSending(t, t.anonymous.conversation.title, t.common.close), sendWaitMs);
   });
 
   /** Which reply one of the small windows over the conversation is about, and the conversation's reply box. */
@@ -178,7 +195,8 @@ export function registerTeamSide(app: App, { config, store, team, i18n, notices,
     await client.views.update({ view_id: viewId, view: await teamWindow(client, t, store.anonymous.byId(conversation.id)!, { replyBlock }) });
   }
 
-  app.view('anon_team_edit', async ({ ack, body, view, client }) => {
+  app.view<ViewSubmitAction>('anon_team_edit', async ({ ack, body, view, client }) => {
+    const form = { ack, client, viewId: view.id, received: Date.now() };
     const user = body.user.id;
     const { ts, reply } = aboutReply(view.private_metadata);
     const [message] = richTextBlocks([view.state.values.reply?.reply?.rich_text_value]);
@@ -189,12 +207,11 @@ export function registerTeamSide(app: App, { config, store, team, i18n, notices,
       return;
     }
     // Saved before answering, so a reply deleted meanwhile is told, not edited.
-    if (!(await thread.editReply(client, conversation!, ts!, message!, user))) {
-      await ack({ response_action: 'errors', errors: { reply: t.inbox.reply.alreadyDeleted } });
-      return;
-    }
-    await ack();
-    await refresh(client, t, view.previous_view_id, conversation!, reply);
+    const answering = thread.editReply(client, conversation!, ts!, message!, user).then((edited): Answer =>
+      edited ? undefined : { response_action: 'errors', errors: { reply: t.inbox.reply.alreadyDeleted } },
+    );
+    const late = lateChange(t, t.anonymous.teamWindow.editTitle, t.common.back);
+    if (!(await answerInTime(form, answering, late, sendWaitMs))) await refresh(client, t, view.previous_view_id, conversation!, reply);
   });
 
   app.view('anon_team_withdraw', async ({ ack, body, view, client }) => {

@@ -1,6 +1,7 @@
 import type { App } from '@slack/bolt';
 import type { WebClient } from '@slack/web-api';
 import type { Deps } from '#src/deps.ts';
+import { SEND_WAIT_MS } from '#src/slack/forms.ts';
 import type { SlackMessage } from '#src/slack/messages.ts';
 import type { AnonConversation } from '#src/storage/index.ts';
 import { registerTeamSide } from './team.ts';
@@ -38,8 +39,8 @@ export interface Anonymous {
  * - keys.ts: the keyed hash of the author, and the private handle.
  * - content.ts: the encryption of conversations' text.
  */
-export function registerAnonymous(app: App, deps: Deps): Anonymous {
+export function registerAnonymous(app: App, deps: Deps, sendWaitMs = SEND_WAIT_MS): Anonymous {
   const thread = createThread(app, deps);
-  registerWindow(app, deps, thread);
-  return registerTeamSide(app, deps, thread);
+  registerWindow(app, deps, thread, sendWaitMs);
+  return registerTeamSide(app, deps, thread, sendWaitMs);
 }

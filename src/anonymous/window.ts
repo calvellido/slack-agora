@@ -1,10 +1,12 @@
-import type { App, BlockAction, ButtonAction, GlobalShortcut, OverflowAction } from '@slack/bolt';
+import type { App, BlockAction, ButtonAction, GlobalShortcut, OverflowAction, ViewSubmitAction } from '@slack/bolt';
 import type { ModalView } from '@slack/types';
 import type { WebClient } from '@slack/web-api';
 import type { Deps } from '#src/deps.ts';
 import type { Strings } from '#src/i18n/index.ts';
 import { serialized } from '#src/lib/serialized.ts';
 import { ANON_SHORTCUT } from '#src/manifest/index.ts';
+import { errorCode } from '#src/slack/errors.ts';
+import { SEND_WAIT_MS, answerInTime, type Answer } from '#src/slack/forms.ts';
 import { isBlank, richTextBlocks, richTextFromPlain } from '#src/slack/richtext.ts';
 import type { AnonConversation } from '#src/storage/index.ts';
 import type { AnonymousThread } from './thread.ts';
@@ -17,6 +19,8 @@ import {
   editMessageView,
   endView,
   inboxView,
+  lateChange,
+  lateSending,
   noticeModal,
   type Page,
 } from './views.ts';
@@ -27,7 +31,7 @@ import {
  * and delete it.
  * Everything is a modal in the author's language: nothing is stored as a message in their Slack.
  */
-export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): void {
+export function registerWindow(app: App, deps: Deps, thread: AnonymousThread, sendWaitMs = SEND_WAIT_MS): void {
   const { config, store, anonOwner, bot, i18n } = deps;
 
   /** Why this person can't start a new anonymous conversation, if they can't. */
@@ -115,7 +119,8 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
     await client.views.push({ trigger_id: body.trigger_id, view: newConversationView(t, body.user.id) });
   });
 
-  app.view('anon_message', async ({ ack, body, view, client }) => {
+  app.view<ViewSubmitAction>('anon_message', async ({ ack, body, view, client }) => {
+    const form = { ack, client, viewId: view.id, received: Date.now() };
     const userId = body.user.id;
     const t = await i18n.forUser(userId);
     const owner = anonOwner(userId);
@@ -124,18 +129,14 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
       await ack({ response_action: 'errors', errors: { message: t.anonymous.form.empty } });
       return;
     }
-    // Posted before acknowledging, so the person only sees "sent" once it is in the team channel.
-    const error = await serialized(`anon:${owner}`, async () => {
-      const problem = newConversationProblem(t, owner);
-      if (problem) return problem;
-      return (await thread.open(client, owner, message)) ? undefined : t.anonymous.sendFailed;
+    // Posted before answering, so the person only sees "sent" once it is in the team channel, unless Slack is slow.
+    const answering = serialized(`anon:${owner}`, async (): Promise<Answer> => {
+      const error = newConversationProblem(t, owner) ?? ((await thread.open(client, owner, message)) ? undefined : t.anonymous.sendFailed);
+      if (error) return { response_action: 'errors', errors: { message: error } };
+      return { response_action: 'update', view: noticeModal(t.anonymous.form.title, t.anonymous.form.sent, t.common.close) };
     });
-    if (error) {
-      await ack({ response_action: 'errors', errors: { message: error } });
-      return;
-    }
-    await ack({ response_action: 'update', view: noticeModal(t.anonymous.form.title, t.anonymous.form.sent, t.common.close) });
-    await refreshInbox(client, t, view.previous_view_id, userId);
+    const answer = await answerInTime(form, answering, lateSending(t, t.anonymous.form.title, t.common.close), sendWaitMs);
+    if (answer?.response_action === 'update') await refreshInbox(client, t, view.previous_view_id, userId);
   });
 
   // Reading a conversation, and writing again from its reply box.
@@ -150,7 +151,8 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
     await refreshInbox(client, t, body.view?.id, body.user.id);
   });
 
-  app.view('anon_conversation', async ({ ack, body, view, client }) => {
+  app.view<ViewSubmitAction>('anon_conversation', async ({ ack, body, view, client }) => {
+    const form = { ack, client, viewId: view.id, received: Date.now() };
     const userId = body.user.id;
     const t = await i18n.forUser(userId);
     const blockId = Object.keys(view.state.values).find((id) => id.startsWith(REPLY_BLOCK)) ?? REPLY_BLOCK;
@@ -160,15 +162,23 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
       return;
     }
     const own = ownConversation(userId, view.private_metadata);
-    const result =
-      own?.closedAt === null ? await serialized(`anon:${own.owner}`, () => thread.followUp(client, own, message)) : 'gone';
-    if (!own || result !== 'sent') {
-      const error = result === 'failed' ? t.anonymous.sendFailed : t.anonymous.unavailable;
-      await ack({ response_action: 'errors', errors: { [blockId]: error } });
-      return;
-    }
-    await ack({ response_action: 'update', view: await conversation(client, t, store.anonymous.byId(own.id)!) });
-    await refreshInbox(client, t, view.previous_view_id, userId);
+    const title = t.anonymous.conversation.title;
+    const answering = (async (): Promise<Answer> => {
+      const result =
+        own?.closedAt === null ? await serialized(`anon:${own.owner}`, () => thread.followUp(client, own, message)) : 'gone';
+      if (!own || result !== 'sent') {
+        const error = result === 'failed' ? t.anonymous.sendFailed : t.anonymous.unavailable;
+        return { response_action: 'errors', errors: { [blockId]: error } };
+      }
+      // It went: if the conversation can't be read back for now, the window only says so.
+      const shown = await conversation(client, t, store.anonymous.byId(own.id)!).catch((error: unknown) => {
+        app.logger.warn(`Couldn't read an anonymous conversation back: ${errorCode(error)}`);
+        return noticeModal(title, t.common.sent, t.common.back);
+      });
+      return { response_action: 'update', view: shown };
+    })();
+    const answer = await answerInTime(form, answering, lateSending(t, title, t.common.back), sendWaitMs);
+    if (answer?.response_action === 'update') await refreshInbox(client, t, view.previous_view_id, userId);
   });
 
   /** One of the author's own messages, if they may still change it: in their open conversation, and not deleted. */
@@ -234,7 +244,8 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
 
   // Both change the message before answering, so the person is told if it didn't go through: until the thread shows
   // the change, a message whose text is there isn't changed.
-  app.view('anon_own_edit', async ({ ack, body, view, client }) => {
+  app.view<ViewSubmitAction>('anon_own_edit', async ({ ack, body, view, client }) => {
+    const form = { ack, client, viewId: view.id, received: Date.now() };
     const userId = body.user.id;
     const t = await i18n.forUser(userId);
     const { handle, ts, reply } = aboutMessage(view.private_metadata);
@@ -245,26 +256,27 @@ export function registerWindow(app: App, deps: Deps, thread: AnonymousThread): v
       await ack({ response_action: 'errors', errors: { reply: error } });
       return;
     }
-    if (!(await thread.editMessage(client, own!, ts!, message!))) {
-      await ack({ response_action: 'errors', errors: { reply: t.anonymous.conversation.changeFailed } });
-      return;
-    }
-    await ack();
-    await refreshConversation(client, t, view.previous_view_id, own!, reply);
+    const answering = thread.editMessage(client, own!, ts!, message!).then((changed): Answer =>
+      changed ? undefined : { response_action: 'errors', errors: { reply: t.anonymous.conversation.changeFailed } },
+    );
+    const late = lateChange(t, t.anonymous.conversation.editTitle, t.common.back);
+    if (!(await answerInTime(form, answering, late, sendWaitMs))) await refreshConversation(client, t, view.previous_view_id, own!, reply);
   });
 
-  app.view('anon_own_delete', async ({ ack, body, view, client }) => {
+  app.view<ViewSubmitAction>('anon_own_delete', async ({ ack, body, view, client }) => {
+    const form = { ack, client, viewId: view.id, received: Date.now() };
     const userId = body.user.id;
     const t = await i18n.forUser(userId);
     const { handle, ts, reply } = aboutMessage(view.private_metadata);
     const own = ownMessage(userId, handle, ts);
-    const problem = !own ? t.anonymous.unavailable : !(await thread.deleteMessage(client, own, ts!)) ? t.anonymous.conversation.changeFailed : undefined;
-    if (problem) {
-      await ack({ response_action: 'update', view: noticeModal(t.anonymous.window.title, problem, t.common.back) });
+    const problem = (text: string): Answer => ({ response_action: 'update', view: noticeModal(t.anonymous.window.title, text, t.common.back) });
+    if (!own) {
+      await ack(problem(t.anonymous.unavailable));
       return;
     }
-    await ack();
-    await refreshConversation(client, t, view.previous_view_id, own!, reply);
+    const answering = thread.deleteMessage(client, own, ts!).then((deleted) => (deleted ? undefined : problem(t.anonymous.conversation.changeFailed)));
+    const late = lateChange(t, t.anonymous.conversation.deleteTitle, t.common.back);
+    if (!(await answerInTime(form, answering, late, sendWaitMs))) await refreshConversation(client, t, view.previous_view_id, own, reply);
   });
 
   // Ending a conversation: the author confirms first, and can also delete their messages from the team channel.

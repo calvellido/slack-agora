@@ -7,6 +7,10 @@ common:
   save: "Guardar"
   close: "Cerrar"
   back: "Volver"
+  sending: "⏳ Enviando…"
+  sent: "✅ Enviado."
+  working: "⏳ Un momento…"
+  done: "✅ Hecho."
 
 notices:
   sender: "{bot} · bot"

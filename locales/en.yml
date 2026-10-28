@@ -10,6 +10,11 @@ common:
   save: "Save"
   close: "Close"
   back: "Back"
+  # In a form's place, when Slack is slow: while sending what it says, or making a change, and once it is done.
+  sending: "⏳ Sending…"
+  sent: "✅ Sent."
+  working: "⏳ One moment…"
+  done: "✅ Done."
 
 # The name the bot's notices in the team channel appear under, next to a robot icon, so they don't look like
 # messages from the team.
