@@ -2,7 +2,7 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
-## [Unreleased]
+## [3.7.0] - 2026-10-28
 
 - At the bottom of the *Home* tab, next to the version, everyone sees whether the bot is running: :large_green_circle: when it has just published the tab, as it does whenever someone opens it, with how long ago that was. A minute later, and when the bot stops, it says that opening the tab checks, since the bot can't change it once it is down. Slack's own green dot next to the app's name is on all the time, so it doesn't tell.
 - On the team's part of the *Home* tab, *Status* and *Check for updates* are a group of their own, *Maintenance*, apart from the button to post as the bot.
@@ -158,6 +158,7 @@ The first release.
 - `pnpm clean-db` empties the database.
 - A Docker image, for linux/amd64 and linux/arm64.
 
+[3.7.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.7.0
 [3.6.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.6.0
 [3.5.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.5.0
 [3.4.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.4.0
