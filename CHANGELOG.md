@@ -2,7 +2,7 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
-## Unreleased
+## [3.7.3] - 2026-10-28
 
 - A minute after the *Home* tab says the bot is online, it says when the bot was last online, and that opening the tab again checks. Until now it said that opening it checks, and to watch for :large_green_circle:, which read as the bot being offline to whoever still had the tab open. It says "green" in words, so nothing shows :large_green_circle: while the bot may be offline.
 
@@ -184,6 +184,7 @@ The first release.
 - `pnpm clean-db` empties the database.
 - A Docker image, for linux/amd64 and linux/arm64.
 
+[3.7.3]: https://github.com/calvellido/slack-agora/releases/tag/v3.7.3
 [3.7.2]: https://github.com/calvellido/slack-agora/releases/tag/v3.7.2
 [3.7.1]: https://github.com/calvellido/slack-agora/releases/tag/v3.7.1
 [3.7.0]: https://github.com/calvellido/slack-agora/releases/tag/v3.7.0
