@@ -2,6 +2,12 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## [Unreleased]
+
+- *Status*, a button on the team's part of the *Home* tab, says how the bot is doing, as the console's `status` does, in the team's language, with *Refresh* to see it again. Of what failed, it only says how many and the last error code: what failed and when stay in the console. It only shows: changing the log's level, restarting and updating are only done from the console.
+
+No new permissions or settings: updating the bot is enough.
+
 ## [3.5.0] - 2026-10-28
 
 - *Check for updates*, a button on the team's part of the *Home* tab, says whether a newer release is out, with a link to what changed, and that whoever runs the bot installs it on its machine, from the console or with Docker. It only tells: nothing is installed from Slack. It looks among the releases of `SOURCE_URL`'s repository on GitHub, so it shows only when that is one, as Agora's own repository is.

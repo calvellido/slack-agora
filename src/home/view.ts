@@ -3,6 +3,7 @@ import type { Strings } from '#src/i18n/index.ts';
 import type { Person } from '#src/slack/team-directory.ts';
 import { readableUrl } from '#src/lib/url.ts';
 import { context, spacer } from '#src/slack/blocks.ts';
+import { STATUS_ACTION } from './status.ts';
 import { UPDATES_ACTION } from './updates.ts';
 
 // The Home tab, in the language of `t`. Everyone gets the same one, and team members also get how to act as the bot,
@@ -147,6 +148,7 @@ export function homeView(t: Strings, options: HomeOptions): HomeView {
         type: 'actions',
         elements: [
           { type: 'button', action_id: 'publish_open', text: plain(t.home.team.publishButton) },
+          { type: 'button', action_id: STATUS_ACTION, text: plain(t.home.team.statusButton) },
           ...(team.updates ? [{ type: 'button' as const, action_id: UPDATES_ACTION, text: plain(t.home.team.updatesButton) }] : []),
         ],
       },

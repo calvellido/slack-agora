@@ -189,6 +189,26 @@ export interface Strings {
         howTo: string;
         failed: string;
       };
+      statusButton: string;
+      status: {
+        title: string;
+        refresh: string;
+        running: (params: { version: string; node: string; duration: string }) => string;
+        connected: (params: { duration: string; reconnections: number }) => string;
+        notConnected: string;
+        sleeps: (params: { count: number; duration: string; ago: string }) => string;
+        losses: (params: { count: number; duration: string; ago: string }) => string;
+        relayedLate: (params: { count: number; ago: string }) => string;
+        requests: (params: { handled: string; failed: number; code: string }) => string;
+        monitorNone: string;
+        monitorWaiting: string;
+        monitor: (params: { ok: string; ago: string }) => string;
+        permissions: string;
+        permissionsMissing: (params: { scopes: string }) => string;
+        permissionsUnknown: string;
+        log: (params: { level: string }) => string;
+        memory: (params: { megabytes: string }) => string;
+      };
     };
     source: (params: { url: string; label: string }) => string;
     version: (params: { version: string }) => string;

@@ -22,7 +22,7 @@ test('everyone gets the same Home tab, and team members also get how to act as t
   assert.match(JSON.stringify(everyone), /"action_id":"anon_inbox"/);
   assert.match(JSON.stringify(everyone), /"action_id":"write_open"/);
   assert.ok(shows(everyone, t.home.intro));
-  assert.doesNotMatch(JSON.stringify(everyone), /publish_open|C1/);
+  assert.doesNotMatch(JSON.stringify(everyone), /publish_open|status_open|C1/);
   // The hint about the command to write with your name, only when there is one.
   const withCommand = homeView(t, { bot: { name: 'Helpdesk' }, writeCommand: '/hd' });
   assert.ok(shows(withCommand, t.home.namedHint({ command: '/hd' })));
@@ -30,6 +30,7 @@ test('everyone gets the same Home tab, and team members also get how to act as t
 
   const member = homeView(t, { bot: { name: 'Helpdesk' }, team });
   assert.match(JSON.stringify(member), /"action_id":"publish_open"/);
+  assert.match(JSON.stringify(member), /"action_id":"status_open"/);
   assert.ok(shows(member, t.home.team.reply({ sendEmoji: 'outbox_tray', anonymous: 'encrypted' })));
   assert.ok(shows(member, t.home.team.conversations({ teamChannel: 'C1' })));
 });

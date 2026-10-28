@@ -1,13 +1,16 @@
 import type { App } from '@slack/bolt';
+import type { StatusInfo } from '#src/console/status.ts';
 import type { Deps } from '#src/deps.ts';
 import { VERSION } from '#src/lib/version.ts';
 import { errorCode } from '#src/slack/errors.ts';
 import type { Person } from '#src/slack/team-directory.ts';
+import { registerStatus } from './status.ts';
 import { canCheckForUpdates, registerUpdateCheck } from './updates.ts';
 import { homeView, type HomeOptions } from './view.ts';
 
 /** The bot's Home tab, published again every time someone opens it, in their language, and its team's buttons. */
-export function registerHome(app: App, { config, team, bot, i18n }: Deps): void {
+export function registerHome(app: App, { config, team, bot, i18n, activity }: Deps, status: () => StatusInfo): void {
+  registerStatus(app, { team, i18n, activity }, status);
   registerUpdateCheck(app, { config, team, i18n });
 
   // Without the list, the tab still opens: Slack may be slow or the channel unreadable for a moment.

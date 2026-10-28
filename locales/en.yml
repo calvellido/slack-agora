@@ -231,6 +231,28 @@ home:
       newMajor: "Version {version} is out too, a new major version, which can need changes: <{url}|read its notes> before updating to it."
       howTo: "Whoever runs {bot} installs it on its machine: with `update apply` in the bot's console, or `docker compose pull && docker compose up -d` with Docker. Nothing is installed from Slack."
       failed: "GitHub couldn't be reached to check for updates. Try again in a while."
+    statusButton: "Status"
+    # The window that button opens: how the bot is doing, as the console's status says, in counts and times, without
+    # who or what. Each field is its name in bold and, under it, its value.
+    status:
+      title: "Status"
+      refresh: "Refresh"
+      running: "*Running*\nVersion {version} on Node {node}, for {duration}"
+      connected: "*Slack*\nConnected for {duration}, {reconnections, plural, =0 {without reconnecting} one {after # reconnection} other {after # reconnections}} since it started"
+      notConnected: "*Slack*\nNot connected"
+      sleeps: "*Sleeps*\n{count, plural, =0 {None} one {#, for about {duration}, ending {ago} ago} other {#, the last for about {duration}, ending {ago} ago}}"
+      losses: "*Lost connections*\n{count, plural, =0 {None} one {#, for {duration}, ending {ago} ago} other {#, the last for {duration}, ending {ago} ago}}"
+      relayedLate: "*DMs relayed late*\n{count, plural, =0 {None} other {#, the last {ago} ago}}"
+      # Only how many failed and the last one's error code: what failed and when stay in the console.
+      requests: "*Requests from Slack*\n{handled} handled, {failed, plural, =0 {none failed} one {# failed, with `{code}`} other {# failed, the last with `{code}`}}"
+      monitorNone: "*Monitor*\nNone: HEARTBEAT_URL isn't set"
+      monitorWaiting: "*Monitor*\nNot called yet"
+      monitor: "*Monitor*\nThe last call {ok, select, yes {worked} other {failed}}, {ago} ago"
+      permissions: "*Permissions*\nAll there"
+      permissionsMissing: "*Permissions*\nMissing {scopes} when the bot started: generate the manifest again, paste it in the app's settings, and restart the bot"
+      permissionsUnknown: "*Permissions*\nUnknown: Slack didn't say"
+      log: "*Log level*\n{level}"
+      memory: "*Memory*\n{megabytes} MB"
   # At the bottom, for everyone.
   source: "This Slack app is running an instance of Agora, an open source project. Anyone can read its code at <{url}|{label}>, and see how it works. If you find something to improve, contributions are welcome."
   # The version that is running, under that.

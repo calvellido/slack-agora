@@ -7,6 +7,7 @@ import { loadConfig } from './config.ts';
 import { consoleCommands } from './console/commands.ts';
 import { startConsole } from './console/index.ts';
 import { RESTART_CODE, launched } from './console/restart.ts';
+import type { StatusInfo } from './console/status.ts';
 import type { Deps } from './deps.ts';
 import { registerHome } from './home/index.ts';
 import { I18n } from './i18n/index.ts';
@@ -41,6 +42,17 @@ const receiver = new SocketModeReceiver({ appToken: config.appToken, logger: log
 const app = new App({ token: config.botToken, receiver, logger: log, logLevel: log.getLevel() });
 activity.watch(receiver.client);
 const bot = await botIdentity(app.client);
+// As when a new version needs a permission, and its manifest wasn't pasted into the app's settings yet
+const missing = missingScopes(bot.scopes, config);
+/** What the status shows besides the activity, for the console and the Home tab's button. */
+const statusInfo = (): StatusInfo => ({
+  version: VERSION,
+  node: process.versions.node,
+  level: log.level,
+  monitor: config.heartbeatUrl !== undefined,
+  missingScopes: missing,
+  memoryBytes: process.memoryUsage.rss(),
+});
 const i18n = new I18n(
   app.client,
   // Without a publish command, no text mentions it.
@@ -67,7 +79,7 @@ warnAboutUnknownShortcuts(app, [WRITE_SHORTCUT, ANON_SHORTCUT, PUBLISH_SHORTCUT]
 const anonymous = registerAnonymous(app, deps);
 const inbox = registerInbox(app, deps, anonymous);
 registerPublish(app, deps);
-registerHome(app, deps);
+registerHome(app, deps, statusInfo);
 
 // Log the Slack error code only: the default handler would print payloads, which carry message contents.
 app.error(async (error) => {
@@ -87,8 +99,6 @@ try {
 } catch (error) {
   app.logger.error(`Cannot read TEAM_CHANNEL_ID (${errorCode(error)}): invite ${bot.name} to the team channel and check the ID`);
 }
-// As when a new version needs a permission, and its manifest wasn't pasted into the app's settings yet
-const missing = missingScopes(bot.scopes, config);
 if (missing?.length) {
   app.logger.warn(`${bot.name} lacks the permissions ${missing.join(', ')}: generate the manifest again and paste it in the app's settings`);
 }
@@ -113,14 +123,7 @@ const terminal =
         consoleCommands({
           log,
           activity,
-          info: () => ({
-            version: VERSION,
-            node: process.versions.node,
-            level: log.level,
-            monitor: config.heartbeatUrl !== undefined,
-            missingScopes: missing,
-            memoryBytes: process.memoryUsage.rss(),
-          }),
+          info: statusInfo,
           restart: launched() ? () => void stop(RESTART_CODE) : undefined,
         }),
         { log, stop: () => void stop() },
