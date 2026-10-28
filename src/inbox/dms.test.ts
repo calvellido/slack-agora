@@ -96,3 +96,44 @@ test('catching up reads every page of a DM since the bot went away, and relays w
   assert.deepEqual(relayed, ['first', 'second', 'third']);
   assert.deepEqual(told(), [t.inbox.dm.lateAck]);
 });
+
+test('a reply in a thread of the DM that is also sent to the DM is relayed and marked as received', async () => {
+  const relayed: string[] = [];
+  const { calls, dm } = setup(async (_, __, ___, message) => (relayed.push(message.text), { ts: '1.0', fileIds: [], problems: [] }));
+  await dm({ user: 'U1', ts: '5.0', text: 'Also here', subtype: 'thread_broadcast', thread_ts: '4.0' });
+  assert.deepEqual(relayed, ['Also here']);
+  assert.ok(calls.some((c) => c.method === 'reactions.add' && c.args.timestamp === '5.0'));
+});
+
+test("catching up looks into the DM's threads with replies since, also those started before, as under the team's replies", async () => {
+  const relayed: string[] = [];
+  const { dms, client } = setup(async (_, __, ___, message) => (relayed.push(message.text), { ts: '1.0', fileIds: [], problems: [] }));
+  const ago = (minutes: number) => (Date.now() / 1000 - minutes * 60).toFixed(6);
+  const reply = ago(24 * 60);
+  const history: HistoryMessage[] = [
+    { ts: ago(2), user: 'U1', text: 'also in the DM', subtype: 'thread_broadcast', thread_ts: reply },
+    { ts: ago(5), user: 'U1', text: 'in the DM' },
+    { ts: ago(60), user: 'U1', text: 'before the bot went away' },
+    { ts: ago(120), user: 'UBOT', text: 'an older reply', reply_count: 1, latest_reply: ago(90) },
+    { ts: reply, user: 'UBOT', text: "the team's reply", reply_count: 4, latest_reply: ago(1) },
+  ];
+  const thread: HistoryMessage[] = [
+    { ts: reply, user: 'UBOT', text: "the team's reply" },
+    { ts: ago(30), user: 'U1', text: 'in the thread, before the bot went away' },
+    { ts: ago(2), user: 'U1', text: 'also in the DM', subtype: 'thread_broadcast', thread_ts: reply },
+    { ts: ago(1), user: 'U1', text: 'in the thread', thread_ts: reply },
+  ];
+  const looked: string[] = [];
+  const since = (oldest: string) => (m: HistoryMessage) => Number(m.ts) >= Number(oldest);
+  Object.assign(client, {
+    conversations: {
+      list: async () => ({ channels: [{ id: 'D1', user: 'U1' }] }),
+      history: async ({ oldest }: { oldest: string }) => ({ messages: history.filter(since(oldest)) }),
+      // Always with the thread's first message.
+      replies: async ({ ts, oldest }: { ts: string; oldest: string }) => (looked.push(ts), { messages: thread.filter((m) => m.ts === ts || since(oldest)(m)) }),
+    },
+  });
+  assert.equal(await dms.catchUp(client, Date.now() - 10 * 60_000), 3);
+  assert.deepEqual(relayed, ['in the DM', 'also in the DM', 'in the thread']);
+  assert.deepEqual(looked, [reply]);
+});

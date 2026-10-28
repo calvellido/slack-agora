@@ -35,15 +35,34 @@ export interface Dms {
   write(client: WebClient, user: string, written: Written): Promise<Copies['problems']>;
 }
 
-/** A DM's messages since `oldest` (seconds), every page of them: the first holds only the latest. */
-async function historySince(client: WebClient, channel: string, oldest: string): Promise<HistoryMessage[]> {
-  const messages: HistoryMessage[] = [];
+/** Every page of a list of messages, from the first: each holds at most 200, the latest first. */
+async function allPages<M>(
+  page: (cursor?: string) => Promise<{ messages?: M[]; response_metadata?: { next_cursor?: string } }>,
+): Promise<M[]> {
+  const messages: M[] = [];
   let cursor: string | undefined;
   do {
-    const page = await client.conversations.history({ channel, oldest, limit: 200, cursor });
-    messages.push(...(page.messages ?? []));
-    cursor = page.response_metadata?.next_cursor || undefined;
+    const { messages: more, response_metadata } = await page(cursor);
+    messages.push(...(more ?? []));
+    cursor = response_metadata?.next_cursor || undefined;
   } while (cursor);
+  return messages;
+}
+
+/**
+ * A DM's messages since `oldest` (seconds), replies in its threads included. Slack lists only the messages that start
+ * a thread, so those since `threadsSince` are listed too, to look into the threads they start that have replies since.
+ */
+async function messagesSince(client: WebClient, channel: string, oldest: number, threadsSince: number): Promise<HistoryMessage[]> {
+  const since = (m: HistoryMessage) => Number(m.ts) >= oldest;
+  const listed = await allPages((cursor) => client.conversations.history({ channel, oldest: String(threadsSince), limit: 200, cursor }));
+  const messages = listed.filter(since);
+  for (const { ts } of listed.filter((m) => m.ts && m.reply_count && Number(m.latest_reply) >= oldest)) {
+    const thread = await allPages((cursor) => client.conversations.replies({ channel, ts: ts!, oldest: String(oldest), limit: 200, cursor }));
+    // The thread's first message always comes, and replies also sent to the DM are listed already.
+    const known = new Set(messages.map((m) => m.ts));
+    messages.push(...thread.filter((m) => m.ts !== ts && since(m) && !known.has(m.ts)));
+  }
   return messages;
 }
 
@@ -125,10 +144,12 @@ export function registerDms(app: App, deps: Deps, relay: Relay): Dms {
   // Edits and deletions are followed in changes.ts.
   app.event('message', async ({ event, client }) => {
     if (event.channel_type !== 'im') return;
-    if (event.subtype !== undefined && event.subtype !== 'file_share') return;
+    // Replies in a thread of the DM too, also those sent to the DM as well.
+    if (event.subtype !== undefined && event.subtype !== 'file_share' && event.subtype !== 'thread_broadcast') return;
     if ('bot_id' in event && event.bot_id) return;
     const { channel, user, ts } = event;
-    await handleDm(client, { channel, user, ts, text: event.text ?? '', blocks: event.blocks, files: event.files ?? [] });
+    const files = 'files' in event ? (event.files ?? []) : [];
+    await handleDm(client, { channel, user, ts, text: event.text ?? '', blocks: event.blocks, files });
   });
 
   return {
@@ -156,7 +177,9 @@ export function registerDms(app: App, deps: Deps, relay: Relay): Dms {
 
     async catchUp(client, since) {
       // A minute of overlap: DMs relayed just before going down already carry the received mark.
-      const oldest = String((since - 60_000) / 1000);
+      const oldest = (since - 60_000) / 1000;
+      // Replies may come in threads started before, as under the team's replies: those of ongoing conversations.
+      const threadsSince = Math.min(oldest, (Date.now() - config.inboxIdleDays * DAY) / 1000);
       let recovered = 0;
       let cursor: string | undefined;
       do {
@@ -164,7 +187,7 @@ export function registerDms(app: App, deps: Deps, relay: Relay): Dms {
         for (const im of page.channels ?? []) {
           if (!im.id || !im.user || im.user === 'USLACKBOT') continue;
           let relayed = 0;
-          for (const m of missedDms(await historySince(client, im.id, oldest), bot.userId)) {
+          for (const m of missedDms(await messagesSince(client, im.id, oldest, threadsSince), bot.userId)) {
             const dm = {
               channel: im.id,
               user: m.user!,

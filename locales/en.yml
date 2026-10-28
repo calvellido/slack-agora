@@ -123,8 +123,8 @@ inbox:
     submit: "Send"
     anonymousHint: "To write anonymously, use `{anonymousCommand}` or *Anonymous messages* on {bot}'s *Home* tab."
     sent: "✅ Sent. The team will reply in {bot}'s *Messages* tab, where you have a copy of your message."
-    # While the files are copied, which can take a while.
-    sending: "⏳ Sending your message and its files to the team…"
+    # While the files are copied, which can take a while, or while Slack is slow.
+    sending: "⏳ Sending your message{files, select, yes { and its files} other {}} to the team…"
     empty: "Write a message or attach files."
     cantSend: "These files can't be sent: {list}"
     sendFailed: "Couldn't send it. Try again in a few minutes."
@@ -182,6 +182,8 @@ publish:
     sent: "✅ Sent to {target}"
     nothing: "⚠️ Nothing was sent to {target}:\n{list}"
     failed: "⚠️ Couldn't send to {target}: {reason}"
+    # When it went out, but its record couldn't be posted in the team channel.
+    unrecorded: "⚠️ It went out, but its record couldn't be posted in <#{teamChannel}>: {reason}. So it can't be deleted with :{deleteEmoji}:, and sending it again would post it twice."
     record: "To delete it, add :{deleteEmoji}: to its record in <#{teamChannel}>."
 
 home:

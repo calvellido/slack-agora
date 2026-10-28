@@ -135,7 +135,10 @@ export function doneView(t: Strings, text: string, extra: string[] = []): ModalV
   };
 }
 
-/** How it went for each target (a channel or a person, as a mention), and, if anything went, how to delete it. */
+/**
+ * How it went for each target (a channel or a person, as a mention), and, if anything went with a record, how to
+ * delete it.
+ */
 export function resultView(
   t: Strings,
   results: { target: string; outcome: Outcome }[],
@@ -146,8 +149,12 @@ export function resultView(
     const problems = describeProblems(t, outcome.problems, 'team');
     if (outcome.status === 'nothing') return t.publish.done.nothing({ target, list: problems });
     const done = outcome.permalink ? t.publish.done.posted({ target, permalink: outcome.permalink }) : t.publish.done.sent({ target });
-    return outcome.problems.length > 0 ? `${done}\n${t.files.notPosted({ list: problems })}` : done;
+    return [
+      done,
+      ...(outcome.problems.length > 0 ? [t.files.notPosted({ list: problems })] : []),
+      ...(outcome.unrecorded ? [t.publish.done.unrecorded({ ...record, reason: describeError(t, outcome.unrecorded.error) })] : []),
+    ].join('\n');
   });
-  const sent = results.some((r) => r.outcome.status === 'sent');
-  return doneView(t, lines.join('\n\n'), sent ? [t.publish.done.record(record)] : []);
+  const recorded = results.some((r) => r.outcome.status === 'sent' && !r.outcome.unrecorded);
+  return doneView(t, lines.join('\n\n'), recorded ? [t.publish.done.record(record)] : []);
 }

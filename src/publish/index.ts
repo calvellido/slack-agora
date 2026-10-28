@@ -106,6 +106,11 @@ export function registerPublish(app: App, deps: Deps): void {
     const results: { target: string; outcome: Outcome }[] = [];
     if (channel) results.push(await attempt(`<#${channel}>`, () => send.toChannel(client, poster, channel, post)));
     for (const user of people) results.push(await attempt(`<@${user}>`, () => send.toPerson(client, poster, user, post)));
+    for (const { outcome } of results) {
+      if (outcome.status === 'sent' && outcome.unrecorded) {
+        app.logger.error(`A post as the bot went out without its record: ${errorCode(outcome.unrecorded.error)}`);
+      }
+    }
     const done = resultView(t, results, { teamChannel, deleteEmoji: config.deleteEmoji });
     // Whoever posted may have closed the form meanwhile.
     await client.views.update({ view_id: view.id, view: done }).catch(() => {});

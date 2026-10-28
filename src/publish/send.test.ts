@@ -109,3 +109,26 @@ test("a send Slack refuses is recorded with the reason in words, and returned as
   const record = calls.find((c) => c.method === 'chat.postMessage')!.args;
   assert.equal(record.text, t.publish.record.failed({ poster: 'UTEAM', target: '<#COLD>', reason: t.errors.archived }));
 });
+
+test("what went out is sent even when its record can't be posted, so it isn't sent again, and it starts no conversation", async () => {
+  const { client, store, send } = setup();
+  const refused = slackError('is_archived');
+  const failing = {
+    ...client,
+    conversations: { ...client.conversations, open: async () => ({ channel: { id: 'D1' } }) },
+    chat: {
+      ...client.chat,
+      postMessage: async (args: { channel: string }) =>
+        args.channel === 'CTEAM' ? Promise.reject(refused) : client.chat.postMessage(args as never),
+    },
+  } as unknown as WebClient;
+  const post = { message: richTextFromPlain('Notice'), files: [] };
+  assert.deepEqual(await send.toChannel(failing, 'UTEAM', 'CMEMBER', post), {
+    status: 'sent',
+    permalink: 'https://slack.example/p1',
+    problems: [],
+    unrecorded: { error: refused },
+  });
+  assert.deepEqual(await send.toPerson(failing, 'UTEAM', 'U1', post), { status: 'sent', problems: [], unrecorded: { error: refused } });
+  assert.equal(store.conversations.latestDm('D1', 0), undefined);
+});

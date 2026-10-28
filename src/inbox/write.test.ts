@@ -9,8 +9,9 @@ import { Notices } from '#src/slack/notices.ts';
 import { richTextFromPlain } from '#src/slack/richtext.ts';
 import { attached, fakeFileApi, serveFiles, type Call } from '#src/slack/testing.ts';
 import { Store } from '#src/storage/index.ts';
-import { registerDms } from './dms.ts';
+import { registerDms, type Dms } from './dms.ts';
 import { createRelay } from './relay.ts';
+import { registerWrite } from './write.ts';
 
 test('a written message is relayed as a DM, with a copy in the DM, and the next one continues its thread', async () => {
   const posts: { channel: string; text: string; thread_ts?: string }[] = [];
@@ -113,4 +114,49 @@ test("files that didn't reach the team are returned, and the person's copy names
     t.files.notReceived({ list: describeProblems(t, problems, 'person') }),
     t.inbox.dm.ack,
   ]);
+});
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Sending the write form with a message, waiting `sendWaitMs` for `write`: what the form answered Slack, and the texts
+ * it was updated with after.
+ */
+async function submit(write: Dms['write'], sendWaitMs: number) {
+  let handler: (args: unknown) => Promise<void> = async () => {};
+  const app = {
+    command: () => {},
+    shortcut: () => {},
+    action: () => {},
+    view: (_id: string, registered: typeof handler) => (handler = registered),
+    logger: { error: () => {} },
+  } as unknown as App;
+  type View = { blocks: { text?: { text: string } }[] };
+  const updates: string[] = [];
+  const client = {
+    users: { info: async () => ({ user: { locale: 'en-US' } }) },
+    views: { update: async ({ view }: { view: View }) => (updates.push(view.blocks[0]!.text!.text), { ok: true }) },
+  } as unknown as WebClient;
+  const names = { bot: 'Helpdesk', publishCommand: '/post', anonymousCommand: '/anon' };
+  registerWrite(app, { config: {}, i18n: new I18n(client, names, 'en') } as unknown as Deps, { write } as Dms, sendWaitMs);
+  const acks: unknown[] = [];
+  const values = { message: { message: { rich_text_value: richTextFromPlain('Hello team') } } };
+  await handler({ ack: async (answer: unknown) => acks.push(answer), body: { user: { id: 'U1' } }, view: { id: 'V1', state: { values } }, client });
+  const text = (answer: unknown) => (answer as { view?: View }).view?.blocks[0]?.text?.text;
+  return { acks, texts: acks.map(text), updates, t: stringsIn('en', names) };
+}
+
+test('a message alone that reaches the team at once is answered as sent, and one that fails keeps the form, with the error', async () => {
+  const sent = await submit(async () => [], 1_000);
+  assert.deepEqual([sent.texts, sent.updates], [[sent.t.inbox.write.sent], []]);
+  const failed = await submit(async () => Promise.reject(new Error('fatal_error')), 1_000);
+  assert.deepEqual(failed.acks, [{ response_action: 'errors', errors: { message: failed.t.inbox.write.sendFailed } }]);
+});
+
+test('a message alone that takes longer than Slack waits for the answer says it is sending, and then how it went', async () => {
+  const slow = await submit(async () => (await wait(50), []), 10);
+  assert.deepEqual(slow.texts, [slow.t.inbox.write.sending({ files: 'no' })]);
+  assert.deepEqual(slow.updates, [slow.t.inbox.write.sent]);
+  const failed = await submit(async () => (await wait(50), Promise.reject(new Error('fatal_error'))), 10);
+  assert.deepEqual(failed.updates, [failed.t.inbox.write.sendFailed]);
 });

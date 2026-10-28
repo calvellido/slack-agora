@@ -93,7 +93,7 @@ inbox:
     submit: "Enviar"
     anonymousHint: "Para escribir de manera anónima, usa `{anonymousCommand}` o *Mensajes anónimos* en la pestaña *Inicio* de {bot}."
     sent: "✅ Enviado. El equipo te responderá en la pestaña *Mensajes* de {bot}, donde tienes una copia de tu mensaje."
-    sending: "⏳ Enviando tu mensaje y sus archivos al equipo…"
+    sending: "⏳ Enviando tu mensaje{files, select, yes { y sus archivos} other {}} al equipo…"
     empty: "Escribe un mensaje o adjunta archivos."
     cantSend: "Estos archivos no se pueden enviar: {list}"
     sendFailed: "No se ha podido enviar. Inténtalo de nuevo en unos minutos."
@@ -144,6 +144,7 @@ publish:
     sent: "✅ Enviado a {target}"
     nothing: "⚠️ No se envió nada a {target}:\n{list}"
     failed: "⚠️ No se pudo enviar a {target}: {reason}"
+    unrecorded: "⚠️ Se envió, pero no se pudo publicar su registro en <#{teamChannel}>: {reason}. Así que no se puede eliminar con :{deleteEmoji}:, y enviarlo de nuevo lo publicaría dos veces."
     record: "Para eliminarlo, añade :{deleteEmoji}: a su registro en <#{teamChannel}>."
 
 home:

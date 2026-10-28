@@ -68,3 +68,13 @@ test('once sent, the form says how it went for each channel and person, and how 
   // Nothing to delete when nothing went.
   assert.equal(resultView(t, [{ target: '<@U2>', outcome: { status: 'nothing', problems } }], record).blocks.length, 1);
 });
+
+test("once sent, the form says what went out without its record, which can't be deleted with the emoji", () => {
+  const record = { teamChannel: 'CTEAM', deleteEmoji: 'wastebasket' };
+  const unrecorded = { error: slackError('is_archived') };
+  const view = resultView(t, [{ target: '<@U1>', outcome: { status: 'sent', problems: [], unrecorded } }], record);
+  assert.deepEqual(
+    view.blocks.map((b) => (b as { text?: { text: string } }).text?.text),
+    [`${t.publish.done.sent({ target: '<@U1>' })}\n${t.publish.done.unrecorded({ ...record, reason: t.errors.archived })}`],
+  );
+});

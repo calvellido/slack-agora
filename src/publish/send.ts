@@ -23,9 +23,12 @@ export interface Post {
   files: readonly AttachedFile[];
 }
 
-/** How a send went, for the form to tell whoever posted: the record in the team channel tells the team. */
+/**
+ * How a send went, for the form to tell whoever posted: the record in the team channel tells the team. `unrecorded`
+ * says why that record couldn't be posted, for something that went out all the same.
+ */
 export type Outcome =
-  | { status: 'sent'; permalink?: string; problems: Copies['problems'] }
+  | { status: 'sent'; permalink?: string; problems: Copies['problems']; unrecorded?: { error: unknown } }
   | { status: 'nothing'; problems: Copies['problems'] }
   | { status: 'failed'; error: unknown };
 
@@ -107,6 +110,16 @@ export function createSender({ config, store, i18n, notices }: Deps): Sender {
     return { status: 'nothing', problems: sent.problems };
   }
 
+  /** Posts the record of what went out. If it can't, it went out all the same, and the form says it has no record. */
+  async function recorded(outcome: Outcome & { status: 'sent' }, record: () => Promise<void>): Promise<Outcome> {
+    try {
+      await record();
+      return outcome;
+    } catch (error) {
+      return { ...outcome, unrecorded: { error } };
+    }
+  }
+
   return {
     async toChannel(client, poster, channel, post) {
       let sent: Sent;
@@ -121,9 +134,10 @@ export function createSender({ config, store, i18n, notices }: Deps): Sender {
         ? t.publish.record.posted({ poster, channel, permalink: link })
         : t.publish.record.postedNoLink({ poster, channel });
       const blocks = [...quoted(header, post.message ? [post.message] : []), ...filesNote(post, sent)];
-      const recordTs = await notices.post(client, { text: header, blocks });
-      if (recordTs) store.deliveries.record(recordTs, channel, sent.ts ?? null, poster, sent.fileIds);
-      return { status: 'sent', permalink: link || undefined, problems: sent.problems };
+      return recorded({ status: 'sent', permalink: link || undefined, problems: sent.problems }, async () => {
+        const recordTs = await notices.post(client, { text: header, blocks });
+        if (recordTs) store.deliveries.record(recordTs, channel, sent.ts ?? null, poster, sent.fileIds);
+      });
     },
 
     async toPerson(client, poster, user, post) {
@@ -150,19 +164,20 @@ export function createSender({ config, store, i18n, notices }: Deps): Sender {
         const existing = store.conversations.latestDm(dmChannel, Date.now() - config.inboxIdleDays * DAY);
         const header = t.publish.record.dmStarted({ poster, user });
         const blocks = [...quoted(header, post.message ? [post.message] : []), ...filesNote(post, sent)];
-        // In the person's ongoing conversation if there is one (and its thread still exists), else in a new one.
-        let recordTs = existing && (await notices.post(client, { text: header, blocks, threadTs: existing.teamThreadTs }));
-        if (existing && recordTs) {
-          store.conversations.touch(existing.id);
-        } else {
-          const hint = context(t.inbox.thread.replyHint({ sendEmoji: config.sendEmoji }));
-          recordTs = await notices.post(client, { text: header, blocks: [...blocks, hint] });
-          if (recordTs) {
-            store.conversations.create({ kind: 'dm', userId: user, targetChannel: dmChannel, targetThreadTs: null, teamThreadTs: recordTs });
+        return recorded({ status: 'sent', problems: sent.problems }, async () => {
+          // In the person's ongoing conversation if there is one (and its thread still exists), else in a new one.
+          let recordTs = existing && (await notices.post(client, { text: header, blocks, threadTs: existing.teamThreadTs }));
+          if (existing && recordTs) {
+            store.conversations.touch(existing.id);
+          } else {
+            const hint = context(t.inbox.thread.replyHint({ sendEmoji: config.sendEmoji }));
+            recordTs = await notices.post(client, { text: header, blocks: [...blocks, hint] });
+            if (recordTs) {
+              store.conversations.create({ kind: 'dm', userId: user, targetChannel: dmChannel, targetThreadTs: null, teamThreadTs: recordTs });
+            }
           }
-        }
-        if (recordTs) store.deliveries.record(recordTs, dmChannel, sent.ts ?? null, poster, sent.fileIds);
-        return { status: 'sent', problems: sent.problems };
+          if (recordTs) store.deliveries.record(recordTs, dmChannel, sent.ts ?? null, poster, sent.fileIds);
+        });
       });
     },
   };

@@ -102,7 +102,7 @@ export interface Strings {
       submit: string;
       anonymousHint: string;
       sent: string;
-      sending: string;
+      sending: (params: { files: string }) => string;
       empty: string;
       cantSend: (params: { list: string }) => string;
       sendFailed: string;
@@ -157,6 +157,7 @@ export interface Strings {
       sent: (params: { target: string }) => string;
       nothing: (params: { target: string; list: string }) => string;
       failed: (params: { target: string; reason: string }) => string;
+      unrecorded: (params: { teamChannel: string; reason: string; deleteEmoji: string }) => string;
       record: (params: { deleteEmoji: string; teamChannel: string }) => string;
     };
   };

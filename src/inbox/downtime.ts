@@ -36,7 +36,7 @@ export const SLEPT_AFTER_MS = 60_000;
 export function missedDms(messages: readonly HistoryMessage[], botUserId: string): HistoryMessage[] {
   return messages
     .filter((m) => m.ts && m.user && m.user !== botUserId && !m.bot_id)
-    .filter((m) => m.subtype === undefined || m.subtype === 'file_share')
+    .filter((m) => m.subtype === undefined || m.subtype === 'file_share' || m.subtype === 'thread_broadcast')
     .filter((m) => !m.reactions?.some((r) => r.name === RECEIVED_EMOJI && r.users?.includes(botUserId)))
     .sort((a, b) => Number(a.ts) - Number(b.ts));
 }
