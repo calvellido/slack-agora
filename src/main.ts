@@ -23,6 +23,7 @@ import { Notices, noticeEmoji } from './slack/notices.ts';
 import { TeamDirectory } from './slack/team-directory.ts';
 import { warnAboutUnknownShortcuts } from './slack/unknown-shortcuts.ts';
 import { Store } from './storage/index.ts';
+import { announceVersion } from './updated.ts';
 
 // The entry point: reads the settings, opens the database, connects to Slack, registers every feature and starts.
 // `pnpm start` runs it through launcher.ts, which can start it again.
@@ -93,7 +94,11 @@ if (missing?.length) {
 }
 app.logger.info(`${bot.name} is running`);
 
-// Background work: catching up after downtime, once; ending and forgetting anonymous conversations, every hour
+// Background work: telling the team about a new version, and catching up after downtime, once; ending and forgetting
+// anonymous conversations, every hour
+announceVersion(app.client, deps, store.heartbeat, VERSION, uptime.lastAlive !== undefined).catch((error) => {
+  app.logger.error(`Telling the team about the new version failed: ${errorCode(error)}`);
+});
 recoverDowntime(app.client, deps, inbox, uptime).catch((error) => app.logger.error(`Catching up failed: ${errorCode(error)}`));
 const cleanup = () => {
   anonymous.cleanup(app.client).catch((error) => app.logger.error(`Cleanup failed: ${errorCode(error)}`));

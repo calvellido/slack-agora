@@ -299,7 +299,7 @@ After a restart, for example for a system update, an encrypted disk waits for it
 
 ### Updating
 
-Each release's section in [CHANGELOG.md](CHANGELOG.md), which is also its release notes, says what changed and what to do. When the app's manifest changes, for example with a new command or permission, generate it again and paste it, as in [Changing the app later](#changing-the-app-later).
+Each release's section in [CHANGELOG.md](CHANGELOG.md), which is also its release notes, says what changed and what to do. When the bot starts on a new version, it tells the team channel, with a link to that release's notes on `SOURCE_URL` (Agora's repository, unless it says otherwise), and when it goes back to an earlier one, it says so too. When the app's manifest changes, for example with a new command or permission, generate it again and paste it, as in [Changing the app later](#changing-the-app-later).
 
 - With Docker, `docker compose pull && docker compose up -d`. The `3` tag in `compose.yaml` gets every 3.x release; a new major version can need changes, which its notes explain, and a `compose.yaml` with its own tag. If yours still says `:1` or `:2`, download it again, or change its tag to `:3`.
 - With Node, `git fetch --tags`, `git checkout` the new version's tag, `pnpm install --prod`, and restart the bot. With `pnpm start`, `update` and `update apply` in the bot's [console](#the-console) do it for you.

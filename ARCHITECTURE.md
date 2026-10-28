@@ -24,6 +24,7 @@ src/
   log.ts             The log, shared with Bolt and the Slack clients, and its levels, trace included.
   activity.ts        What the bot did since it started, in counts and times, for the console's status.
   monitor.ts         Calls HEARTBEAT_URL while connected to Slack, for a monitor to alert when the calls stop.
+  updated.ts         Telling the team channel when the bot starts on another version than it last ran.
 
   console/           Commands typed in the bot's terminal.
     index.ts           Reading them, and printing log lines above what is being typed.
@@ -37,7 +38,7 @@ src/
     serialized.ts      Runs tasks with the same key one after another.
     time.ts            DAY, and durations such as "2 h 14 min".
     url.ts             Addresses as people read them, without https://.
-    version.ts         The version that is running, from package.json.
+    version.ts         The version that is running, from package.json, and comparing versions.
 
   slack/             Slack plumbing shared by the features.
     identity.ts        The bot's own name, avatar, IDs and permissions, read from Slack at start.
@@ -58,7 +59,7 @@ src/
     deliveries.ts      What the bot sent on the team's behalf, so it can be deleted later.
     relays.ts          What relaying each DM posted in the team channel, so the copy can follow its edits.
     anonymous.ts       Anonymous conversations, their keys, and their messages: from whom, and their encrypted text.
-    heartbeat.ts       When the bot was last running.
+    heartbeat.ts       When the bot was last running, and which version.
     cli.ts             `pnpm clean-db`.
 
   i18n/              Texts, from locales/*.yml.

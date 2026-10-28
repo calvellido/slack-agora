@@ -15,6 +15,10 @@ common:
 # messages from the team.
 notices:
   sender: "{bot} · bot"
+  # Posted in the team channel when the bot starts on another version than it last ran. `previous` is unknown when the
+  # version it ran before wasn't kept, and `notes` says whether there is a link to what changed.
+  updated: "🆕 {bot} has been updated to version {version}{previous, select, unknown {} other {, from {previous}}}.{notes, select, yes { <{url}|What changed>} other {}}"
+  wentBack: "↩️ {bot} went back to version {version}, from {previous}."
 
 # Copying the files of messages: why one couldn't be copied, and the notices about it.
 files:

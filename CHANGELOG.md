@@ -2,6 +2,12 @@
 
 What changed in each version, and what to do when updating to it. Versions follow [semantic versioning](https://semver.org), and each one's section here becomes the notes of its [GitHub release](https://github.com/calvellido/slack-agora/releases).
 
+## [Unreleased]
+
+- When the bot starts on a new version, it tells the team channel, as it does when it is back online, with a link to what changed: the release's notes on `SOURCE_URL`, which is Agora's repository unless it says otherwise. Going back to an earlier version is told too. The first time a version is announced, the bot doesn't know which one it ran before, so it only says it was updated.
+
+No new permissions or settings: updating the bot is enough.
+
 ## [3.3.0] - 2026-10-27
 
 - The console: when the bot runs in a terminal with `pnpm start`, commands typed there say how it is doing (`status`), change the log's level (`log`), restart it (`restart`), and look for a newer release and install it (`update`, `update apply`). `pnpm start` now runs the bot through a launcher, which starts it again for those, and when it stops with an error after running for over a minute. While a command is still running, such as an update, Ctrl-C has to be pressed twice to stop the bot. See *The console* in the guide.

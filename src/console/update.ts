@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { compareVersions, parseVersion, type Version } from '#src/lib/version.ts';
 
 // The console's update: finding a newer release among the repository's tags, and installing it, in a folder cloned
 // at a release as GUIDE.md installs it. Only within the same major version, as a new one can need changes by hand.
@@ -39,42 +40,31 @@ function said(error: unknown): string {
   return (stderr?.trim() || message || String(error)).split('\n')[0]!;
 }
 
-type Version = [number, number, number];
-
-function parse(version: string): Version | undefined {
-  const match = /^v?(\d+)\.(\d+)\.(\d+)$/.exec(version);
-  return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : undefined;
-}
-
-function compare(a: Version, b: Version): number {
-  return a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
-}
-
 /**
  * Among release tags (v1.2.3), the newest with the same major version as `current`, if newer, and the newest with a
  * later major version, if any; as versions, without the v.
  */
 export function newerReleases(tags: readonly string[], current: string): { next?: string; major?: string } {
-  const now = parse(current);
+  const now = parseVersion(current);
   if (!now) return {};
   const newer = tags
-    .map(parse)
-    .filter((v): v is Version => v !== undefined && compare(v, now) > 0)
-    .sort((a, b) => compare(b, a));
+    .map(parseVersion)
+    .filter((v): v is Version => v !== undefined && compareVersions(v, now) > 0)
+    .sort((a, b) => compareVersions(b, a));
   const name = (v: Version | undefined) => v?.join('.');
   return { next: name(newer.find((v) => v[0] === now[0])), major: name(newer.find((v) => v[0] > now[0])) };
 }
 
 /** The changelog's sections for the versions after `from`, up to `to`, without the links at its end. */
 export function notesBetween(changelog: string, from: string, to: string): string {
-  const [after, upTo] = [parse(from)!, parse(to)!];
+  const [after, upTo] = [parseVersion(from)!, parseVersion(to)!];
   const lines: string[] = [];
   let inside = false;
   for (const line of changelog.split('\n')) {
     const heading = /^## \[([^\]]+)\]/.exec(line);
     if (heading) {
-      const version = parse(heading[1]!);
-      inside = version !== undefined && compare(version, after) > 0 && compare(version, upTo) <= 0;
+      const version = parseVersion(heading[1]!);
+      inside = version !== undefined && compareVersions(version, after) > 0 && compareVersions(version, upTo) <= 0;
     } else if (/^## |^\[[^\]]+\]: /.test(line)) {
       inside = false;
     }

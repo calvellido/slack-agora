@@ -10,6 +10,8 @@ export interface Strings {
   };
   notices: {
     sender: string;
+    updated: (params: { version: string; previous: string; notes: string; url: string }) => string;
+    wentBack: (params: { version: string; previous: string }) => string;
   };
   files: {
     attached: (params: { user: string }) => string;

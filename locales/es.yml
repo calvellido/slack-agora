@@ -10,6 +10,8 @@ common:
 
 notices:
   sender: "{bot} · bot"
+  updated: "🆕 {bot} se ha actualizado a la versión {version}{previous, select, unknown {} other {, desde la {previous}}}.{notes, select, yes { <{url}|Qué ha cambiado>} other {}}"
+  wentBack: "↩️ {bot} ha vuelto a la versión {version}, desde la {previous}."
 
 files:
   attached: "📎 <@{user}> adjuntó:"

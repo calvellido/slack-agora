@@ -38,3 +38,11 @@ test('the heartbeat is kept between starts', () => {
   store.heartbeat.beat(2_000);
   assert.equal(store.heartbeat.last(), 2_000);
 });
+
+test('the version the bot last ran is kept between starts', () => {
+  const store = new Store(':memory:', 'C1');
+  assert.equal(store.heartbeat.lastVersion(), undefined);
+  store.heartbeat.ranVersion('3.3.0');
+  store.heartbeat.ranVersion('3.4.0');
+  assert.equal(store.heartbeat.lastVersion(), '3.4.0');
+});
